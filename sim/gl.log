@@ -1,0 +1,36 @@
+gl.log log. local time Thu Jun  7 22:32:09 2018
+
+../../../lib/mygl/log.cpp:29 starting GLFW 3.1.1 Cocoa NSGL chdir menubar retina
+../../../lib/mygl/log.cpp:56 Creating window 1280x1024
+../../../lib/mygl/shader.h:60 Loading shader shaders/4.0/spectrum.vp
+../../../lib/mygl/shader.h:60 Loading shader shaders/4.0/spectrum.fp
+../../../lib/mygl/shader.h:206 --------------------
+shader programme 1 info:
+../../../lib/mygl/shader.h:215 GL_LINK_STATUS = GL_TRUE
+../../../lib/mygl/shader.h:229 GL_ACTIVE_ATTRIBUTES = 2
+../../../lib/mygl/shader.h:247   0) type:GL_FLOAT_VEC3 name:vertex_color location:1
+../../../lib/mygl/shader.h:247   1) type:GL_FLOAT_VEC3 name:vertex_position location:0
+../../../lib/mygl/shader.h:252 GL_ACTIVE_UNIFORMS = 3
+../../../lib/mygl/shader.h:270   0) type:GL_FLOAT_MAT4 name:model location:0
+../../../lib/mygl/shader.h:270   1) type:GL_FLOAT_MAT4 name:proj location:-1
+../../../lib/mygl/shader.h:270   2) type:GL_FLOAT_MAT4 name:view location:-1
+../../../lib/mygl/shader.h:282 program info log for GL index 1:
+
+../../../lib/mygl/world.h:876 Binding position array, 6 points
+../../../lib/mygl/world.h:887 Binding color array
+../../../lib/mygl/shader.h:60 Loading shader shaders/4.0/phong.vp
+../../../lib/mygl/shader.h:60 Loading shader shaders/4.0/phong.fp
+../../../lib/mygl/shader.h:206 --------------------
+shader programme 4 info:
+../../../lib/mygl/shader.h:215 GL_LINK_STATUS = GL_TRUE
+../../../lib/mygl/shader.h:229 GL_ACTIVE_ATTRIBUTES = 2
+../../../lib/mygl/shader.h:247   0) type:GL_FLOAT_VEC3 name:vertex_position location:0
+../../../lib/mygl/shader.h:247   1) type:GL_FLOAT_VEC3 name:vertex_normal location:1
+../../../lib/mygl/shader.h:252 GL_ACTIVE_UNIFORMS = 5
+../../../lib/mygl/shader.h:270   0) type:GL_FLOAT_VEC3 name:color_ambient location:0
+../../../lib/mygl/shader.h:270   1) type:GL_FLOAT_VEC3 name:color_specular location:1
+../../../lib/mygl/shader.h:270   2) type:GL_FLOAT_VEC3 name:color_diffuse location:2
+../../../lib/mygl/shader.h:270   3) type:GL_FLOAT_MAT4 name:proj location:-1
+../../../lib/mygl/shader.h:270   4) type:GL_FLOAT_MAT4 name:view location:-1
+../../../lib/mygl/shader.h:282 program info log for GL index 4:
+

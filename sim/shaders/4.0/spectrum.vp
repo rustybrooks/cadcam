@@ -1,0 +1,27 @@
+#version 400
+
+in vec3 vertex_position;
+in vec3 vertex_color;
+
+out vec3 color;
+
+uniform mat4 model;
+layout (std140) uniform cam_block { 
+       mat4 proj; 
+       mat4 view; 
+};
+
+void main () {
+  vec4 vertex_position2 = vec4(vertex_position, 1.0);
+  //vertex_position2[2] = vertex_position[2]*-1;
+  color = vertex_color;
+  mat4 scale = mat4(
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, -1, 0,
+    0, 0, 0, 1
+  );
+  gl_Position = proj * view * scale * model * vertex_position2;
+}
+
+

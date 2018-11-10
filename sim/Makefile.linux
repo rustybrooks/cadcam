@@ -1,0 +1,86 @@
+SUFFIXES += .d
+
+CFLAGS=
+STATIC_LIBS=
+LIBS=
+
+CFLAGS+=-DAA -DBB -DCC
+CFLAGS+=-Wall
+
+CFLAGS += -std=c++11
+
+CFLAGS += -Wno-write-strings
+#-Wno-parenthesis
+
+LDFLAGS += -L/usr/X11/lib
+
+CC=g++
+LINK=$(CC)
+
+CFLAGS+=-I ../lib/mygl
+
+STATIC_LIBS += ../../../lib/tcltk/installed/lib/libtcl8.5.a
+STATIC_LIBS += ../../../lib/tcltk/installed/lib/libtk8.5.a
+
+CFLAGS += -I ../lib/cpptk/cpptk-1.0.2/
+CFLAGS += -I /usr/include/SOIL/
+CFLAGS += -I ../../../lib/tcltk/installed/include
+
+UNAME_S := $(shell uname -s)
+
+
+LIBS+=-lGL -lGLU -lX11 -lXrandr -lXi -lXxf86vm -lXinerama -lXcursor -lpthread -ldl -lXft -lfontconfig -lXss
+LIBS+=-lglfw -lGLEW -lassimp -lboost_thread -lboost_system -lboost_program_options
+
+SOURCES1=sim.cpp
+SOURCES1+=mymath.cpp
+SOURCES1+=path.cpp
+SOURCES1+=rs274ngc_pre.cpp
+SOURCES1+=canon.cpp
+SOURCES1+=interface.cpp
+SOURCES1+=grid_volume.cpp
+SOURCES1+=../lib/mygl/log.cpp
+SOURCES1+=../lib/mygl/math_funcs.cpp
+SOURCES1a+=../lib/cpptk/cpptk-1.0.2/cpptk.cc
+SOURCES1a+=../lib/cpptk/cpptk-1.0.2/base/cpptkbase.cc
+
+EXECUTABLE=sim 
+
+#CFLAGS += -ggdb -O0
+#CFLAGS += -O
+#CFLAGS += -O2
+CFLAGS += -O3
+
+OBJECTS1=$(SOURCES1:.cpp=.o) $(SOURCES1a:.cc=.o)
+
+#These are the dependency files, which make will clean up after it creates them
+DEPFILES=$(SOURCES1:.cpp=.d) 
+
+all: $(EXECUTABLE) 
+
+clean:
+	rm -f *.o *.obj *.d $(EXECUTABLE) 
+
+-include $(DEPFILES)
+
+sim: $(OBJECTS1) 
+	$(LINK) $(LDFLAGS) $(OBJECTS1) $(STATIC_LIBS) $(LIBS) -o $@
+
+
+#This is the rule for creating the dependency files
+%.d: %.cpp
+	$(CC) $(CFLAGS) -MM -MT '$(patsubst src/%,obj/%,$(patsubst %.cpp,%.o,$<))' $< > $@
+
+
+%.o: %.cpp %.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.d: %.cc
+	$(CC) $(CFLAGS) -MM -MT '$(patsubst src/%,obj/%,$(patsubst %.cpp,%.o,$<))' $< > $@
+
+
+%.o: %.cc %.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+

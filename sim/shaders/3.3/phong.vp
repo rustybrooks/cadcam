@@ -1,0 +1,35 @@
+#version 330
+
+in vec3 vertex_position;
+in vec3 vertex_normal;
+
+uniform mat4 model;
+uniform vec3 color_specular, color_diffuse, color_ambient;
+
+layout (std140) uniform cam_block { 
+       mat4 proj; 
+       mat4 view; 
+};
+
+out vec3 position_eye, normal_eye, color;
+out vec3 Ks, Kd, Ka;
+
+void main () {
+//        position_eye = vec3 (view * model * vec4(vertex_position, 1.0));
+//        normal_eye = vec3 (view * model * vec4(vertex_normal, 0.0));
+// had trouble binding a model loc to this, screw it, dun need it
+
+        position_eye = vec3 (view * vec4(vertex_position, 1.0));
+        normal_eye = vec3 (view * vec4(vertex_normal, 0.0));
+
+        gl_Position = proj * vec4(position_eye, 1.0);
+	Ks = color_specular;
+	Kd = color_diffuse;
+	Ka = color_ambient;
+	//Ks = vec3(1.0, 1.0, 1.0);
+	//Kd = vec3(1.0, 0.5, 0.0);
+	//Ka = vec3(1.0, 1.0, 1.0);
+
+}
+
+

@@ -1,0 +1,9 @@
+bson
+numpy
+numpy-stl
+descartes
+shapely
+matplotlib
+enum34
+flask
+gevent

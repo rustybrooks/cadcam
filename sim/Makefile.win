@@ -1,0 +1,55 @@
+SUFFIXES += .d
+
+CFLAGS=-fdump-class-hierarchy
+LDFLAGS=
+
+SOURCES=texture.cpp sim_time.cpp sim.cpp volume.cpp actor.cpp mymath.cpp 
+SOURCES+=marching_cubes.cpp mp_vector.cpp
+#SOURCES += rs274ngc_pre.cpp canon.cpp 
+
+#LDFLAGS=-L/usr/X11/lib -L/usr/local/lib
+CFLAGS+= -I /usr/X11/include 
+#-std=gnu++0x
+CC=g++
+LIBS=-lpng -lgl -lglut -lglu -lGLU
+LIBBINS=\
+    /usr/lib/libpng.dll.a \
+    /usr/lib/libGLU.dll.a \
+    /usr/lib/libglut.dll.a \
+    /usr/lib/libGL.dll.a 
+EXECUTABLE=sim
+LINK=$(CC)
+
+CFLAGS += -g
+CFLAGS += -O3
+
+OBJECTS=$(SOURCES:.cpp=.o)	
+
+
+#These are the dependency files, which make will clean up after it creates them
+DEPFILES=$(SOURCES:.cpp=.d)
+
+all: $(EXECUTABLE)
+
+clean:
+	rm -f *.o *.obj *.d $(EXECUTABLE)
+
+-include $(DEPFILES)
+
+sim: $(OBJECTS) 
+	$(LINK) $(LDFLAGS) $(LIBS) $(OBJECTS) $(LIBBINS) -o sim.exe
+
+
+
+#This is the rule for creating the dependency files
+%.d: %.cpp
+	$(CC) $(CFLAGS) -MM -MT '$(patsubst src/%,obj/%,$(patsubst %.cpp,%.o,$<))' $< > $@
+
+
+# %.d
+%.o: %.cpp %.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.obj: %.cpp %.h
+	$(CC) $(CFLAGS) -c $< -o $@
+

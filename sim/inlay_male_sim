@@ -1,0 +1,8 @@
+res=0.01
+
+inter=./test/carve_inter.dat
+file1=./test/vcarve1_male.ngc
+file2=./test/vcarve1_male_part_2.ngc
+
+../campy.py && ./sim --quit-after 1 -i $file1 -r $res --save-grid $inter && ./sim --load-grid $inter -i $file2
+#scp test/test_bowl_*.ngc rustybrooks.com:/extra/cadcam/misc
