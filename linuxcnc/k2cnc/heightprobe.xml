@@ -1,0 +1,15 @@
+<pyvcp>
+    <label>
+        <text>"Probe"</text>
+    </label>
+    <button>
+         <halpin>"o100"</halpin>
+         <text>"Touch Off Z"</text>
+         <font>('fixed',10)</font>
+    </button>
+    <led>
+        <halpin>"probe-in"</halpin>
+        <on_color>"green"</on_color>
+        <off_color>"red"</off_color>
+    </led>
+</pyvcp>

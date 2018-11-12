@@ -1,0 +1,18 @@
+o100 sub
+
+( Set current Z position to 0 so that we will always be moving down )
+G10 L20 P0 Z0
+
+( Probe to Z-.5 at F1, this is meant to be slow!] )
+G38.2 Z-.5 f1
+
+( Set Z0 at point where probe triggers with offset of +1.47 [this is the thickness of my PCB plate. You must adjust this for your plate / setup] )
+(G10 L20 P0 Z1.47)
+
+(For now I'm going to set Z to the probed surface.  Once I have a standard plate I can use the thickness of that)
+G10 L20 P0 Z0
+
+( Rapid up to above the material )
+G0 Z.5
+
+o100 endsub
