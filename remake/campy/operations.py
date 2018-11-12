@@ -72,7 +72,7 @@ def rect_stock(width, height, thickness, origin=(0, 0, 0)):
 
 @operation(required=['center', 'z', 'depth'], operation_feedrate='probe')
 def zprobe(
-    center=None, z=None, depth=None, rate=None, toward=True, halt_on_error=True,
+    center=None, z=None, zretract=0.025, depth=None, rate=None, toward=True, halt_on_error=True,
     tries=1, backoff=.5
 ):
     x, y = center
@@ -81,7 +81,9 @@ def zprobe(
 
     for i in range(tries):
         machine().probe(axis='Z', to=z-depth, rate=rate*(backoff**i), toward=toward, halt_on_error=halt_on_error)
-        machine().probe(axis='Z', to=z, rate=rate, toward=not toward, halt_on_error=halt_on_error)
+        if i +1 != tries:
+            machine().goto(z="[#5063+{}]".format(zretract))
+#        machine().probe(axis='Z', to=z, rate=rate, toward=not toward, halt_on_error=False)
 
 
 # This will make a helical arc with the outter radius = outter-rad

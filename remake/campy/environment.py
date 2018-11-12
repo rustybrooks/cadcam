@@ -44,7 +44,11 @@ class Environment(object):
     def format_movement(cls, x=None, y=None, z=None, a=None, rate=None):
         movement = []
         for var, axis in zip((x, y, z, a, rate), ('X', 'Y', 'Z', 'A', 'F')):
-            if var is not None: movement.append('%s%.6f' % (axis, var))
+            if var is not None: 
+                if str(var).strip().startswith('['):
+                    movement.append("%s%s" % (axis, var))
+                else:
+                    movement.append('%s%.6f' % (axis, var))
 
         return movement
 
