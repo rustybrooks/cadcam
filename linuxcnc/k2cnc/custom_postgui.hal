@@ -13,3 +13,7 @@ sets spindle-at-speed true
 net probe-in <= parport.0.pin-13-in-not
 net probe-in => motion.probe-input
 net probe-in => pyvcp.probe-in
+
+# This is so I can do a probe with a button in the UI
+net remote-o100 halui.mdi-command-00 <= pyvcp.o100
+
