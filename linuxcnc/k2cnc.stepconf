@@ -48,7 +48,7 @@
   <property name="pin12" type="string" value="unused-input"/>
   <property name="pin12inv" type="bool" value="False"/>
   <property name="pin13" type="string" value="unused-input"/>
-  <property name="pin13inv" type="bool" value="False"/>
+  <property name="pin13inv" type="bool" value="probe-in"/>
   <property name="pin14" type="string" value="spindle-on"/>
   <property name="pin14inv" type="bool" value="True"/>
   <property name="pin15" type="string" value="unused-input"/>
