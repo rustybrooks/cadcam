@@ -70,6 +70,14 @@ def rect_stock(width, height, thickness, origin=(0, 0, 0)):
     machine().write("(RectSolid %f %f %f origin=%f %f %f)" % (width, height, thickness, origin[0], origin[1], origin[2]))
 
 
+@operation(required=['center', 'z', 'depth'], operation_feedrate='probe')
+def zprobe(center=None, z=None, depth=None, rate=None):
+    x, y = center
+    machine().goto(z=z)
+    machine().goto(x, y)
+    machine().probe(axis='Z', to=z-depth, rate=rate)
+
+
 # This will make a helical arc with the outter radius = outter-rad
 # it only operates at one radius
 # with outter_rad = 1*r to 2*r this is essentially a drilling procedure

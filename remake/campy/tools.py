@@ -2,6 +2,7 @@ import math
 
 from .cammath import frange
 
+
 class Tool(object):
     index_counter = 0
 
@@ -17,8 +18,8 @@ class Tool(object):
             'plunge': None,
             'leadin': None,
             'leadout': None,
-            'ramp': None
-
+            'ramp': None,
+            'probe': None,
         }
 
         self.spindle_speed = None
@@ -34,7 +35,7 @@ class Tool(object):
     # rpm = sfm/(dp/12)
     # ips = rpm*fpt/flutes
     def calculate_feedrates(self, material, machine, base_feedrate=None):
-        print "calculate_feedrate", material, base_feedrate
+        # print "calculate_feedrate", material, base_feedrate
 
         def _fpt(rpm, ipm):
             return (self.flutes*ipm)/rpm
@@ -56,7 +57,7 @@ class Tool(object):
             print "diami =", diami, "material=", material
 
             if self.tool_material == 'hss':
-                fpt_list = material.ftp_hss
+                fpt_list = material.fpt_hss
                 sfm_list = material.sfm_hss
             elif self.tool_material == 'carbide':
                 fpt_list = material.fpt_carbide
@@ -92,6 +93,7 @@ class Tool(object):
         self.feeds['leadin'] = 0
         self.feeds['leadout'] = 0
         self.feeds['ramp'] = 0
+        self.feeds['probe'] = 1
         self.spindle_speed = rpm
 
     def comment(self, cam):

@@ -11,8 +11,8 @@ class Material(object):
         self.name = name
         self.sfm_hss = sfm_hss
         self.sfm_carbide = sfm_carbide
-        self.ftp_hss = fpt_hss
-        self.ftp_carbide = fpt_carbide
+        self.fpt_hss = fpt_hss
+        self.fpt_carbide = fpt_carbide
 
     def __str__(self):
         return "Material({})".format(self.name)
@@ -24,6 +24,7 @@ class Environment(object):
         self.material = None
         self.material_factor = 1
         self.speed = None
+        self.probe_speed = 1
         self.speed_stack = []
         self.location = None
         self.files = {}
@@ -189,6 +190,17 @@ class Environment(object):
         # self.record_arc_move(x, y, z, I, J, clockwise)
         self.write("%s X%.6f Y%.6f I%.6f J%6f %s %s" % ('G2' if clockwise else 'G3', x, y, I, J, Z, feed))
 
+    def probe(self, axis='z', rate=None, to=None):
+        if self.speed is not None and rate is None:
+            feed = "F%0.3f " % self.speed
+            self.speed = None
+        elif rate is not None:
+            feed = "F%0.3f " % rate
+        else:
+            feed = ""
+
+        self.write("G38.2 {}{} {}".format(axis.upper(), to, feed))
+
     def calc_stepover(self, stepover=None, max_stepover=0.95):
         # stepover = stepover or self.stepover
         if str(stepover)[-1] == '%':
@@ -272,9 +284,16 @@ tools['1 1/2in straight bit'] = StraightRouterBit(diameter=1.5, tool_material='h
 tools['1/2in dovetail'] = DovetailRouterBit(minor_diameter=5/8., major_diameter=1/2., height=7/8., tool_material='hss', flutes=2)
 tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='hss', flutes=1)
 
+tools['probe'] = Tool('hss', 1, 1)
+tools['probe'].feeds['probe'] = 1
+
 
 # fpt is for diameter of 1/8 1/4 1/2 1
 materials = {
+    'none': Material(
+        name='none', sfm_hss=[0, 0], sfm_carbide=[0, 0],
+        fpt_hss=[(0, 0), (0, 0), (0, 0), (0, 0)], fpt_carbide=[(0, 0), (0, 0), (0, 0), (0, 0)],
+    ),
     'aluminum': Material(
         name='aluminum', sfm_hss=[250, 800], sfm_carbide=[600, 1200],
         fpt_hss=[], fpt_carbide=[.0010, .0020, .0040, .0080],

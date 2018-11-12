@@ -19,12 +19,7 @@ def spoil_holes():
 
     for x in range(1, width, 2):
         for y in range(1, height, 2):
-            hsm_circle_pocket(center=(x, y), z=thickness, inner_rad=0, outer_rad=nut['minor_dia'], depth=thickness+0.010, stepover='25%', stepdown='50%')
-            hsm_circle_pocket(center=(x, y), z=thickness, inner_rad=0, outer_rad=nut['major_dia'], depth=nut['major_length'], stepover='25%', stepdown='50%')
 
-    for x in range(2, width, 2):
-        for y in range(2, width, 2):
-            hsm_circle_pocket(center=(x, y), z=thickness, inner_rad=0, outer_rad=.5, depth=thickness+0.010, stepover='25%', stepdown='50%')
 
 
 machine = set_machine('k2cnc')
