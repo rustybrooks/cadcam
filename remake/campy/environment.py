@@ -190,7 +190,7 @@ class Environment(object):
         # self.record_arc_move(x, y, z, I, J, clockwise)
         self.write("%s X%.6f Y%.6f I%.6f J%6f %s %s" % ('G2' if clockwise else 'G3', x, y, I, J, Z, feed))
 
-    def probe(self, axis='z', rate=None, to=None):
+    def probe(self, axis='z', rate=None, to=None, toward=True, halt_on_error=True):
         if self.speed is not None and rate is None:
             feed = "F%0.3f " % self.speed
             self.speed = None
@@ -199,7 +199,12 @@ class Environment(object):
         else:
             feed = ""
 
-        self.write("G38.2 {}{} {}".format(axis.upper(), to, feed))
+        if toward:
+            gcode = 'G38.2' if halt_on_error else 'G38.3'
+        else:
+            gcode = 'G38.4' if halt_on_error else 'G38.5'
+
+        self.write("{} {}{} {}".format(gcode, axis.upper(), to, feed))
 
     def calc_stepover(self, stepover=None, max_stepover=0.95):
         # stepover = stepover or self.stepover
