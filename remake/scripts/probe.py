@@ -15,7 +15,7 @@ offset = 0.25
 step = .5
 
 
-def probe():
+def doprobe():
     machine.write("(probeopen /tmp/probe.txt)")
     for x in frange(offset, width-offset, step):
         for y in frange(offset, height-offset, step):
@@ -29,5 +29,5 @@ machine = set_machine('k2cnc')
 machine.set_material('none')
 machine.set_tool('1/4in spiral ball')
 machine.set_file('ngc/probe.ngc')
-probe()
+doprobe()
 

@@ -99,6 +99,8 @@ class Tool(object):
     def comment(self, cam):
         pass
 
+    def diameter_at_depth(self, depth=0):
+        return self.effective_diameter
 
 class StraightRouterBit(Tool):
     def __init__(self, diameter, tool_material, flutes=None):
@@ -127,14 +129,18 @@ class DovetailRouterBit(Tool):
 
 
 class VRouterBit(Tool):
-    def __init__(self, included_angle, diameter=None, tool_material=None, flutes=None):
+    def __init__(self, included_angle, diameter=None, tip_diameter=None, tool_material=None, flutes=None):
         super(VRouterBit, self).__init__(effective_diameter=diameter/2., tool_material=tool_material, flutes=flutes)
 
         self.included_angle = included_angle
         self.diameter = diameter
+        self.tip_diameter = tip_diameter
 
     def comment(self, cam):
         cam.comment("VMill %f %f %f" % (1, self.diameter/2.0, self.included_angle))  # FIXME fixed cutting length
+
+    def diameter_at_depth(self, depth=0):
+        return self.tip_diameter + math.tan(math.radians(self.included_angle/2.))*depth*2
 
 
 class HoleSize(object):

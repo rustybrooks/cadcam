@@ -926,7 +926,7 @@ class SVGProfile(CAM):
 
         # print "scale = ", self.scale
         svgf = svg.parse(self.file).scale(self.scale)
-        #svgf = svg.parse(self.file)
+        # svgf = svg.parse(self.file)
         a, b = svgf.bbox()
         width, height = b.coord()
         self.clearZ = self.topleft[2] + 0.125

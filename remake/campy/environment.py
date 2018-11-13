@@ -1,9 +1,11 @@
 from .cammath import frange
 from .tools import *
+from . import constants
 
 import copy
 import math
 import os
+
 
 
 class Material(object):
@@ -291,6 +293,9 @@ tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='
 
 tools['probe'] = Tool('hss', 1, 1)
 tools['probe'].feeds['probe'] = 1
+
+tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.1-10'] = VRouterBit(included_angle=30.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 
 
 # fpt is for diameter of 1/8 1/4 1/2 1
