@@ -7,3 +7,4 @@ matplotlib
 enum34
 flask
 gevent
+pcb-tools

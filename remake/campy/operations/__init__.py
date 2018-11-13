@@ -2,8 +2,8 @@ from functools import wraps
 import inspect
 import math
 
-from . import machine
-from .cammath import frange
+from .. import machine
+from ..cammath import frange
 
 # center is always x, y, z separate?
 # if an operation goes straight down, then use depth rather then a stop center
