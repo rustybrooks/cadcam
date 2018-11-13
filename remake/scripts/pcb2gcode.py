@@ -172,6 +172,7 @@ class GerberLinesetContext(render.GerberContext):
     def _render_test_record(self, primitive, color):
         raise Exception("Missing render")
 
+
 def cut_coords(c, simplify=0.001):
     machine.goto(z=clearZ)
     coords = c.simplify(simplify).coords
@@ -224,27 +225,6 @@ if __name__ == '__main__':
             cut_coords(el.exterior)
             for i in el.interiors:
                 cut_coords(i)
-
-        machine.goto(z=clearZ)
-
-    #o1 = rest.enforce_direction(clockwise=True).parallel_offset(
-    #    machine.tool.diameter_at_depth(depth),
-    #    side='right',
-    #    # use_ring=False, # I wish I knew better why
-    #)
-    #for l in o1.lines:
-        # if not len(l.coords):
-        #     print "... no coords"
-        #     continue
-        #
-        # print len(l.coords), l.coords.__class__
-        # coords = l.simplify(0.001).coords
-        # machine.goto(z=clearZ)
-        # machine.goto(*(coords[0]))
-        # machine.cut(z=-depth)
-        #
-        # for c in reversed(coords):
-        #     machine.cut(*c)
 
     machine.goto(z=clearZ)
 
