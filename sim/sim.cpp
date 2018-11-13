@@ -147,20 +147,18 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Setting default tool\n");
     vec3ff loc(-1, -1, -1);
     Bit *b1 = new Bit(loc);
-    b1->add(new BitCylinder(0, 4, 1/2.));
+    //b1->add(new BitCylinder(0, 2, 1/8.));
     
-    /*
     if (0) {
 	    double rad = 1/16.;
 	    b1->add(new BitCylinder(rad, 4, rad));
 	    b1->add(new BitSphere(rad, rad));
     } else {
-           double rad = 1/4.;
-           double height = rad / tan(DEG2RAD * 45.0);
-           b1->add(new BitCylinder(height, 4, rad));
-	   b1->add(new BitCone(0, height, 1/1000., rad));
+           double rad = 1/16.;
+           double height = rad / tan(DEG2RAD * 30.0);
+           b1->add(new BitCylinder(height, 1, rad));
+	   b1->add(new BitCone(0, height, 5/1000., rad));
     }
-    */
     b1->set_shader(camera, SPECTRUM);
     context.bit = b1;
 

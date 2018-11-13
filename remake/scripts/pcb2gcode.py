@@ -142,58 +142,77 @@ class GerberLinesetContext(render.GerberContext):
             print "OTHER"
             print [x for x in line.vertices]
 
+    def _render_arc(self, primitive, color):
+        raise Exception("Missing render")
 
+    def _render_region(self, primitive, color):
+        raise Exception("Missing render")
 
-def cut_coords(offset, c, simplify=0.001):
+    def _render_circle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_rectangle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_obround(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_polygon(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_drill(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_slot(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_amgroup(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_test_record(self, primitive, color):
+        raise Exception("Missing render")
+
+def cut_coords(c, simplify=0.001):
     machine.goto(z=clearZ)
     coords = c.simplify(simplify).coords
-    machine.goto(coords[0][0]+offset, coords[0][1]+offset)
+    machine.goto(coords[0][0]+offset-minx, coords[0][1]+offset-miny)
     machine.cut(z=-depth)
 
     for c in coords:
-        machine.cut(c[0]+offset, c[1]+offset)
+        machine.cut(c[0]+offset-minx, c[1]+offset-miny)
 
 
 if __name__ == '__main__':
     depth = .01
     clearZ = 0.25
     offset = 0.1
-    steps = 5
+    steps = 6
+    overlap = 0.15
+    thickness = 1.6*constants.MM
 
     machine = set_machine('k2cnc')
     machine.max_rpm = 15000
     machine.min_rpm = 15000
     machine.set_material('mdf')
-    machine.set_tool('engrave-0.1-30')
     machine.set_file('ngc/pcb/pcb.gcode')
+    machine.set_tool('engrave-0.1-30')
+    machine.set_speed(5)
 
     b = gerber.load_layer('/tmp/pcb/Gerber_PCB Test 1/Gerber_BottomLayer.GBL')
     ctx = GerberLinesetContext()
     geom = ctx.render_layer(b)
 
     minx, miny, maxx, maxy = geom.bounds
-    rect_stock(2*offset+maxx-minx, 2*offset+maxy-miny, 1.54*constants.MM)
-
-    board = Polygon([
-        (minx-offset, miny-offset),
-        (minx-offset, maxy+offset),
-        (maxx+offset, maxy+offset),
-        (maxx+offset, miny-offset)
-    ])
-    rest = board.difference(geom)
-
-    with open('test.svg', 'w') as f:
-        f.write(rest._repr_svg_())
-
-    with open('test2.svg', 'w') as f:
-        f.write(geom._repr_svg_())
-
-    with open('test3.svg', 'w') as f:
-        bgeom = geom.buffer(machine.tool.diameter_at_depth(depth)*2)
-        f.write(bgeom._repr_svg_())
+    width = 2*offset + maxx-minx
+    height = 2*offset + maxy - miny
+    rect_stock(width, height, thickness, origin=(0, -thickness, 0))
+    effective_rad = machine.tool.diameter_at_depth(depth)/2.0
+    print "Effective rad:", effective_rad
+    print minx, miny, maxx, maxy
+    print width, height
 
     for step in range(1,steps+1):
-        bgeom = geom.buffer(machine.tool.diameter_at_depth(depth)/2*step)
+        bgeom = geom.buffer(effective_rad*step*(1-overlap))
 
         with open('test{}.svg'.format(step), 'w') as f:
             f.write(bgeom._repr_svg_())
@@ -202,9 +221,9 @@ if __name__ == '__main__':
             bgeom = [bgeom]
 
         for el in bgeom:
-            cut_coords(offset, el.exterior)
+            cut_coords(el.exterior)
             for i in el.interiors:
-                cut_coords(offset, i)
+                cut_coords(i)
 
         machine.goto(z=clearZ)
 
