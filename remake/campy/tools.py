@@ -52,8 +52,14 @@ class Tool(object):
         diams = [1., .5, .25, .125]
 
         if base_feedrate in ['high', 'low', 'average']:
-            diam = [x for x in diams if x <= self.effective_diameter][0]
-            diami = diams.index(diam)
+            diams = [x for x in diams if x <= self.effective_diameter]
+            if diams:
+                diam = diams[0]
+                diami = diams.index(diam)
+            else:
+                print "Warning: diameter too small to effectively calculate feed rates"
+                diami = 0
+
             print "diami =", diami, "material=", material
 
             if self.tool_material == 'hss':

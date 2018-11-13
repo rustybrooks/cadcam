@@ -301,6 +301,7 @@ tools['probe'].feeds['probe'] = 1
 tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 
+tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
 
 # fpt is for diameter of 1/8 1/4 1/2 1
 materials = {

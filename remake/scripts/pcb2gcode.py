@@ -173,6 +173,54 @@ class GerberLinesetContext(render.GerberContext):
         raise Exception("Missing render")
 
 
+class GerberDrillLinesetContext(render.GerberContext):
+    def __init__(self, units='inch'):
+        super(GerberDrillLinesetContext, self).__init__(units=units)
+
+        self.holes = []
+
+    def render_layer(self, layer):
+        for prim in layer.primitives:
+            self.render(prim)
+
+        return self.holes
+
+    def _render_line(self, line, color):
+        raise Exception("Missing render")
+
+    def _render_arc(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_region(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_circle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_rectangle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_obround(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_polygon(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_drill(self, primitive, color):
+        self.holes.append(
+            (primitive.position, primitive.radius)
+        )
+
+    def _render_slot(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_amgroup(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_test_record(self, primitive, color):
+        raise Exception("Missing render")
+
+
 def cut_coords(c, simplify=0.001):
     machine.goto(z=clearZ)
     coords = c.simplify(simplify).coords
@@ -187,7 +235,7 @@ if __name__ == '__main__':
     depth = .01
     clearZ = 0.25
     offset = 0.1
-    steps = 6
+    steps = 2
     overlap = 0.15
     thickness = 1.6*constants.MM
 
@@ -228,4 +276,30 @@ if __name__ == '__main__':
 
     machine.goto(z=clearZ)
 
+    machine.set_tool('tiny-0.8mm')
+    # machine.set_file('ngc/pcb/pcb2.gcode')
+    b = gerber.load_layer('/tmp/pcb/Gerber_PCB Test 1/Gerber_drill_PTH.DRL')
+    ctx = GerberDrillLinesetContext()
+    holes = ctx.render_layer(b)
+    for h in holes:
+        x, y = h[0]
+        helical_drill(center=(x+offset-minx, y+offset-miny),outer_rad=h[1], z=0, depth=thickness, stepdown=0.1)
+
+    machine.goto(z=clearZ)
+
+    machine.set_tool('1/16in spiral upcut')
+    x1 = 0-machine.tool.diameter/2
+    x2 = width+machine.tool.diameter/2
+    y1 = 0-machine.tool.diameter/2
+    y2 = height+machine.tool.diameter/2
+    for Z in machine.zstep(0, -thickness, thickness/2.0, ):
+        print Z
+        machine.goto(x1, y1)
+        machine.cut(z=Z)
+        machine.cut(x=x1, y=y2)
+        machine.cut(x=x2, y=y2)
+        machine.cut(x=x2, y=y1)
+        machine.cut(x=x1, y=y1)
+
+    machine.goto(z=clearZ)
 

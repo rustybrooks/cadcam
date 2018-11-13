@@ -8,5 +8,6 @@ def frange(start, stop, step, include_end=True):
             yield start
             start -= step
 
-    if include_end and start < stop:
+    print "...", include_end, start, stop, start<stop
+    if include_end and start <= stop:
         yield stop

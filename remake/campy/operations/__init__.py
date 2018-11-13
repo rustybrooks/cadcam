@@ -115,12 +115,17 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
 
     start, end = machine().arc_start_end(x1, y1, rad, 0, 0, clockwise=clockwise)
     machine().goto(x=start[0], y=start[1])
-    machine().goto(z=z1)
 
-    for Z in machine().zstep(z1, z2, stepdown):
-        machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=Z, clockwise=clockwise, cut_to=True)
+    if outer_rad <= R:
+        print "Asked to helical drill, but just drilling", R, outer_rad
+        machine().cut(z=z2)
+    else:
+        machine().goto(z=z1)
+        for Z in machine().zstep(z1, z2, stepdown):
+            print z1, z2, Z
+            machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=Z, clockwise=clockwise, cut_to=True)
 
-    machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=z2, clockwise=clockwise, cut_to=True)
+        machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=z2, clockwise=clockwise, cut_to=True)
 
 
 @operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut')
