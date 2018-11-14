@@ -108,6 +108,7 @@ class Tool(object):
     def diameter_at_depth(self, depth=0):
         return self.effective_diameter
 
+
 class StraightRouterBit(Tool):
     def __init__(self, diameter, tool_material, flutes=None):
         super(StraightRouterBit, self).__init__(effective_diameter=diameter, tool_material=tool_material, flutes=flutes)

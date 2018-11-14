@@ -1,10 +1,7 @@
 import gerber
 from gerber.render import render
 from gerber.primitives import *
-import logging
-import math
 import shapely.ops
-import sys
 import os.path
 
 
@@ -32,35 +29,6 @@ class GerberGeometryContext(render.GerberContext):
         end = line.end
 
         if isinstance(line.aperture, Circle):
-
-            """
-            width = line.aperture.diameter
-            xd = end[0] - start[0]
-            yd = end[1] - start[1]
-            a = math.atan2(yd, xd)
-            b = math.pi - a
-
-            xo = width/2 * math.sin(b)
-            yo = width/2 * math.cos(b)
-
-            poly = Polygon([
-                (start[0] - xo, start[1] + yo),
-                (end[0]   - xo, end[1]   + yo),
-                (end[0]   + xo, start[1] - yo),
-                (start[0] + xo, start[1] - yo),
-            ])
-            # print poly.area
-            if poly.area == 0:
-                pass
-                #print "APERT", width, start, end, xd, yd, xo, yo
-                #print poly
-            elif not poly.is_valid:
-                print "APERT", width, start, end, xd, yd, xo, yo
-                print poly
-            else:
-                self.polys.append(poly)
-            """
-
             poly = LineString([start, end]).buffer(
                 line.aperture.diameter/2.,
                 resolution=16,
@@ -139,9 +107,7 @@ class GerberDrillContext(render.GerberContext):
         raise Exception("Missing render")
 
     def _render_drill(self, primitive, color):
-        self.holes.append(
-            (primitive.position, primitive.radius)
-        )
+        self.holes.append([list(primitive.position), primitive.radius])
 
     def _render_slot(self, primitive, color):
         raise Exception("Missing render")
@@ -169,6 +135,8 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     b = gerber.load_layer(gerber_file)
     ctx = GerberGeometryContext()
     geom = ctx.render_layer(b)
+    print "iso", b.bounds
+    print dir(b)
 
     minx, miny, maxx, maxy = geom.bounds
 
@@ -183,7 +151,8 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     geoms = []
     for step in range(1, stepovers+1):
         bgeom = geom.buffer(tool_radius*step*(1-stepover))
-        if isinstance(bgeom, Polygon):
+        print bgeom.__class__
+        if isinstance(bgeom, shapely.geometry.polygon.Polygon):
             bgeom = [bgeom]
 
         geoms.append(bgeom)
@@ -206,16 +175,13 @@ def pcb_isolation_mill(
 
     clearz = clearz or 0.25
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
-
-    foo = pcb_isolation_geometry(
+    bounds, geoms = pcb_isolation_geometry(
         gerber_file=gerber_file,
         adjust_zero=adjust_zero,
         stepover=stepover,
         stepovers=stepovers,
         tool_radius=tool_radius,
     )
-    print "foo =", foo
-    bounds, geoms = foo
 
     for g in geoms:
         for p in g:
@@ -230,15 +196,28 @@ def pcb_isolation_mill(
     return [minx, miny, maxx+2*border, maxy+2*border], geoms
 
 
-@operation(required=['drill_file', 'depth'], operation_feedrate='drill')
+@operation(required=['drill_file', 'depth', 'bounds'], operation_feedrate='drill')
 def pcb_drill(
-    drill_file, depth=None, xoff=0, yoff=0, flipx=False, clearz=None, auto_clear=True
+    drill_file, depth=None, bounds=None, flipx=False, clearz=None, auto_clear=True
 ):
     clearz = clearz or 0.25
 
+    minx, miny, maxx, maxy = bounds
+
     b = gerber.load_layer(drill_file)
+    print "drill", b.bounds
     ctx = GerberDrillContext()
     holes = ctx.render_layer(b)
+    print holes
+    if flipx:
+        xoff = maxx + minx
+        for h in holes:
+            h[0][0] *= -1
+    else:
+        xoff = minx
+
+    yoff = miny
+
     for h in holes:
         x, y = h[0]
         helical_drill(center=(x+xoff, y+yoff), outer_rad=h[1], z=0, depth=depth, stepdown="10%")

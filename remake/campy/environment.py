@@ -84,6 +84,7 @@ class Environment(object):
         self.tool = copy.copy(this_tool)
         self.tool.rpm_range = rpm_range or [self.min_rpm, self.max_rpm]
         self.tool.calculate_feedrates(material=self.material, machine=self, base_feedrate=base_feedrate)
+        self.tool.comment(self)
 
     def set_material(self, material):
         if isinstance(material, (str, unicode)):
@@ -298,8 +299,8 @@ tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='
 tools['probe'] = Tool('hss', 1, 1)
 tools['probe'].feeds['probe'] = 1
 
-tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
-tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/.8, tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 
 tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
 
@@ -335,7 +336,7 @@ materials = {
     # FIXME - these numbers are pure guesses
     'fr4-1oz': Material(
         name='FR4 PCB, 1oz copper',
-        sfm_hss=[600, 1000],
+        sfm_hss=[250, 800],
         sfm_carbide=[600, 1000],
         fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
         fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],

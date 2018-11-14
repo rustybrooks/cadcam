@@ -119,7 +119,7 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
     machine().goto(x=start[0], y=start[1])
 
     if outer_rad <= R:
-        print "Asked to helical drill, but just drilling", R, outer_rad
+        # print "Asked to helical drill, but just drilling", R, outer_rad
         machine().cut(z=z2)
     else:
         machine().goto(z=z1)

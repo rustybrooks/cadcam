@@ -78,7 +78,7 @@ if __name__ == '__main__':
         pcb_drill(
             drill_file=drill_file,
             depth=options.thickness,
-            xoff=options.border, yoff=options.border, flipx=flipx
+            bounds=bounds, flipx=flipx
         )
 
     machine.set_tool('1/16in spiral upcut')
