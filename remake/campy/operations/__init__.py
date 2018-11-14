@@ -124,7 +124,6 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
     else:
         machine().goto(z=z1)
         for Z in machine().zstep(z1, z2, stepdown):
-            print z1, z2, Z
             machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=Z, clockwise=clockwise, cut_to=True)
 
         machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=z2, clockwise=clockwise, cut_to=True)

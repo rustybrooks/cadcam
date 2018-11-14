@@ -82,6 +82,5 @@ if __name__ == '__main__':
         )
 
     machine.set_tool('1/16in spiral upcut')
-    print "...... bounds", bounds
     pcb_cutout(bounds=bounds, depth=options.thickness)
 

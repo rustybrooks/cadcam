@@ -135,8 +135,8 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     b = gerber.load_layer(gerber_file)
     ctx = GerberGeometryContext()
     geom = ctx.render_layer(b)
-    print "iso", b.bounds
-    print dir(b)
+#    print "iso", b.bounds
+#     print dir(b)
 
     minx, miny, maxx, maxy = geom.bounds
 
@@ -151,7 +151,6 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     geoms = []
     for step in range(1, stepovers+1):
         bgeom = geom.buffer(tool_radius*step*(1-stepover))
-        print bgeom.__class__
         if isinstance(bgeom, shapely.geometry.polygon.Polygon):
             bgeom = [bgeom]
 
@@ -205,10 +204,10 @@ def pcb_drill(
     minx, miny, maxx, maxy = bounds
 
     b = gerber.load_layer(drill_file)
-    print "drill", b.bounds
+    # print "drill", b.bounds
     ctx = GerberDrillContext()
     holes = ctx.render_layer(b)
-    print holes
+    # print holes
     if flipx:
         xoff = maxx + minx
         for h in holes:
@@ -240,7 +239,6 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", tabs=None, clearz=None, 
     y1 = 0-machine().tool.diameter/2
     y2 = height+machine().tool.diameter/2
     for Z in machine().zstep(0, -depth, stepdown):
-        print Z
         machine().goto(x1, y1)
         machine().cut(z=Z)
         machine().cut(x=x1, y=y2)

@@ -49,19 +49,9 @@ class Tool(object):
         def _pair(sfm, fpt):
             return _ipm(_rpm(sfm), fpt), _rpm(sfm)
 
-        diams = [1., .5, .25, .125]
+        diams = [1., 1/2., 1/4., 1/8., 1/16., 1/32.]
 
         if base_feedrate in ['high', 'low', 'average']:
-            diams = [x for x in diams if x <= self.effective_diameter]
-            if diams:
-                diam = diams[0]
-                diami = diams.index(diam)
-            else:
-                print "Warning: diameter too small to effectively calculate feed rates"
-                diami = 0
-
-            print "diami =", diami, "material=", material
-
             if self.tool_material == 'hss':
                 fpt_list = material.fpt_hss
                 sfm_list = material.sfm_hss
@@ -71,9 +61,15 @@ class Tool(object):
             else:
                 raise Exception("Unsupported tool material: %r", self.tool_material)
 
+            data = zip(diams, fpt_list)
+            fpt_low, fpt_high = fpt_list[-1]
+            for el in reversed(data):
+                fpt_low, fpt_high = el[1]
+                if el[0] >= self.effective_diameter:
+                    break
+
             rpm_low = max(_rpm(sfm_list[0]), machine.min_rpm)
             rpm_high = min(_rpm(sfm_list[1]), machine.max_rpm)
-            fpt_low, fpt_high = fpt_list[diami]
 
             feedrate_low = _ipm(rpm_low, fpt_low)
             feedrate_high = _ipm(rpm_high, fpt_high)

@@ -305,6 +305,7 @@ tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_dia
 tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
 
 # fpt is for diameter of 1/8 1/4 1/2 1
+# http://www.micro-machine-shop.com/SFM_Formulae_Chart_2.pdf
 materials = {
     'none': Material(
         name='none', sfm_hss=[0, 0], sfm_carbide=[0, 0],
@@ -312,41 +313,44 @@ materials = {
     ),
     'aluminum': Material(
         name='aluminum', sfm_hss=[250, 800], sfm_carbide=[600, 1200],
-        fpt_hss=[], fpt_carbide=[.0010, .0020, .0040, .0080],
+        fpt_hss=[], fpt_carbide=[.0080, .0040, .0020, .0010],
     ),
     'steel': Material(
         name='steel', sfm_hss=[], sfm_carbide=[100, 350],
-        fpt_hss=[], fpt_carbide=[.0010, .0020, .0030, .0050],
+        fpt_hss=[],
+        fpt_carbide=[.0050, .0030, .0020, .0010],
     ),
     'hardwood': Material(
         name='hardwood', sfm_hss=[600, 1000], sfm_carbide=[600, 1000],
-        fpt_hss=[], fpt_carbide=[(.003, .005), (.009, .011), (.019, .021), (.019, .021)],
+        fpt_hss=[],
+        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
     ),
     'softwood': Material(
         name='softwood', sfm_hss=[600, 1000], sfm_carbide=[600, 1000],
-        fpt_hss=[], fpt_carbide=[(.004, .006), (.011, .013), (.021, .023), (.021, .023)],
+        fpt_hss=[],
+        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
     ),
     'mdf': Material(
         name='mdf',
         sfm_hss=[600, 1000],
         sfm_carbide=[600, 1000],
-        fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)], # stolen from carbide settings, no idea where carbide came from
-        fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
+        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
+        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007), ],
     ),
     # FIXME - these numbers are pure guesses
     'fr4-1oz': Material(
         name='FR4 PCB, 1oz copper',
         sfm_hss=[250, 800],
         sfm_carbide=[600, 1000],
-        fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
-        fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
+        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007), (.002, .004), (.001, .002)],
+        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
     ),
     'foam': Material(
         name='foam',
         sfm_hss=[100, 5000],
         sfm_carbide=[100, 5000],
-        fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)], # stolen from carbide settings, no idea where carbide came from
-        fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
+        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
+        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
     ),
     # 'soft-plastic': Material(),
     # 'hard-plastic': Material(),
