@@ -55,11 +55,13 @@ def operation(required=None, operation_feedrate=None):
                 pop_speed = True
                 machine().push_speed(operation_feedrate)
 
-            fn(*args, **kwargs)
+            retval = fn(*args, **kwargs)
 
             machine().pop_level()
             if pop_speed:
                 machine().pop_speed()
+
+            return retval
 
         return wrapper
 
@@ -92,12 +94,12 @@ def zprobe(
 # otherwise it'll be making a groove with a width of the diameter of the bit
 # Used to be HelicalDrill
 @operation(required=['center', 'z', 'outer_rad', 'depth', 'stepdown'], operation_feedrate='plunge')
-def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, _comment=None):
+def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None, _comment=None):
     R = machine().tool.diameter / 2.0
     x1, y1 = center
     z1 = z
     z2 = z1 - depth
-    clearZ = z1 + 0.25
+    clearz = clearz or (z1 + 0.25)
 
     if depth == 0:
         return
@@ -106,7 +108,7 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
         machine().comment("Cutting HelicalDrill at %r, outter_rad=%.3f, depth=%.3f" % (list(center), outer_rad, depth))
 
     if outer_rad <= R:
-        machine().goto(z=clearZ)
+        machine().goto(z=clearz)
         machine().goto(x1, y1)
 
     # machine().write("G17")  # plane selection
@@ -130,12 +132,12 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
 
 @operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut')
 def hsm_circle_pocket(
-    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, _comment='HSM Circle Pocket', climb=True,
+    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, _comment='HSM Circle Pocket', climb=True,
 ):
     depth = depth or 0
     xc, yc = center
     zc = z
-    clearZ = zc + 0.25
+    clearz = clearz or (zc + 0.25)
 
     R = machine().tool.diameter / 2.
 
@@ -150,7 +152,7 @@ def hsm_circle_pocket(
     )
 
     for Z in machine().zstep(zc, zc - depth, stepdown):
-        machine().goto(z=clearZ)
+        machine().goto(z=clearz)
         machine().goto(*center)
         machine().goto(z=Z)
         for rad in frange(startrad, outer_rad, stepover):
@@ -163,7 +165,7 @@ def hsm_circle_pocket(
 # type is x (movement parallel to x axis) or y (y axis)
 # probably needs to stop short of boundaries and then trim
 @operation(required=['stepdown', 'stepover'])
-def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough_margin=0, auto_clear=True, **kwargs):
+def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough_margin=0, clearz=None, auto_clear=True, **kwargs):
     R = machine().tool.diameter / 2.
 
     x1p, y1p = p1
@@ -186,12 +188,12 @@ def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough
     # FIXME reset after?
     # machine().set_speed(machine().tool.rough_speed)
 
-    clearZ = z + .25
+    clearz = clearz or (z + .25)
 
     for Z in machine().zstep(0, -1 * depth, stepdown=stepdown):
         # Don't actually need to go very far up
         if auto_clear:
-            machine().goto(z=clearZ)
+            machine().goto(z=clearz)
 
         machine().goto(x=x1, y=y1)
 
@@ -220,11 +222,11 @@ def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough
                 plus = not plus
 
     if auto_clear:
-        machine().goto(z=clearZ)
+        machine().goto(z=clearz)
 
 
 @operation(required=['stepdown'])
-def rect_pocket_corner_relief(p1, p2, z, depth, stepdown=None, auto_clear=True, **kwargs):
+def rect_pocket_corner_relief(p1, p2, z, depth, stepdown=None, auto_clear=True, clearz=None, **kwargs):
     px1, py1 = p1
     px2, py2 = p2
     r = 1.1 * machine().tool.diameter / 2.
@@ -237,7 +239,7 @@ def rect_pocket_corner_relief(p1, p2, z, depth, stepdown=None, auto_clear=True, 
     px2 -= r
     py2 -= r
 
-    clearZ = z + 0.25
+    clearz = clearz or (z + 0.25)
 
     z1 = z
     z2 = z - depth
@@ -270,6 +272,6 @@ def rect_pocket_corner_relief(p1, p2, z, depth, stepdown=None, auto_clear=True, 
         machine().goto(x=px2, y=py1)
 
     if auto_clear:
-        machine().goto(z=clearZ)
+        machine().goto(z=clearz)
 
 

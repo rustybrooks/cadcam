@@ -1,4 +1,4 @@
-gl.log log. local time Tue Nov 13 17:44:51 2018
+gl.log log. local time Tue Nov 13 21:23:39 2018
 
 ../../../lib/mygl/log.cpp:29 starting GLFW 3.1.1 Cocoa NSGL chdir menubar retina
 ../../../lib/mygl/log.cpp:56 Creating window 1280x1024

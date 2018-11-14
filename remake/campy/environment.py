@@ -332,6 +332,14 @@ materials = {
         fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)], # stolen from carbide settings, no idea where carbide came from
         fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
     ),
+    # FIXME - these numbers are pure guesses
+    'fr4-1oz': Material(
+        name='FR4 PCB, 1oz copper',
+        sfm_hss=[600, 1000],
+        sfm_carbide=[600, 1000],
+        fpt_hss=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
+        fpt_carbide=[(.004, .007), (.013, .016), (.025, .027), (.025, .027)],
+    ),
     'foam': Material(
         name='foam',
         sfm_hss=[100, 5000],
