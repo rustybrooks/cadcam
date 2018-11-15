@@ -2,14 +2,13 @@
 
 from descartes import PolygonPatch
 import math
-#from matplotlib.collections import PatchCollection
-#from matplotlib import pyplot
 import ocl
 import shapely.affinity
 from shapely.coords import CoordinateSequence
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing
 import svg
 import stl
+import textwrap
 
 
 def make_vector(p1, p2):
@@ -602,7 +601,55 @@ def graph_poly(all_poly, fig=None):
     if dograph:
         pyplot.show()
 
+
 def graph_lines():
     pass
 
+
+def shapely_to_svg(geom, svg_file):
+    import re
+
+    with open(svg_file, 'w') as f:
+        geom = shapely.affinity.scale(geom, 1000, 1000)
+        svg = geom._repr_svg_()
+        svg = re.sub(r'width="100.0"', 'width="500.0"', svg)
+        svg = re.sub(r'height="100.0"', 'height="500.0"', svg)
+        f.write(svg)
+
+    """
+    with open(svg_file, 'w') as f:
+        # specify margin in coordinate units
+        margin = 10
+
+        bbox = list(geom.bounds)
+        print bbox
+        bbox[0] -= margin
+        bbox[1] -= margin
+        bbox[2] += margin
+        bbox[3] += margin
+
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+
+        props = {
+            'version': '1.1',
+            'baseProfile': 'full',
+            'width': '{width:.0f}px'.format(width=width * scale),
+            'height': '{height:.0f}px'.format(height=height * scale),
+            'viewBox': '%.1f,%.1f,%.1f,%.1f' % (bbox[0], bbox[1], width, height),
+            'xmlns': 'http://www.w3.org/2000/svg',
+            'xmlns:ev': 'http://www.w3.org/2001/xml-events',
+            'xmlns:xlink': 'http://www.w3.org/1999/xlink'
+        }
+
+        f.write(textwrap.dedent(r'''
+            <?xml version="1.0" encoding="utf-8" ?>
+            <svg {attrs:s}>
+            {data:s}
+            </svg>
+        ''').format(
+            attrs=' '.join(['{key:s}="{val:s}"'.format(key=key, val=props[key]) for key in props]),
+            data=geom.svg()
+        ).strip())
+    """
 

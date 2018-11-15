@@ -7,7 +7,7 @@ import os.path
 
 import shapely.affinity
 import shapely.ops
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon, MultiPolygon, Point, MultiPoint
 
 from . import operation, machine, helical_drill
 
@@ -121,7 +121,7 @@ class GerberDrillContext(render.GerberContext):
 
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
 @operation(required=['gerber_file', 'tool_radius'])
-def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', stepovers=1, tool_radius=None):
+def pcb_isolation_geometry(gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, tool_radius=None):
     flipx = False
 
     ext = os.path.splitext(gerber_file)[-1].lower()
@@ -132,7 +132,11 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     else:
         raise Exception("only gerber top and bottom copper layer supported: {}".format(gerber_file))
 
-    b = gerber.load_layer(gerber_file)
+    if gerber_file is not None:
+        b = gerber.load_layer_data(gerber_data, gerber_file)
+    else:
+        b = gerber.load_layer(gerber_file)
+
     ctx = GerberGeometryContext()
     geom = ctx.render_layer(b)
 #    print "iso", b.bounds
@@ -151,7 +155,7 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
     geoms = []
     for step in range(1, stepovers+1):
         bgeom = geom.buffer(tool_radius*step*(1-stepover))
-        if isinstance(bgeom, shapely.geometry.polygon.Polygon):
+        if isinstance(bgeom, shapely.geometry.Polygon):
             bgeom = [bgeom]
 
         geoms.append(bgeom)
@@ -161,7 +165,7 @@ def pcb_isolation_geometry(gerber_file=None, adjust_zero=True, stepover='20%', s
 
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
-    gerber_file, adjust_zero=True, stepover='20%', stepovers=1, depth=None, clearz=None, border=0.1, auto_clear=True
+    gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, depth=None, clearz=None, border=0.1, auto_clear=True
 ):
     def _cut_coords(c, simplify=0.001):
         machine().goto(z=clearz)
@@ -176,6 +180,7 @@ def pcb_isolation_mill(
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
     bounds, geoms = pcb_isolation_geometry(
         gerber_file=gerber_file,
+        gerber_data=gerber_data,
         adjust_zero=adjust_zero,
         stepover=stepover,
         stepovers=stepovers,
@@ -197,17 +202,20 @@ def pcb_isolation_mill(
 
 @operation(required=['drill_file', 'depth', 'bounds'], operation_feedrate='drill')
 def pcb_drill(
-    drill_file, depth=None, bounds=None, flipx=False, clearz=None, auto_clear=True
+    drill_file=None, drill_data=None, depth=None, bounds=None, flipx=False, flipy=False, clearz=None, auto_clear=True
 ):
     clearz = clearz or 0.25
 
     minx, miny, maxx, maxy = bounds
+    geoms = []
 
-    b = gerber.load_layer(drill_file)
-    # print "drill", b.bounds
+    if drill_data is not None:
+        b = gerber.load_layer_data(drill_data, drill_file)
+    else:
+        b = gerber.load_layer(drill_file)
+
     ctx = GerberDrillContext()
     holes = ctx.render_layer(b)
-    # print holes
     if flipx:
         xoff = maxx + minx
         for h in holes:
@@ -218,11 +226,15 @@ def pcb_drill(
     yoff = miny
 
     for h in holes:
+        geoms.append(Point(h[0]).buffer(h[1], resolution=16))
         x, y = h[0]
+        print x, y
         helical_drill(center=(x+xoff, y+yoff), outer_rad=h[1], z=0, depth=depth, stepdown="10%")
 
     if auto_clear:
         machine().goto(z=clearz)
+
+    return MultiPolygon(geoms)
 
 
 # FIXME - tabs not supported, add if I ever need

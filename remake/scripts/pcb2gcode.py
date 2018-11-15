@@ -4,11 +4,24 @@ import logging
 import optparse
 from os import sys, path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+import zipfile
 
 from campy import *
 
 
 logging.basicConfig()
+
+
+def identify_file(fname):
+    ext = os.path.splitext(fname)[-1].lower()
+    if ext == ".gbl":
+        return 'bottom-copper'
+    elif ext == '.gtl':
+        return 'top-copper'
+    elif ext == '.drl':
+        return 'drill'
+    else:
+        return None
 
 
 if __name__ == '__main__':
@@ -20,24 +33,29 @@ if __name__ == '__main__':
     parser.add_option('-t', '--thickness', help="Thickness of PCB (for drill/cutout)", type=float, default=1.6*constants.MM)
     options, args = parser.parse_args()
 
-    drill_file = None
-    gerber_top = None
-    gerber_bottom = None
-    flipx = False
-    for fname in args:
-        ext = os.path.splitext(fname)[-1].lower()
-        if ext == ".gbl":
-            gerber_bottom = fname
-            flipx = True
-        elif ext == '.gtl':
-            gerber_top = fname
-        elif ext == '.drl':
-            drill_file = fname
-        else:
-            raise Exception("only drill files and gerber top and bottom copper layer supported: {}".format(gerber_file))
+    layers = {
 
-    if not gerber_bottom and not gerber_top:
-        raise Exception("Must supply at least one gerber")
+    }
+
+    if os.path.isdir(args[0]):
+        for fname in os.listdir(args[0]):
+            ftype = identify_file(fname)
+            if ftype is None:
+                continue
+
+            layers[ftype] = (fname, open(fname).read())
+
+    elif os.path.splitext(args[0])[-1].lower() == '.zip':
+        z = zipfile.ZipFile(args[0])
+        for i in z.infolist():
+            ftype = identify_file(i.filename)
+            if ftype is None:
+                continue
+
+            layers[ftype] = (i.filename, z.read(i.filename))
+    else:
+        print("Input not supported: supply either a directory or zip file containing gerber files")
+        sys.exit(1)
 
     machine = set_machine('k2cnc')
     machine.max_rpm = 15000
@@ -47,40 +65,51 @@ if __name__ == '__main__':
 
     machine.set_tool(options.vbit)
     bounds=None
-    if gerber_top:
-        bounds, geoms = pcb_isolation_mill(
-            gerber_file=gerber_top,
+    if 'top-copper' in layers:
+        fname, fdata = layers['top-copper']
+        print fdata
+        bounds, top_geoms = pcb_isolation_mill(
+            gerber_data=fdata,
+            gerber_file=fname,
             stepovers=options.stepovers,
             depth=options.depth,
             border=options.border,
         )
 
-        minx, miny, maxx, maxy = bounds
-        width = maxx - minx
-        height = maxy - miny
-        rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
+        # minx, miny, maxx, maxy = bounds
+        # width = maxx - minx
+        # height = maxy - miny
+        # rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
 
-    if gerber_bottom:
-        bounds, geoms = pcb_isolation_mill(
-            gerber_file=gerber_bottom,
+    if 'bottom-copper' in layers:
+        fname, fdata = layers['bottom-copper']
+        bounds, bottom_geoms = pcb_isolation_mill(
+            gerber_data=fdata,
+            gerber_file=fname,
             stepovers=options.stepovers,
             depth=options.depth,
             border=options.border,
         )
 
-        minx, miny, maxx, maxy = bounds
-        width = maxx - minx
-        height = maxy - miny
-        rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
+        # minx, miny, maxx, maxy = bounds
+        # width = maxx - minx
+        # height = maxy - miny
+        # rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
 
-    if drill_file:
+    if 'drill' in layers:
         machine.set_tool('tiny-0.8mm')
-        pcb_drill(
-            drill_file=drill_file,
+        fname, fdata = layers['drill']
+        drill_geoms = pcb_drill(
+            drill_data=fdata,
+            drill_file=fname,
             depth=options.thickness,
-            bounds=bounds, flipx=flipx
+            bounds=bounds,
+            # flipx=flipx
+            flipx=False,
         )
 
     machine.set_tool('1/16in spiral upcut')
     pcb_cutout(bounds=bounds, depth=options.thickness)
 
+    #geom = shapely.ops.unary_union(bottom_geoms + [drill_geoms])
+    #geometry.shapely_to_svg(geom, 'drill.svg')
