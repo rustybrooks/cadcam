@@ -47,6 +47,7 @@ unit_convert = {
         '%' :  1 / 100.0   # 1 percent
         }
 
+
 class Transformable:
     '''Abstract class for objects that can be geometrically drawn & transformed'''
     def __init__(self, elt=None):
@@ -695,6 +696,7 @@ class Line(Transformable):
         #self.P1 *= ratio
         #self.P2 *= ratio
         self.segment.scale(ratio)
+
 
 # overwrite JSONEncoder for svg classes which have defined a .json() method
 class JSONEncoder(json.JSONEncoder):

@@ -10,3 +10,4 @@ gevent
 pcb-tools
 meta
 ocl
+svgwrite

@@ -64,11 +64,14 @@ if __name__ == '__main__':
     machine.set_file('ngc/pcb/pcb.gcode')
 
     machine.set_tool(options.vbit)
-    bounds=None
+
+    bottom_trace_geom = None
+    top_trace_geom = None
+    drill_geom = None
+
     if 'top-copper' in layers:
         fname, fdata = layers['top-copper']
-        print fdata
-        bounds, top_geoms = pcb_isolation_mill(
+        top_trace_geom, top_iso_geoms = pcb_isolation_mill(
             gerber_data=fdata,
             gerber_file=fname,
             stepovers=options.stepovers,
@@ -83,7 +86,7 @@ if __name__ == '__main__':
 
     if 'bottom-copper' in layers:
         fname, fdata = layers['bottom-copper']
-        bounds, bottom_geoms = pcb_isolation_mill(
+        bottom_trace_geom, bottom_iso_geoms = pcb_isolation_mill(
             gerber_data=fdata,
             gerber_file=fname,
             stepovers=options.stepovers,
@@ -99,17 +102,17 @@ if __name__ == '__main__':
     if 'drill' in layers:
         machine.set_tool('tiny-0.8mm')
         fname, fdata = layers['drill']
-        drill_geoms = pcb_drill(
+        drill_geom = pcb_drill(
             drill_data=fdata,
             drill_file=fname,
             depth=options.thickness,
-            bounds=bounds,
             # flipx=flipx
             flipx=False,
         )
 
-    machine.set_tool('1/16in spiral upcut')
-    pcb_cutout(bounds=bounds, depth=options.thickness)
 
-    #geom = shapely.ops.unary_union(bottom_geoms + [drill_geoms])
-    #geometry.shapely_to_svg(geom, 'drill.svg')
+    machine.set_tool('1/16in spiral upcut')
+    # pcb_cutout(bounds=bounds, depth=options.thickness)
+
+    geoms = [x for x in [bottom_trace_geom, top_trace_geom, drill_geom] if x]
+    geometry.shapely_to_svg('drill.svg', geoms)

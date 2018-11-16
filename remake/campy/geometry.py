@@ -5,10 +5,11 @@ import math
 import ocl
 import shapely.affinity
 from shapely.coords import CoordinateSequence
-from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing
+from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing, MultiPolygon
 import svg
 import stl
 import textwrap
+import svgwrite
 
 
 def make_vector(p1, p2):
@@ -606,50 +607,43 @@ def graph_lines():
     pass
 
 
-def shapely_to_svg(geom, svg_file):
-    import re
+def shapely_to_svg(svg_file, geoms, scale_to=500):
+    def _drawpoly(poly):
+        dwg.add(dwg.polygon(
+            poly.exterior.coords,
+            stroke=svgwrite.rgb(10, 10, 16, '%'), stroke_width=0.005*scale,
+            fill='red',
+        ))
 
-    with open(svg_file, 'w') as f:
-        geom = shapely.affinity.scale(geom, 1000, 1000)
-        svg = geom._repr_svg_()
-        svg = re.sub(r'width="100.0"', 'width="500.0"', svg)
-        svg = re.sub(r'height="100.0"', 'height="500.0"', svg)
-        f.write(svg)
+    if not isinstance(geoms, (tuple, list)):
+        geoms = [geoms]
 
-    """
-    with open(svg_file, 'w') as f:
-        # specify margin in coordinate units
-        margin = 10
+    dwg = svgwrite.Drawing(svg_file, profile='tiny', width=100, height=100)
 
-        bbox = list(geom.bounds)
-        print bbox
-        bbox[0] -= margin
-        bbox[1] -= margin
-        bbox[2] += margin
-        bbox[3] += margin
+    minx, miny, maxx, maxy = geoms[0].bounds
+    for g in geoms[1:]:
+        tminx, tminy, tmaxx, tmaxy = geoms[0].bounds
+        if tminx < minx: minx = tminx
+        if tminy < miny: miny = tminy
+        if tmaxx > maxy: minx = tminx
+        if tmaxy > maxy: miny = tminy
 
-        width = bbox[2] - bbox[0]
-        height = bbox[3] - bbox[1]
+    width = maxx - minx
+    height = maxy - miny
+    scale = float(scale_to/max(width, height))
 
-        props = {
-            'version': '1.1',
-            'baseProfile': 'full',
-            'width': '{width:.0f}px'.format(width=width * scale),
-            'height': '{height:.0f}px'.format(height=height * scale),
-            'viewBox': '%.1f,%.1f,%.1f,%.1f' % (bbox[0], bbox[1], width, height),
-            'xmlns': 'http://www.w3.org/2000/svg',
-            'xmlns:ev': 'http://www.w3.org/2001/xml-events',
-            'xmlns:xlink': 'http://www.w3.org/1999/xlink'
-        }
+    for g in geoms:
+        minx, miny, maxx, maxy = g.bounds
+        g = shapely.affinity.scale(g, scale, scale, origin=(0, 0))
+        if isinstance(g, Polygon):
+            _drawpoly(g)
+        elif isinstance(g, MultiPolygon):
+            for g2 in g:
+                _drawpoly(g2)
 
-        f.write(textwrap.dedent(r'''
-            <?xml version="1.0" encoding="utf-8" ?>
-            <svg {attrs:s}>
-            {data:s}
-            </svg>
-        ''').format(
-            attrs=' '.join(['{key:s}="{val:s}"'.format(key=key, val=props[key]) for key in props]),
-            data=geom.svg()
-        ).strip())
-    """
+#    dwg.add(dwg.line((0, 0), (100, 0), stroke=svgwrite.rgb(10, 10, 16, '%')))
+#    dwg.add(dwg.text('Test', insert=(0, 10.2), fill='red'))
+
+
+    dwg.save()
 
