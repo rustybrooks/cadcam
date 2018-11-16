@@ -54,6 +54,7 @@ class GerberGeometryContext(OurRenderContext):
         super(GerberGeometryContext, self).__init__(units=units)
 
         self.polys = []
+        self.remove_polys = []
 
     def render_layer(self, layer):
         for prim in layer.primitives:
@@ -79,6 +80,81 @@ class GerberGeometryContext(OurRenderContext):
             print "OTHER"
             print [x for x in line.vertices]
 
+    def _render_rectangle(self, primitive, color):
+        x1, y1 = primitive.lower_left
+        x2 = x1 + primitive.width
+        y2 = y1 + primitive.height
+        box = shapely.geometry.box(x1, y1, x2, y2, ccw=False)
+
+        center = primitive.position
+        if primitive.hole_diameter > 0:
+            circle = shapely.geometry.Point(*center).buffer(distance=primitive.hole_diameter)
+            if primitive.level_polarity == 'dark':
+                box = box.difference(circle)
+            else:
+                raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
+
+        if primitive.hole_width > 0 and primitive.hole_height > 0:
+            cx, cy = center
+            w = primitive.hole_width
+            h = primitive.hole_height
+            box2 = shapely.geometry.box((cx-w)/2., (cy-h)/2., (cx+w)/2., (cy+h)/2)
+            if primitive.level_polarity == 'dark':
+                box = box.difference(box2)
+            else:
+                raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
+
+        self.polys.append(box)
+
+    def _render_circle(self, primitive, color):
+        center = primitive.position
+        if not self.invert and primitive.level_polarity == 'dark':
+            circle = shapely.geometry.Point(*center).buffer(distance=primitive.radius)
+        else:
+            raise Exception("render_circle doesn't know what to do with polarity!=dark")
+
+        if hasattr(primitive, 'hole_diameter') and primitive.hole_diameter is not None and primitive.hole_diameter > 0:
+            hole = shapely.geometry.Point(*center).buffer(distance=primitive.hole_diameter)
+            circle = circle.difference(hole)
+
+        if (hasattr(primitive, 'hole_width') and hasattr(primitive, 'hole_height')
+            and primitive.hole_width is not None and primitive.hole_height is not None
+            and primitive.hole_width > 0 and primitive.hole_height > 0):
+
+            if primitive.hole_width > 0 and primitive.hole_height > 0:
+                cx, cy = center
+                w = primitive.hole_width
+                h = primitive.hole_height
+                box2 = shapely.geometry.box((cx - w) / 2., (cy - h) / 2., (cx + w) / 2., (cy + h) / 2)
+                if primitive.level_polarity == 'dark':
+                    circle = circle.difference(box2)
+
+        self.polys.append(circle)
+
+    def _render_region(self, primitive, color):
+        pass
+        # p = shapely.geometry.MultiPolygon()
+        # for prim in primitive.primitives:
+        #     if isinstance(prim, Line):
+        #                 mask.ctx.line_to(*self.scale_point(prim.end))
+        #             else:
+        #                 center = self.scale_point(prim.center)
+        #                 radius = self.scale[0] * prim.radius
+        #                 angle1 = prim.start_angle
+        #                 angle2 = prim.end_angle
+        #                 if prim.direction == 'counterclockwise':
+        #                     mask.ctx.arc(center[0], center[1], radius,
+        #                                  angle1, angle2)
+        #                 else:
+        #                     mask.ctx.arc_negative(center[0], center[1], radius,
+        #                                           angle1, angle2)
+        #         mask.ctx.fill()
+        #         self.ctx.mask_surface(mask.surface, self.origin_in_pixels[0])
+
+        if not self.invert and primitive.level_polarity == 'dark':
+            pass  # add
+        else:
+            pass  # remove
 
 class GerberDrillContext(render.GerberContext):
     def __init__(self, units='inch'):
@@ -150,11 +226,13 @@ def pcb_isolation_geometry(
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, depth=None, clearz=None,
-    border=0.1, auto_clear=True, flipx=False, flipy=False,
+    border=0.1, auto_clear=True, flipx=False, flipy=False, simplify=0.001
 ):
-    def _cut_coords(c, simplify=0.001):
+    def _cut_coords(c):
         machine().goto(z=clearz)
-        coords = c.simplify(simplify).coords
+
+        if simplify:
+            coords = c.simplify(simplify).coords
         machine().goto(coords[0][0] + border, coords[0][1] + border)
         machine().cut(z=-depth)
 
@@ -215,7 +293,7 @@ def pcb_drill(
 
 # FIXME - tabs not supported, add if I ever need
 @operation(required=['bounds', 'depth'], operation_feedrate='cut')
-def pcb_cutout(bounds=None, depth=None, stepdown="50%", tabs=None, clearz=None, auto_clear=True):
+def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True):
     clearz = clearz or 0.25
 
     minx, miny, maxx, maxy = bounds

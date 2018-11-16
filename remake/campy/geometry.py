@@ -607,18 +607,18 @@ def graph_lines():
     pass
 
 
-def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
+def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
     def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
             poly.exterior.coords,
-            stroke=stroke, stroke_width=0.0005,
+            stroke=stroke, stroke_width=0.05,
             fill_opacity=0
         ))
 
         for i in poly.interiors:
             dwg.add(dwg.polygon(
                 i.coords,
-                stroke='red', stroke_width=0.0005,
+                stroke='red', stroke_width=0.05,
                 fill_opacity=0
             ))
 
@@ -644,11 +644,11 @@ def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
 
     minx, miny, maxx, maxy = geoms[0].bounds
     for g in geoms[1:]:
-        tminx, tminy, tmaxx, tmaxy = geoms[0].bounds
+        tminx, tminy, tmaxx, tmaxy = g.bounds
         if tminx < minx: minx = tminx
         if tminy < miny: miny = tminy
-        if tmaxx > maxy: minx = tminx
-        if tmaxy > maxy: miny = tminy
+        if tmaxx > maxx: maxx = tmaxx
+        if tmaxy > maxy: maxy = tmaxy
 
     box_width = maxx - minx
     box_height = maxy - miny
@@ -659,25 +659,15 @@ def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
         svg_file,
         profile='tiny',
         size=(width, height),
-        viewBox="{} {} {} {}".format(minx-marginx, miny-marginx, box_width+2*marginy, box_height+2*marginy)
+        viewBox="{} {} {} {}".format(minx-marginx, miny-marginy, box_width+2*marginx, box_height+2*marginy)
     )
 
     dwg.add(dwg.rect(
         (minx, miny),
         (box_width, box_height),
-        stroke='#888888', stroke_width=0.005,
+        stroke='#888888', stroke_width=0.05,
         fill='#dddddd',
     ))
-
-    #dwg.add(dwg.line(
-    #    (minx, miny+box_height/2.0), (maxx, miny+box_height/2.0),
-    #    stroke="#ffffff", stroke_width=.005,
-    #))
-
-    #dwg.add(dwg.line(
-    #    (minx+box_width/2.0, miny), (minx+box_width/2.0, maxy),
-    #    stroke="#ffffff", stroke_width=.005,
-    #))
 
     _draw_geoms(geoms)
 

@@ -2,8 +2,10 @@
 
 import logging
 import optparse
-from os import sys, path
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+import os.path
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import zipfile
 
 from campy import *
@@ -46,7 +48,6 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
 
     layers = {
-
     }
 
     union_geom = MultiPolygon()
@@ -145,5 +146,5 @@ if __name__ == '__main__':
         drill_geom
     ] if x]
     geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
-    geometry.shapely_to_svg('drill2.svg', list(reversed(bottom_iso_geoms))+[drill_geom])
+    geometry.shapely_to_svg('drill2.svg', list(reversed(bottom_iso_geoms))+[drill_geom], marginpct=0)
 #    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)
