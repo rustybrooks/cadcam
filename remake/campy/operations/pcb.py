@@ -77,13 +77,14 @@ class GerberDrillContext(render.GerberContext):
     def __init__(self, units='inch'):
         super(GerberDrillContext, self).__init__(units=units)
 
-        self.holes = []
+        self.hole_pos = []
+        self.hole_size = []
 
     def render_layer(self, layer):
         for prim in layer.primitives:
             self.render(prim)
 
-        return self.holes
+        return MultiPoint(self.hole_pos), self.hole_size
 
     def _render_line(self, line, color):
         raise Exception("Missing render")
@@ -107,7 +108,8 @@ class GerberDrillContext(render.GerberContext):
         raise Exception("Missing render")
 
     def _render_drill(self, primitive, color):
-        self.holes.append([list(primitive.position), primitive.radius])
+        self.hole_pos.append(Point(primitive.position))
+        self.hole_size.append(primitive.radius)
 
     def _render_slot(self, primitive, color):
         raise Exception("Missing render")
@@ -119,25 +121,43 @@ class GerberDrillContext(render.GerberContext):
         raise Exception("Missing render")
 
 
-# FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
-@operation(required=['gerber_file', 'tool_radius'])
-def pcb_isolation_geometry(
-    gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, tool_radius=None,
-    flipx=False, flipy=False,
-):
+def pcb_trace_geometry(gerber_file=None, gerber_data=None):
     if gerber_file is not None:
         b = gerber.load_layer_data(gerber_data, gerber_file)
     else:
         b = gerber.load_layer(gerber_file)
 
     ctx = GerberGeometryContext()
-    geom = ctx.render_layer(b)
+    return ctx.render_layer(b)
 
-#    minx, miny, maxx, maxy = geom.bounds
 
-#    if flipx:
-#        geom = shapely.affinity.scale(geom, xfact=-1)
-#        geom = shapely.affinity.translate(geom, xoff=maxx+minx)
+def pcb_drill_geometry(gerber_file=None, gerber_data=None):
+    if gerber_data is not None:
+        b = gerber.load_layer_data(gerber_data, gerber_file)
+    else:
+        b = gerber.load_layer(gerber_file)
+
+    ctx = GerberDrillContext()
+    return ctx.render_layer(b)
+
+
+# FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
+@operation(required=['gerber_file', 'tool_radius'])
+def pcb_isolation_geometry(
+    gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, tool_radius=None,
+    flipx=False, flipy=False,
+):
+    geom = pcb_trace_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
+
+    minx, miny, maxx, maxy = geom.bounds
+
+    if flipx:
+        geom = shapely.affinity.scale(geom, xfact=-1, origin=(0, 0))
+        geom = shapely.affinity.translate(geom, xoff=maxx+minx)
+
+    if flipy:
+        geom = shapely.affinity.scale(geom, yfact=-1, origin=(0, 0))
+        geom = shapely.affinity.translate(geom, yoff=maxy+miny)
 
     geoms = []
     for step in range(1, stepovers+1):
@@ -152,7 +172,8 @@ def pcb_isolation_geometry(
 
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, depth=None, clearz=None, border=0.1, auto_clear=True
+    gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, depth=None, clearz=None,
+    border=0.1, auto_clear=True, flipx=False, flipy=False,
 ):
     def _cut_coords(c, simplify=0.001):
         machine().goto(z=clearz)
@@ -168,10 +189,10 @@ def pcb_isolation_mill(
     geom, geoms = pcb_isolation_geometry(
         gerber_file=gerber_file,
         gerber_data=gerber_data,
-        adjust_zero=adjust_zero,
         stepover=stepover,
         stepovers=stepovers,
         tool_radius=tool_radius,
+        flipx=flipx, flipy=flipy,
     )
 
     for g in geoms:
@@ -186,35 +207,34 @@ def pcb_isolation_mill(
     return geom, geoms
 
 
-@operation(required=['drill_file', 'depth'], operation_feedrate='drill')
+@operation(required=['gerber_file', 'depth'], operation_feedrate='drill')
 def pcb_drill(
-    drill_file=None, drill_data=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
+    gerber_file=None, gerber_data=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
 ):
     clearz = clearz or 0.25
 
     geoms = []
+    hole_geom, hole_rads = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
-    if drill_data is not None:
-        b = gerber.load_layer_data(drill_data, drill_file)
-    else:
-        b = gerber.load_layer(drill_file)
+    # minx = maxx = miny = maxy = None
+    # for h in holes:
+    #     x, y = h[0]
+    #     if minx is None or x < minx: minx = x
+    #     if miny is None or y < miny: miny = y
+    #     if maxx is None or x > maxx: maxx = x
+    #     if maxy is None or y > maxy: maxy = y
+    #
+    # if flipx:
+    #     for h in holes:
+    #         h[0][0] = h[0][0] * -1 + minx + maxx
+    #
+    # if flipy:
+    #     for h in holes:
+    #         h[0][1] = h[0][1] * -1 + miny + maxy
 
-    ctx = GerberDrillContext()
-    holes = ctx.render_layer(b)
-#    if flipx:
-#        xoff = maxx + minx
-#        for h in holes:
-#            h[0][0] *= -1
-#    else:
-#        xoff = minx
-#
-#    yoff = miny
-    xoff = 0; yoff = 0
-
-    for h in holes:
-        geoms.append(Point(h[0]).buffer(h[1], resolution=16))
-        x, y = h[0]
-        helical_drill(center=(x+xoff, y+yoff), outer_rad=h[1], z=0, depth=depth, stepdown="10%")
+    for h, r in zip(hole_geom, hole_rads):
+        geoms.append(h.buffer(r, resolution=16))
+        helical_drill(center=h.coords[0], outer_rad=r, z=0, depth=depth, stepdown="10%")
 
     if auto_clear:
         machine().goto(z=clearz)
@@ -248,7 +268,7 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", tabs=None, clearz=None, 
 
 
 def pcb_mill_and_drill(
-    gerber_files, drill_file, adjust_zero=True, stepover='20%', stepovers=1, depth=None, border=0.1,
+    gerber_files, gerber_file, adjust_zero=True, stepover='20%', stepovers=1, depth=None, border=0.1,
     clearZ=None, auto_clear=True
 ):
     pass

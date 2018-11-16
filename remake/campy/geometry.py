@@ -607,19 +607,33 @@ def graph_lines():
     pass
 
 
-def shapely_to_svg(svg_file, geoms, scale_to=500):
+def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
     def _drawpoly(poly):
         dwg.add(dwg.polygon(
             poly.exterior.coords,
-            stroke=svgwrite.rgb(10, 10, 16, '%'), stroke_width=0.005*scale,
+            stroke=svgwrite.rgb(10, 10, 16, '%'), stroke_width=0.005,
             fill='red',
         ))
+
+    def _draw_geoms(_geoms):
+        for g in _geoms:
+            if isinstance(g, Polygon):
+                _drawpoly(g)
+            elif isinstance(g, MultiPolygon):
+                for g2 in g:
+                    _drawpoly(g2)
+            elif isinstance(g, Point):
+                x, y = g.coords[0]
+                dwg.add(dwg.ellipse((x, y), (.025, .025), fill='#000'))
+            elif isinstance(g, shapely.geometry.GeometryCollection):
+                _draw_geoms(g)
+            else:
+                raise Exception("unsupported shapely type: %r", g.__class__.__name__)
 
     if not isinstance(geoms, (tuple, list)):
         geoms = [geoms]
 
-    dwg = svgwrite.Drawing(svg_file, profile='tiny', width=100, height=100)
-
+    print geoms[0]
     minx, miny, maxx, maxy = geoms[0].bounds
     for g in geoms[1:]:
         tminx, tminy, tmaxx, tmaxy = geoms[0].bounds
@@ -628,21 +642,37 @@ def shapely_to_svg(svg_file, geoms, scale_to=500):
         if tmaxx > maxy: minx = tminx
         if tmaxy > maxy: miny = tminy
 
-    width = maxx - minx
-    height = maxy - miny
-    scale = float(scale_to/max(width, height))
+    box_width = maxx - minx
+    box_height = maxy - miny
+    marginx = box_width*marginpct/100.0
+    marginy = box_height*marginpct/100.0
 
-    for g in geoms:
-        minx, miny, maxx, maxy = g.bounds
-        g = shapely.affinity.scale(g, scale, scale, origin=(0, 0))
-        if isinstance(g, Polygon):
-            _drawpoly(g)
-        elif isinstance(g, MultiPolygon):
-            for g2 in g:
-                _drawpoly(g2)
+    dwg = svgwrite.Drawing(
+        svg_file,
+        profile='tiny',
+        size=(width, height),
+        viewBox="{} {} {} {}".format(minx-marginx, miny-marginx, box_width+2*marginy, box_height+2*marginy)
+    )
 
-#    dwg.add(dwg.line((0, 0), (100, 0), stroke=svgwrite.rgb(10, 10, 16, '%')))
-#    dwg.add(dwg.text('Test', insert=(0, 10.2), fill='red'))
+    dwg.add(dwg.rect(
+        (minx, miny),
+        (box_width, box_height),
+        stroke='#888888', stroke_width=0.005,
+        fill='#dddddd',
+    ))
+
+    dwg.add(dwg.line(
+        (minx, miny+box_height/2.0), (maxx, miny+box_height/2.0),
+        stroke="#ffffff", stroke_width=.005,
+    ))
+
+    dwg.add(dwg.line(
+        (minx+box_width/2.0, miny), (minx+box_width/2.0, maxy),
+        stroke="#ffffff", stroke_width=.005,
+    ))
+
+    _draw_geoms(geoms)
+
 
 
     dwg.save()

@@ -37,6 +37,7 @@ if __name__ == '__main__':
 
     }
 
+    union_geom = MultiPolygon()
     if os.path.isdir(args[0]):
         for fname in os.listdir(args[0]):
             ftype = identify_file(fname)
@@ -65,7 +66,16 @@ if __name__ == '__main__':
 
     machine.set_tool(options.vbit)
 
-    bottom_trace_geom = None
+    union_geom = shapely.geometry.GeometryCollection()
+    for k, v in layers.items():
+        fname, fdata = v
+        if k == 'drill':
+            g, rads = pcb_drill_geometry(gerber_data=fdata, gerber_file=fname)
+        else:
+            g = pcb_trace_geometry(gerber_data=fdata, gerber_file=fname)
+
+        union_geom = union_geom.union(g)
+
     top_trace_geom = None
     drill_geom = None
 
@@ -86,12 +96,13 @@ if __name__ == '__main__':
 
     if 'bottom-copper' in layers:
         fname, fdata = layers['bottom-copper']
+
         bottom_trace_geom, bottom_iso_geoms = pcb_isolation_mill(
             gerber_data=fdata,
             gerber_file=fname,
             stepovers=options.stepovers,
             depth=options.depth,
-            border=options.border,
+            flipy=True,
         )
 
         # minx, miny, maxx, maxy = bounds
@@ -103,16 +114,20 @@ if __name__ == '__main__':
         machine.set_tool('tiny-0.8mm')
         fname, fdata = layers['drill']
         drill_geom = pcb_drill(
-            drill_data=fdata,
-            drill_file=fname,
+            gerber_data=fdata,
+            gerber_file=fname,
             depth=options.thickness,
-            # flipx=flipx
-            flipx=False,
+            flipy=True
         )
 
 
     machine.set_tool('1/16in spiral upcut')
     # pcb_cutout(bounds=bounds, depth=options.thickness)
 
-    geoms = [x for x in [bottom_trace_geom, top_trace_geom, drill_geom] if x]
-    geometry.shapely_to_svg('drill.svg', geoms)
+#    geoms = [x for x in [
+#        bottom_trace_geom,
+#        # top_trace_geom,
+#        drill_geom
+#    ] if x]
+#    geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
+    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)
