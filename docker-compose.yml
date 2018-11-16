@@ -2,6 +2,9 @@ version: '2'
 
 services:
   cadcam:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: cadcam:latest
     container_name: cadcam
     environment:
@@ -13,13 +16,13 @@ services:
     stdin_open: true
     tty: true
 
-  cadcam-api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    image: cadcam-api:latest
-    container_name: cadcam-api
-    volumes:
-       - ./api:/cadcam/api  
-    ports:
-      - 8000:8000  
+#  cadcam-api:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.api
+#    image: cadcam-api:latest
+#    container_name: cadcam-api
+#    volumes:
+#       - ./api:/cadcam/api  
+#    ports:
+#      - 8000:8000  

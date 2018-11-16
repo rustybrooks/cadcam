@@ -1,9 +1,9 @@
 bson
-numpy
-numpy-stl
-descartes
+#numpy
+#numpy-stl
+#descartes
 shapely
-matplotlib
+# matplotlib
 enum34
 flask
 gevent

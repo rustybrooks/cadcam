@@ -14,7 +14,6 @@ RUN apt-get -y update \
   && rm -rf /var/cache/apt/archives/*
 
 RUN mkdir -p $CNCHOME $CNCHOME/src /src $CNCHOME/src/sim $CNCHOME/src/lib
-COPY ./requirements.txt $CNCHOME/requirements.txt
 
 WORKDIR $CNCHOME/src
 RUN git clone https://github.com/aewallin/opencamlib.git
@@ -30,26 +29,27 @@ RUN cmake ../src/ && make install
 WORKDIR $CNCHOME/src/truetype-tracer/build
 RUN cmake ../src/ && make install
 
-COPY ./lib/cpptk $CNCHOME/src/lib/cpptk
-COPY ./lib/tcltk $CNCHOME/src/lib/tcltk
+#COPY ./lib/cpptk $CNCHOME/src/lib/cpptk
+#COPY ./lib/tcltk $CNCHOME/src/lib/tcltk
 
-# build tcl/tk
-RUN tar xvzf $CNCHOME/src/lib/tcltk/tcl8.5.18-src.tar.gz -C $CNCHOME/src/lib/tcltk/ && \
-    tar xvzf $CNCHOME/src/lib/tcltk/tk8.5.18-src.tar.gz -C $CNCHOME/src/lib/tcltk/
+## build tcl/tk
+#RUN tar xvzf $CNCHOME/src/lib/tcltk/tcl8.5.18-src.tar.gz -C $CNCHOME/src/lib/tcltk/ && \
+#    tar xvzf $CNCHOME/src/lib/tcltk/tk8.5.18-src.tar.gz -C $CNCHOME/src/lib/tcltk/
+#
+#RUN cd $CNCHOME/src/lib/tcltk/tcl8.5.18/unix && ./configure --enable-64bit --disable-shared && make install
+#RUN cd $CNCHOME/src/lib/tcltk/tk8.5.18/unix && ./configure --enable-64bit --disable-shared && make install
+#
+#COPY ./lib/mygl $CNCHOME/src/lib/mygl
+#COPY ./sim/ $CNCHOME/src/sim
+#WORKDIR $CNCHOME/src/sim
+##RUN ln -s /usr/lib/x86_64-linux-gnu/libXft.so.2 /usr/lib/x86_64-linux-gnu/libXft.so && \
+##    ln -s /usr/lib/x86_64-linux-gnu/libXss.so.1 /usr/lib/x86_64-linux-gnu/libXss.so && \
+##    ln -s /usr/lib/x86_64-linux-gnu/libfontconfig.so.1 /usr/lib/x86_64-linux-gnu/libfontconfig.so
+#RUN cd $CNCHOME/src/sim && make -f Makefile.docker
 
-RUN cd $CNCHOME/src/lib/tcltk/tcl8.5.18/unix && ./configure --enable-64bit --disable-shared && make install
-RUN cd $CNCHOME/src/lib/tcltk/tk8.5.18/unix && ./configure --enable-64bit --disable-shared && make install
-
-COPY ./lib/mygl $CNCHOME/src/lib/mygl
-COPY ./sim/ $CNCHOME/src/sim
-WORKDIR $CNCHOME/src/sim
-#RUN ln -s /usr/lib/x86_64-linux-gnu/libXft.so.2 /usr/lib/x86_64-linux-gnu/libXft.so && \
-#    ln -s /usr/lib/x86_64-linux-gnu/libXss.so.1 /usr/lib/x86_64-linux-gnu/libXss.so && \
-#    ln -s /usr/lib/x86_64-linux-gnu/libfontconfig.so.1 /usr/lib/x86_64-linux-gnu/libfontconfig.so
-RUN cd $CNCHOME/src/sim && make -f Makefile.docker
-
-RUN pip install --upgrade pip \
-  && pip install setuptools==9.1 \
+# pip install --upgrade pip \
+COPY ./requirements.txt $CNCHOME/requirements.txt
+RUN pip install setuptools==9.1 \
   && pip install -r $CNCHOME/requirements.txt
 
 WORKDIR /src/
