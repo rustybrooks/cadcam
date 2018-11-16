@@ -2,7 +2,6 @@ import gerber
 from gerber.render import render
 import gerber.primitives as primitives
 import shapely.ops
-import os.path
 
 
 import shapely.affinity
@@ -12,7 +11,45 @@ from shapely.geometry import LineString, Polygon, MultiPolygon, Point, MultiPoin
 from . import operation, machine, helical_drill
 
 
-class GerberGeometryContext(render.GerberContext):
+class OurRenderContext(render.GerberContext):
+    def __init__(self, units='inch'):
+        super(OurRenderContext, self).__init__(units=units)
+
+    def _render_line(self, line, color):
+        raise Exception("Missing render")
+
+    def _render_arc(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_region(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_circle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_rectangle(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_obround(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_polygon(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_drill(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_slot(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_amgroup(self, primitive, color):
+        raise Exception("Missing render")
+
+    def _render_test_record(self, primitive, color):
+        raise Exception("Missing render")
+
+
+class GerberGeometryContext(OurRenderContext):
     def __init__(self, units='inch'):
         super(GerberGeometryContext, self).__init__(units=units)
 
@@ -42,36 +79,6 @@ class GerberGeometryContext(render.GerberContext):
             print "OTHER"
             print [x for x in line.vertices]
 
-    def _render_arc(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_region(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_circle(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_rectangle(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_obround(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_polygon(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_drill(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_slot(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_amgroup(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_test_record(self, primitive, color):
-        raise Exception("Missing render")
-
 
 class GerberDrillContext(render.GerberContext):
     def __init__(self, units='inch'):
@@ -86,39 +93,9 @@ class GerberDrillContext(render.GerberContext):
 
         return MultiPoint(self.hole_pos), self.hole_size
 
-    def _render_line(self, line, color):
-        raise Exception("Missing render")
-
-    def _render_arc(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_region(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_circle(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_rectangle(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_obround(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_polygon(self, primitive, color):
-        raise Exception("Missing render")
-
     def _render_drill(self, primitive, color):
         self.hole_pos.append(Point(primitive.position))
         self.hole_size.append(primitive.radius)
-
-    def _render_slot(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_amgroup(self, primitive, color):
-        raise Exception("Missing render")
-
-    def _render_test_record(self, primitive, color):
-        raise Exception("Missing render")
 
 
 def pcb_trace_geometry(gerber_file=None, gerber_data=None):
@@ -172,7 +149,7 @@ def pcb_isolation_geometry(
 
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, adjust_zero=True, stepover='20%', stepovers=1, depth=None, clearz=None,
+    gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, depth=None, clearz=None,
     border=0.1, auto_clear=True, flipx=False, flipy=False,
 ):
     def _cut_coords(c, simplify=0.001):
@@ -261,8 +238,3 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", tabs=None, clearz=None, 
         machine().goto(z=clearz)
 
 
-def pcb_mill_and_drill(
-    gerber_files, gerber_file, adjust_zero=True, stepover='20%', stepovers=1, depth=None, border=0.1,
-    clearZ=None, auto_clear=True
-):
-    pass
