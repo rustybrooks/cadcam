@@ -24,6 +24,18 @@ def identify_file(fname):
         return None
 
 
+def flipx(geom, bounds):
+    minx, miny, maxx, maxy = geom.bounds
+    geom = shapely.affinity.scale(geom, xfact=-1, origin=(0, 0))
+    return shapely.affinity.translate(geom, xoff=maxx + minx)
+
+
+def flipy(geom, bounds):
+    minx, miny, maxx, maxy = geom.bounds
+    geom = shapely.affinity.scale(geom, yfact=-1, origin=(0, 0))
+    return shapely.affinity.translate(geom, yoff=maxy+miny)
+
+
 if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-v', '--vbit', help='VBit engraving tool', type=str, default='engrave-0.1-30')
@@ -76,6 +88,9 @@ if __name__ == '__main__':
 
         union_geom = union_geom.union(g)
 
+    bounds = union_geom.bounds
+
+    bottom_trace_geom = None
     top_trace_geom = None
     drill_geom = None
 
@@ -102,7 +117,7 @@ if __name__ == '__main__':
             gerber_file=fname,
             stepovers=options.stepovers,
             depth=options.depth,
-            flipy=True,
+            flipy=bounds,
         )
 
         # minx, miny, maxx, maxy = bounds
@@ -117,17 +132,17 @@ if __name__ == '__main__':
             gerber_data=fdata,
             gerber_file=fname,
             depth=options.thickness,
-            flipy=True
+            flipy=bounds
         )
 
 
     machine.set_tool('1/16in spiral upcut')
     # pcb_cutout(bounds=bounds, depth=options.thickness)
 
-#    geoms = [x for x in [
-#        bottom_trace_geom,
+    geoms = [x for x in [
+        bottom_trace_geom,
 #        # top_trace_geom,
-#        drill_geom
+        drill_geom
 #    ] if x]
-#    geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
-    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)
+    geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
+#    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)

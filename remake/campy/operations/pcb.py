@@ -149,13 +149,13 @@ def pcb_isolation_geometry(
 ):
     geom = pcb_trace_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
-    minx, miny, maxx, maxy = geom.bounds
-
     if flipx:
+        minx, miny, maxx, maxy = flipx
         geom = shapely.affinity.scale(geom, xfact=-1, origin=(0, 0))
         geom = shapely.affinity.translate(geom, xoff=maxx+minx)
 
     if flipy:
+        minx, miny, maxx, maxy = flipy
         geom = shapely.affinity.scale(geom, yfact=-1, origin=(0, 0))
         geom = shapely.affinity.translate(geom, yoff=maxy+miny)
 
@@ -216,21 +216,15 @@ def pcb_drill(
     geoms = []
     hole_geom, hole_rads = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
-    # minx = maxx = miny = maxy = None
-    # for h in holes:
-    #     x, y = h[0]
-    #     if minx is None or x < minx: minx = x
-    #     if miny is None or y < miny: miny = y
-    #     if maxx is None or x > maxx: maxx = x
-    #     if maxy is None or y > maxy: maxy = y
-    #
-    # if flipx:
-    #     for h in holes:
-    #         h[0][0] = h[0][0] * -1 + minx + maxx
-    #
-    # if flipy:
-    #     for h in holes:
-    #         h[0][1] = h[0][1] * -1 + miny + maxy
+    if flipx:
+        minx, miny, maxx, maxy = flipx
+        hole_geom = shapely.affinity.scale(hole_geom, xfact=-1, origin=(0, 0))
+        hole_geom = shapely.affinity.translate(hole_geom, xoff=maxx+minx)
+
+    if flipy:
+        minx, miny, maxx, maxy = flipy
+        hole_geom = shapely.affinity.scale(hole_geom, yfact=-1, origin=(0, 0))
+        hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
     for h, r in zip(hole_geom, hole_rads):
         geoms.append(h.buffer(r, resolution=16))
