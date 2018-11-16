@@ -1,6 +1,6 @@
 import gerber
 from gerber.render import render
-from gerber.primitives import *
+import gerber.primitives as primitives
 import shapely.ops
 import os.path
 
@@ -28,7 +28,7 @@ class GerberGeometryContext(render.GerberContext):
         start = line.start
         end = line.end
 
-        if isinstance(line.aperture, Circle):
+        if isinstance(line.aperture, primitives.Circle):
             poly = LineString([start, end]).buffer(
                 line.aperture.diameter/2.,
                 resolution=16,
@@ -163,7 +163,7 @@ def pcb_isolation_geometry(
     for step in range(1, stepovers+1):
         bgeom = geom.buffer(tool_radius*step*(1-stepover))
         if isinstance(bgeom, shapely.geometry.Polygon):
-            bgeom = [bgeom]
+            bgeom = shapely.geometry.MultiPolygon([bgeom])
 
         geoms.append(bgeom)
 

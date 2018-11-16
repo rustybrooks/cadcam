@@ -143,6 +143,7 @@ if __name__ == '__main__':
         bottom_trace_geom,
 #        # top_trace_geom,
         drill_geom
-#    ] if x]
+    ] if x]
     geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
+    geometry.shapely_to_svg('drill2.svg', list(reversed(bottom_iso_geoms))+[drill_geom])
 #    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)

@@ -608,12 +608,19 @@ def graph_lines():
 
 
 def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
-    def _drawpoly(poly):
+    def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
             poly.exterior.coords,
-            stroke=svgwrite.rgb(10, 10, 16, '%'), stroke_width=0.005,
-            fill='red',
+            stroke=stroke, stroke_width=0.0005,
+            fill_opacity=0
         ))
+
+        for i in poly.interiors:
+            dwg.add(dwg.polygon(
+                i.coords,
+                stroke='red', stroke_width=0.0005,
+                fill_opacity=0
+            ))
 
     def _draw_geoms(_geoms):
         for g in _geoms:
@@ -633,7 +640,8 @@ def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
     if not isinstance(geoms, (tuple, list)):
         geoms = [geoms]
 
-    print geoms[0]
+    geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
+
     minx, miny, maxx, maxy = geoms[0].bounds
     for g in geoms[1:]:
         tminx, tminy, tmaxx, tmaxy = geoms[0].bounds
@@ -661,19 +669,17 @@ def shapely_to_svg(svg_file, geoms, width=500, height=500, marginpct=10):
         fill='#dddddd',
     ))
 
-    dwg.add(dwg.line(
-        (minx, miny+box_height/2.0), (maxx, miny+box_height/2.0),
-        stroke="#ffffff", stroke_width=.005,
-    ))
+    #dwg.add(dwg.line(
+    #    (minx, miny+box_height/2.0), (maxx, miny+box_height/2.0),
+    #    stroke="#ffffff", stroke_width=.005,
+    #))
 
-    dwg.add(dwg.line(
-        (minx+box_width/2.0, miny), (minx+box_width/2.0, maxy),
-        stroke="#ffffff", stroke_width=.005,
-    ))
+    #dwg.add(dwg.line(
+    #    (minx+box_width/2.0, miny), (minx+box_width/2.0, maxy),
+    #    stroke="#ffffff", stroke_width=.005,
+    #))
 
     _draw_geoms(geoms)
-
-
 
     dwg.save()
 

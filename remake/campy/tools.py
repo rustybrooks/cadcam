@@ -113,7 +113,6 @@ class StraightRouterBit(Tool):
         self.cutting_length = 5 # FIXME
 
     def comment(self, cam):
-        print cam.comment
         cam.comment("FlatMill %f %f" % (self.cutting_length, self.diameter/2.0))
 
 
