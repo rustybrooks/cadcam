@@ -156,22 +156,21 @@ class GerberGeometryContext(OurRenderContext):
         else:
             pass  # remove
 
+
 class GerberDrillContext(render.GerberContext):
     def __init__(self, units='inch'):
         super(GerberDrillContext, self).__init__(units=units)
 
         self.hole_pos = []
-        self.hole_size = []
 
     def render_layer(self, layer):
         for prim in layer.primitives:
             self.render(prim)
 
-        return MultiPoint(self.hole_pos), self.hole_size
+        return MultiPoint(self.hole_pos)
 
     def _render_drill(self, primitive, color):
-        self.hole_pos.append(Point(primitive.position))
-        self.hole_size.append(primitive.radius)
+        self.hole_pos.append(Point(primitive.position[0], primitive.position[1], primitive.radius))
 
 
 def pcb_trace_geometry(gerber_file=None, gerber_data=None):
@@ -269,7 +268,7 @@ def pcb_drill(
     clearz = clearz or 0.25
 
     geoms = []
-    hole_geom, hole_rads = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
+    hole_geom = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
     if flipx:
         minx, miny, maxx, maxy = flipx
@@ -281,9 +280,9 @@ def pcb_drill(
         hole_geom = shapely.affinity.scale(hole_geom, yfact=-1, origin=(0, 0))
         hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
-    for h, r in zip(hole_geom, hole_rads):
-        geoms.append(h.buffer(r, resolution=16))
-        helical_drill(center=h.coords[0], outer_rad=r, z=0, depth=depth, stepdown="10%")
+    for h in hole_geom:
+        geoms.append(h.buffer(h.coords[0][2], resolution=16))
+        helical_drill(center=h.coords[0][:2], outer_rad=h.coords[0][2], z=0, depth=depth, stepdown="10%")
 
     if auto_clear:
         machine().goto(z=clearz)

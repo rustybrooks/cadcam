@@ -83,7 +83,7 @@ if __name__ == '__main__':
     for k, v in layers.items():
         fname, fdata = v
         if k == 'drill':
-            g, rads = pcb_drill_geometry(gerber_data=fdata, gerber_file=fname)
+            g = pcb_drill_geometry(gerber_data=fdata, gerber_file=fname)
         else:
             g = pcb_trace_geometry(gerber_data=fdata, gerber_file=fname)
 
