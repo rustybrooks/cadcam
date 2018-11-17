@@ -36,7 +36,8 @@ class Tool(object):
     """
     # rpm = sfm/(dp/12)
     # ips = rpm*fpt/flutes
-    def calculate_feedrates(self, material, machine, base_feedrate=None):
+
+    def base_feedrate(self, material, machine, feed_class=None):
         # print "calculate_feedrate", material, base_feedrate
 
         def _fpt(rpm, ipm):
@@ -53,7 +54,7 @@ class Tool(object):
 
         diams = [1., 1/2., 1/4., 1/8., 1/16., 1/32.]
 
-        if base_feedrate in ['high', 'low', 'average']:
+        if feed_class in ['high', 'low', 'average']:
             if self.tool_material == 'hss':
                 fpt_list = material.fpt_hss
                 sfm_list = material.sfm_hss
@@ -79,28 +80,38 @@ class Tool(object):
                 feedrate_high = machine.peak_feedrate
                 rpm_high = feedrate_high * self.flutes / fpt_high
 
-            if base_feedrate == 'high':
+            if feed_class == 'high':
                 feedrate = feedrate_high
                 rpm = rpm_high
-            elif base_feedrate == 'low':
+            elif feed_class == 'low':
                 feedrate = feedrate_low
                 rpm = rpm_low
-            elif base_feedrate == 'average':
+            elif feed_class == 'average':
                 feedrate = (feedrate_low + feedrate_high) / 2.
             else:
                 raise Exception("Unknown base feedrate value: %r", base_feedrate)
         else:
-            feedrate = base_feedrate
+            feedrate = feed_class
 
-        self.feeds['cut'] = feedrate
-        self.feeds['plunge'] = feedrate*0.40  # FIXME?
-        self.feeds['raster_engrave'] = 0  # FIXME?
-        self.feeds['vector_engrave'] = 0  # FIXME?
-        self.feeds['leadin'] = 0
-        self.feeds['leadout'] = 0
-        self.feeds['ramp'] = 0
-        self.feeds['probe'] = 1
-        self.spindle_speed = rpm
+        return feedrate
+
+
+    # def calculate_feedrates(self, material, machine, feed_class=None):
+    #     base = self.base_feedrate(material, machine, feed_class=feed_class)
+    #
+    #     self.feeds['cut'] = feedrate
+    #     self.feeds['plunge'] = feedrate*0.40  # FIXME?
+    #     self.feeds['raster_engrave'] = 0  # FIXME?
+    #     self.feeds['vector_engrave'] = 0  # FIXME?
+    #     self.feeds['leadin'] = 0
+    #     self.feeds['leadout'] = 0
+    #     self.feeds['ramp'] = 0
+    #     self.feeds['probe'] = 1
+    #     self.spindle_speed = rpm
+
+    def calculate_feedrate(self, material=None, machine=None, feed_type=None, feed_class=None):
+        base = self.base_feedrate(material, machine, feed_class=feed_class)
+        return base
 
     def comment(self, cam):
         pass
@@ -147,6 +158,14 @@ class VRouterBit(Tool):
 
     def diameter_at_depth(self, depth=0):
         return self.tip_diameter + math.tan(math.radians(self.included_angle/2.))*depth*2
+
+
+class Laser(Tool):
+    def __init__(self, focused_beam_width):
+        self.focused_beam_width = focused_beam_width
+
+    def diameter_at_depth(self, depth=0):
+        return self.focused_beam_width
 
 
 class HoleSize(object):

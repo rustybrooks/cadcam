@@ -75,15 +75,16 @@ class Environment(object):
         self.filename = filename
         self.f = self.files[filename]
 
-    def set_tool(self, tool, base_feedrate='low', rpm_range=None, ):
+    def set_tool(self, tool, feed_class='low', rpm_range=None, ):
         if isinstance(tool, (str, unicode)):
             this_tool = tools[tool]
         else:
             this_tool = tool
 
+        self.feed_class = feed_class
         self.tool = copy.copy(this_tool)
         self.tool.rpm_range = rpm_range or [self.min_rpm, self.max_rpm]
-        self.tool.calculate_feedrates(material=self.material, machine=self, base_feedrate=base_feedrate)
+        # self.tool.calculate_feedrates(material=self.material, machine=self, base_feedrate=base_feedrate)
         self.tool.comment(self)
 
     def set_material(self, material):
@@ -103,9 +104,12 @@ class Environment(object):
         self.f.flush()  # required?
 
     def set_speed(self, rate):
-        if rate in self.tool.feeds:
-            rate = self.tool.feeds[rate]
-        self.speed = rate
+        if isinstance(rate, (int, float)):
+            self.speed = rate
+        else:
+            self.speed = self.tool.calculate_feedrate(material=self.material, machine=self, feed_type=rate, feed_class=self.feed_class)
+
+
 
     def push_speed(self, rate):
         self.speed_stack.append(self.speed)
@@ -303,6 +307,8 @@ tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_dia
 tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 
 tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
+
+tools['k40-laser'] = Laser(focused_beam_width=0.010)  # Just a guess - measure...
 
 # fpt is for diameter of 1/8 1/4 1/2 1
 # http://www.micro-machine-shop.com/SFM_Formulae_Chart_2.pdf
