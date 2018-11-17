@@ -29,13 +29,12 @@ if __name__ == '__main__':
     machine.min_rpm = 15000
     machine.set_material('fr4-1oz')
 
-    #
-
     pcb.pcb_job(
         output_directory='/tmp/test/',
         drill='bottom',
         cutout='bottom',
         iso_bit='engrave-0.1-30',
         drill_bit='tiny-0.8mm',
-        cutout_bit='1/16in spiral upcut'
+        cutout_bit='1/16in spiral upcut',
+        file_per_operation=False,
     )

@@ -175,12 +175,15 @@ class GerberDrillContext(render.GerberContext):
 
 
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
-@operation(required=['gerber_file', 'tool_radius'])
+@operation(required=['tool_radius'])
 def pcb_isolation_geometry(
-    gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, tool_radius=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, tool_radius=None,
     flipx=False, flipy=False,
 ):
-    geom = pcb_trace_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
+    if gerber_geometry:
+        geom = gerber_geometry
+    else:
+        geom = pcb_trace_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
     if flipx:
         minx, miny, maxx, maxy = flipx
@@ -202,9 +205,9 @@ def pcb_isolation_geometry(
 
     return geom, geoms
 
-@operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
+@operation(required=['depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, depth=None, clearz=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, depth=None, clearz=None,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
     def _cut_coords(c):
@@ -218,11 +221,12 @@ def pcb_isolation_mill(
         for c in coords:
             machine().cut(c[0], c[1])
 
-    clearz = clearz or 0.25
+    clearz = clearz or 0.125
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
     geom, geoms = pcb_isolation_geometry(
         gerber_file=gerber_file,
         gerber_data=gerber_data,
+        gerber_geometry=gerber_geometry,
         stepover=stepover,
         stepovers=stepovers,
         tool_radius=tool_radius,
@@ -269,6 +273,7 @@ def pcb_isolation_mill(
 
     return geom, geoms
 
+
 def pcb_trace_geometry(gerber_file=None, gerber_data=None):
     if gerber_file is not None:
         b = gerber.load_layer_data(gerber_data, gerber_file)
@@ -289,14 +294,17 @@ def pcb_drill_geometry(gerber_file=None, gerber_data=None):
     return ctx.render_layer(b)
 
 
-@operation(required=['gerber_file', 'depth'], operation_feedrate='drill')
+@operation(required=['depth'], operation_feedrate='drill')
 def pcb_drill(
-    gerber_file=None, gerber_data=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
+    gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
 ):
-    clearz = clearz or 0.25
+    clearz = clearz or 0.125
 
     geoms = []
-    hole_geom = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
+    if gerber_geometry:
+        hole_geom = gerber_geometry
+    else:
+        hole_geom = pcb_drill_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
 
     if flipx:
         minx, miny, maxx, maxy = flipx
@@ -343,7 +351,7 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=
 
 
 class PCBProject(object):
-    def __init__(self, gerber_input, border=None, thickness=1.7*constants.MM, flip='y'):
+    def __init__(self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM, flip='y'):
         self.gerber_input = gerber_input
         if isinstance(border, (int, float)):
             self.border = [border, border, border, border]
@@ -352,8 +360,10 @@ class PCBProject(object):
 
         self.thickness = thickness
         self.layers = None
-        self.load(gerber_input)
         self.flip = flip
+        self.auto_zero = auto_zero
+
+        self.load(gerber_input)
 
     def identify_file(self, fname):
         ext = os.path.splitext(fname)[-1].lower()
@@ -403,9 +413,32 @@ class PCBProject(object):
             else:
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'])
 
+            v['geometry'] = g
             union_geom = union_geom.union(g)
 
         self.bounds = union_geom.bounds
+        minx, miny, maxx, maxy = self.bounds
+
+        if self.auto_zero:
+            newminx = 0
+            newminy = 0
+            xoff = -minx
+            yoff = -miny
+        else:
+            newminx = minx - self.border[0]
+            newminy = miny - self.border[0]
+            xoff = yoff = 0
+
+        # union_geom = shapely.affinity.translate(union_geom, xoff=minx, yoff=miny)
+        for k, v in self.layers.items():
+            v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
+
+        self.bounds = [
+            newminx,
+            newminy,
+            newminx + (maxx - minx) + self.border[0] + self.border[2],
+            newminy + (maxy - miny) + self.border[1] + self.border[3],
+        ]
 
     def auto_set_stock(self):
         minx, miny, maxx, maxy = self.bounds
@@ -429,11 +462,12 @@ class PCBProject(object):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        if not file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_all.ngc'))
-            self.auto_set_stock()
 
         # .... TOP ....
+        if not file_per_operation:
+            machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
+            self.auto_set_stock()
+
         if file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_top_iso.ngc'))
             self.auto_set_stock()
@@ -442,8 +476,7 @@ class PCBProject(object):
 
         l = self.layers['top-copper']
         pcb_isolation_mill(
-            gerber_data=l['data'],
-            gerber_file=l['filename'],
+            gerber_geometry=l['geometry'],
             stepovers=outline_stepovers,
             depth=outline_depth,
         )
@@ -457,8 +490,7 @@ class PCBProject(object):
 
             l = self.layers['drill']
             pcb_drill(
-                gerber_data=l['data'],
-                gerber_file=l['filename'],
+                gerber_geometry=l['geometry'],
                 depth=self.thickness,
                 flipy=False
             )
@@ -474,46 +506,50 @@ class PCBProject(object):
         # .... BOTTOM ....
         l = self.layers['bottom-copper']
 
+        if not file_per_operation:
+            machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))
+            self.auto_set_stock()
+
         if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_top_iso.ngc'))
+            machine().set_file(os.path.join(output_directory, 'pcb_bottom_iso.ngc'))
             self.auto_set_stock()
 
         machine().set_tool(iso_bit)
 
         pcb_isolation_mill(
-            gerber_data=l['data'],
-            gerber_file=l['filename'],
+            gerber_geometry=l['geometry'],
             stepovers=outline_stepovers,
             depth=outline_depth,
+            flipx=self.bounds if self.flip == 'x' else False,
+            flipy=self.bounds if self.flip == 'y' else False,
         )
 
         if drill == 'bottom':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_drill.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_drill.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(drill_bit)
 
             l = self.layers['drill']
             pcb_drill(
-                gerber_data=l['data'],
-                gerber_file=l['filename'],
+                gerber_geometry=l['geometry'],
                 depth=self.thickness,
-                flipx=self.bounds if self.flip=='x' else False,
-                flipy=self.bounds if self.flip=='y' else False,
+                flipx=self.bounds if self.flip == 'x' else False,
+                flipy=self.bounds if self.flip == 'y' else False,
             )
 
         if cutout == 'bottom':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_cutout.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_cutout.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(cutout_bit)
             pcb_cutout(
                 bounds=self.bounds,
                 depth=self.thickness,
-                flipx=self.bounds if self.flip=='x' else False,
-                flipy=self.bounds if self.flip=='y' else False,
+                #flipx=self.bounds if self.flip=='x' else False,
+                #flipy=self.bounds if self.flip=='y' else False,
             )
 
     #
