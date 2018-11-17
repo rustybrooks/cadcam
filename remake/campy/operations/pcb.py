@@ -1,14 +1,13 @@
 import gerber
 from gerber.render import render
 import gerber.primitives as primitives
-import shapely.ops
-
-
+import math
 import shapely.affinity
+import shapely.geometry
 import shapely.ops
-from shapely.geometry import LineString, Polygon, MultiPolygon, Point, MultiPoint
 
 from . import operation, machine, helical_drill
+from .. import geometry
 
 
 class OurRenderContext(render.GerberContext):
@@ -67,7 +66,7 @@ class GerberGeometryContext(OurRenderContext):
         end = line.end
 
         if isinstance(line.aperture, primitives.Circle):
-            poly = LineString([start, end]).buffer(
+            poly = shapely.geometry.LineString([start, end]).buffer(
                 line.aperture.diameter/2.,
                 resolution=16,
                 cap_style=shapely.geometry.CAP_STYLE.round,
@@ -167,10 +166,10 @@ class GerberDrillContext(render.GerberContext):
         for prim in layer.primitives:
             self.render(prim)
 
-        return MultiPoint(self.hole_pos)
+        return shapely.geometry.MultiPoint(self.hole_pos)
 
     def _render_drill(self, primitive, color):
-        self.hole_pos.append(Point(primitive.position[0], primitive.position[1], primitive.radius))
+        self.hole_pos.append(shapely.geometry.Point(primitive.position[0], primitive.position[1], primitive.radius))
 
 
 def pcb_trace_geometry(gerber_file=None, gerber_data=None):
@@ -225,7 +224,7 @@ def pcb_isolation_geometry(
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, depth=None, clearz=None,
-    border=0.1, auto_clear=True, flipx=False, flipy=False, simplify=0.001
+    border=0.1, auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
     def _cut_coords(c):
         machine().goto(z=clearz)
@@ -248,6 +247,34 @@ def pcb_isolation_mill(
         tool_radius=tool_radius,
         flipx=flipx, flipy=flipy,
     )
+
+    if zprobe_radius:
+        points = []
+        minx, miny, maxx, maxy = geom.bounds
+        even = True
+        cy = (miny + maxy) / 2.
+        while cy > 0:
+            if even:
+                cx = (minx + maxx) / 2.
+            else:
+                cx = (minx + maxx - zprobe_radius) / 2.
+
+            while cx > 0:
+                points.append(shapely.geometry.Point(cx, cy))
+                cx -= zprobe_radius
+
+            cy -= zprobe_radius/math.sqrt(2)
+            even = not even
+
+        cx = (minx + maxx) / 2.
+        cy = (miny + maxy) / 2.
+
+        pg = shapely.geometry.MultiPoint(points)
+        pg = pg.union(shapely.affinity.scale(pg, xfact=-1, origin=(cx, cy)))
+        pg = pg.union(shapely.affinity.scale(pg, yfact=-1, origin=(cy, cy)))
+        delauney = shapely.ops.triangulate(pg, edges=False)
+        geometry.shapely_to_svg('points.svg', [pg, shapely.geometry.MultiPolygon(delauney)])
+        print pg
 
     for g in geoms:
         for p in g:
@@ -287,7 +314,7 @@ def pcb_drill(
     if auto_clear:
         machine().goto(z=clearz)
 
-    return MultiPolygon(geoms)
+    return shapely.geometry.MultiPolygon(geoms)
 
 
 # FIXME - tabs not supported, add if I ever need

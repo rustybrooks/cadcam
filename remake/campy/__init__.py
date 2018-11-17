@@ -19,4 +19,4 @@ from environment import tools, materials, machines, holes
 from operations import *
 from operations.pcb import *
 from operations.probe import *
-import geometry
+from . import geometry

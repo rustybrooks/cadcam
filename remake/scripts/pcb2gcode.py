@@ -50,7 +50,7 @@ if __name__ == '__main__':
     layers = {
     }
 
-    union_geom = MultiPolygon()
+    union_geom = shapely.geometry.MultiPolygon()
     if os.path.isdir(args[0]):
         for fname in os.listdir(args[0]):
             ftype = identify_file(fname)
@@ -119,6 +119,7 @@ if __name__ == '__main__':
             stepovers=options.stepovers,
             depth=options.depth,
             flipy=bounds,
+            zprobe_radius=None,
         )
 
         # minx, miny, maxx, maxy = bounds
@@ -135,7 +136,6 @@ if __name__ == '__main__':
             depth=options.thickness,
             flipy=bounds
         )
-
 
     machine.set_tool('1/16in spiral upcut')
     # pcb_cutout(bounds=bounds, depth=options.thickness)

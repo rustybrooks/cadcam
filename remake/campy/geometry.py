@@ -607,31 +607,51 @@ def graph_lines():
     pass
 
 
+# # This is kinda dumb but I can store an RGB as a base-255 float so that I can use it in
+# # operands that just take a float.  Like... shapely z-coords
+# def color_to_float(rgb):
+#     rgb.stripleft("#").strip()
+#     if len(rgb) == 3:
+#         rgb = "{}{}{}{}{}{}".format(rgb[0], rgb[0], rgb[1], rgb[1], rgb[2], rbg[2])
+#
+#     r = int(rgb[:2], 16)
+#     g = int(rgb[2:4], 16)
+#     b = int(rgb[4:], 16)
+#
+#
+# def float_to_color(f):
+#     pass
+
+
 def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
     def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
             poly.exterior.coords,
-            stroke=stroke, stroke_width=0.05,
+            stroke=stroke, stroke_width=0.0005,
             fill_opacity=0
         ))
 
         for i in poly.interiors:
             dwg.add(dwg.polygon(
                 i.coords,
-                stroke='red', stroke_width=0.05,
+                stroke='red', stroke_width=0.0005,
                 fill_opacity=0
             ))
 
     def _draw_geoms(_geoms):
         for g in _geoms:
-            if isinstance(g, Polygon):
+            if isinstance(g, shapely.geometry.Polygon):
                 _drawpoly(g)
-            elif isinstance(g, MultiPolygon):
+            elif isinstance(g, shapely.geometry.MultiPolygon):
                 for g2 in g:
                     _drawpoly(g2)
-            elif isinstance(g, Point):
+            elif isinstance(g, shapely.geometry.Point):
                 x, y = g.coords[0]
-                dwg.add(dwg.ellipse((x, y), (.025, .025), fill='#000'))
+                dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
+            elif isinstance(g, shapely.geometry.MultiPoint):
+                for g2 in g:
+                    x, y = g2.coords[0]
+                    dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
             elif isinstance(g, shapely.geometry.GeometryCollection):
                 _draw_geoms(g)
             else:
