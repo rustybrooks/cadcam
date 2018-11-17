@@ -104,12 +104,15 @@ class Environment(object):
         self.f.flush()  # required?
 
     def set_speed(self, rate):
+        if rate is None:
+            return
+
         if isinstance(rate, (int, float)):
             self.speed = rate
         else:
             self.speed = self.tool.calculate_feedrate(material=self.material, machine=self, feed_type=rate, feed_class=self.feed_class)
 
-
+        # print 'set_speed', rate, self.speed
 
     def push_speed(self, rate):
         self.speed_stack.append(self.speed)
@@ -348,7 +351,7 @@ materials = {
         name='FR4 PCB, 1oz copper',
         sfm_hss=[250, 800],
         sfm_carbide=[600, 1000],
-        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007), (.002, .004), (.001, .002)],
+        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007), (.001, .002), (.0005, .001)],
         fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
     ),
     'foam': Material(

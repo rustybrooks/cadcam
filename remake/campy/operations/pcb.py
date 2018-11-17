@@ -205,7 +205,8 @@ def pcb_isolation_geometry(
 
     return geom, geoms
 
-@operation(required=['depth'], operation_feedrate='cut')
+
+@operation(required=['depth'], operation_feedrate='vector_engrave')
 def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, depth=None, clearz=None,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,

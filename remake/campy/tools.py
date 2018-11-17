@@ -37,7 +37,35 @@ class Tool(object):
     # rpm = sfm/(dp/12)
     # ips = rpm*fpt/flutes
 
-    def base_feedrate(self, material, machine, feed_class=None):
+    def sfm(self, material):
+        if self.tool_material == 'hss':
+            sfm_list = material.sfm_hss
+        elif self.tool_material == 'carbide':
+            sfm_list = material.sfm_carbide
+        else:
+            raise Exception("Unsupported tool material: %r", self.tool_material)
+
+        return sfm_list
+
+    def fpt(self, material):
+        if self.tool_material == 'hss':
+            fpt_list = material.fpt_hss
+        elif self.tool_material == 'carbide':
+            fpt_list = material.fpt_carbide
+        else:
+            raise Exception("Unsupported tool material: %r", self.tool_material)
+
+        diams = [1., 1/2., 1/4., 1/8., 1/16., 1/32.]
+        data = zip(diams, fpt_list)
+        fpt_low, fpt_high = fpt_list[-1]
+        for el in reversed(data):
+            fpt_low, fpt_high = el[1]
+            if el[0] >= self.effective_diameter:
+                break
+
+        return fpt_low, fpt_high
+
+    def base_feedrate(self, material, machine, effective_depth=None, feed_class=None):
         # print "calculate_feedrate", material, base_feedrate
 
         def _fpt(rpm, ipm):
@@ -52,27 +80,12 @@ class Tool(object):
         def _pair(sfm, fpt):
             return _ipm(_rpm(sfm), fpt), _rpm(sfm)
 
-        diams = [1., 1/2., 1/4., 1/8., 1/16., 1/32.]
-
         if feed_class in ['high', 'low', 'average']:
-            if self.tool_material == 'hss':
-                fpt_list = material.fpt_hss
-                sfm_list = material.sfm_hss
-            elif self.tool_material == 'carbide':
-                fpt_list = material.fpt_carbide
-                sfm_list = material.sfm_carbide
-            else:
-                raise Exception("Unsupported tool material: %r", self.tool_material)
+            sfm_low, sfm_high = self.sfm(material)
+            fpt_low, fpt_high = self.fpt(material)
 
-            data = zip(diams, fpt_list)
-            fpt_low, fpt_high = fpt_list[-1]
-            for el in reversed(data):
-                fpt_low, fpt_high = el[1]
-                if el[0] >= self.effective_diameter:
-                    break
-
-            rpm_low = max(_rpm(sfm_list[0]), machine.min_rpm)
-            rpm_high = min(_rpm(sfm_list[1]), machine.max_rpm)
+            rpm_low = max(_rpm(sfm_low), machine.min_rpm)
+            rpm_high = min(_rpm(sfm_high), machine.max_rpm)
 
             feedrate_low = _ipm(rpm_low, fpt_low)
             feedrate_high = _ipm(rpm_high, fpt_high)
@@ -89,12 +102,11 @@ class Tool(object):
             elif feed_class == 'average':
                 feedrate = (feedrate_low + feedrate_high) / 2.
             else:
-                raise Exception("Unknown base feedrate value: %r", base_feedrate)
+                raise Exception("Unknown feed_class value: %r", feed_class)
         else:
             feedrate = feed_class
 
         return feedrate
-
 
     # def calculate_feedrates(self, material, machine, feed_class=None):
     #     base = self.base_feedrate(material, machine, feed_class=feed_class)
@@ -109,8 +121,65 @@ class Tool(object):
     #     self.feeds['probe'] = 1
     #     self.spindle_speed = rpm
 
+    # z = #flutes!
+    # rpm*d*pi/12 = sfm
+    # sfm*(pi/12)/d = rpm
+    # ipm*z=ipr
+    # rpm*ipr=ipm
+    # ipm/rpm/z = ipt
+    def drill_feedrate(self, material, machine, feed_class=None):
+        def _rpm(sfm):
+            return sfm / (self.effective_diameter*math.pi/12)
+
+        def _ipm(rpm, fpt):
+            return fpt*rpm*self.flutes
+
+        if feed_class in ['high', 'low', 'average']:
+            sfm_low, sfm_high = self.sfm(material)
+            fpt_low, fpt_high = self.fpt(material)  # FIXME not sure this is valid for drill operations
+
+            rpm_low = max(_rpm(sfm_low), machine.min_rpm)
+            rpm_high = min(_rpm(sfm_high), machine.max_rpm)
+
+            feedrate_low = _ipm(rpm_low, fpt_low)
+            feedrate_high = _ipm(rpm_high, fpt_high)
+            if feedrate_high > machine.peak_feedrate:
+                feedrate_high = machine.peak_feedrate
+                rpm_high = feedrate_high * self.flutes / fpt_high
+
+            if feed_class == 'high':
+                feedrate = feedrate_high
+                rpm = rpm_high
+            elif feed_class == 'low':
+                feedrate = feedrate_low
+                rpm = rpm_low
+            elif feed_class == 'average':
+                feedrate = (feedrate_low + feedrate_high) / 2.
+            else:
+                raise Exception("Unknown feed_class value: %r", feed_class)
+
+            # print "!!!!!", feedrate
+            feedrate = feedrate / 5.  # This is entirely pulled out of my ass, but intuitively we can't plunge
+                                      # or drill at the same x-y feed rate?
+        else:
+            feedrate = feed_class
+
+        return feedrate
+
+    def engrave_feedrate(self, material, machine, feed_class=None):
+        return 5  # FIXME lol
+
     def calculate_feedrate(self, material=None, machine=None, feed_type=None, feed_class=None):
-        base = self.base_feedrate(material, machine, feed_class=feed_class)
+        if feed_type in ['cut']:
+            base = self.base_feedrate(material, machine, feed_class=feed_class)
+        elif feed_type in ['plunge', 'drill']:
+            base = self.drill_feedrate(material, machine, feed_class=feed_class)
+        elif feed_type in ['vector_engrave']:
+            base = self.engrave_feedrate(material, machine, feed_class=feed_class)
+        else:
+            raise Exception("Unsupported feed type: {}".format(feed_type))
+
+        # print feed_type, feed_class, "returning", base
         return base
 
     def comment(self, cam):
