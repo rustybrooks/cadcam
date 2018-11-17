@@ -11,7 +11,7 @@ from ..cammath import frange
 # stepdown is X% for a percentage of bit diameter, X for absolute
 
 
-def operation(required=None, operation_feedrate=None):
+def operation(required=None, operation_feedrate=None, comment=None):
     required = required or []
 
     def wrapout(fn):
@@ -37,7 +37,9 @@ def operation(required=None, operation_feedrate=None):
             if missing:
                 raise Exception("Required parameters missing: {}".format(missing))
 
-            if '_comment' in foo and foo['_comment']:
+            if comment is not None:
+                machine().comment(comment.format(**kwargs))
+            elif '_comment' in foo and foo['_comment']:
                 machine().comment(foo['_comment'])
 
             pop_speed = False
@@ -93,8 +95,12 @@ def zprobe(
 # with outter_rad = 1*r to 2*r this is essentially a drilling procedure
 # otherwise it'll be making a groove with a width of the diameter of the bit
 # Used to be HelicalDrill
-@operation(required=['center', 'z', 'outer_rad', 'depth', 'stepdown'], operation_feedrate='plunge')
-def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None, _comment=None):
+@operation(
+    required=['center', 'z', 'outer_rad', 'depth', 'stepdown'],
+    operation_feedrate='plunge',
+    comment="Cutting HelicalDrill at {center}, outter_rad={outer_rad:.3f}, depth={depth:.3f}",
+)
+def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None):
     R = machine().tool.diameter / 2.0
     x1, y1 = center
     z1 = z
@@ -103,9 +109,6 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
 
     if depth == 0:
         return
-
-    if not _comment:
-        machine().comment("Cutting HelicalDrill at %r, outter_rad=%.3f, depth=%.3f" % (list(center), outer_rad, depth))
 
     if outer_rad <= R:
         machine().goto(z=clearz)
@@ -129,9 +132,9 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
         machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=z2, clockwise=clockwise, cut_to=True)
 
 
-@operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut')
+@operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut', comment='HSM Circle Pocket')
 def hsm_circle_pocket(
-    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, _comment='HSM Circle Pocket', climb=True,
+    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, climb=True,
 ):
     depth = depth or 0
     xc, yc = center

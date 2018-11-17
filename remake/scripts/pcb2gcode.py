@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_option('-d', '--depth', help="Engraving depth", type=float, default=0.010)
     parser.add_option('-s', '--stepovers', help='# of isolation paths to engrave', type=int, default=2)
     parser.add_option('-b', '--border', help='Width of border for PCB', type=float, default=0.1)
-    parser.add_option('-t', '--thickness', help="Thickness of PCB (for drill/cutout)", type=float, default=1.6*constants.MM)
+    parser.add_option('-t', '--thickness', help="Thickness of PCB (for drill/cutout)", type=float, default=1.7*constants.MM)
     options, args = parser.parse_args()
 
     layers = {
@@ -91,24 +91,24 @@ if __name__ == '__main__':
 
     bounds = union_geom.bounds
 
+    minx, miny, maxx, maxy = bounds
+    width = maxx - minx
+    height = maxy - miny
+    rect_stock(width*1.2, height*1.2, options.thickness, origin=(minx-width*.1, -options.thickness, maxy-height-height*.1))
+
     bottom_trace_geom = None
     top_trace_geom = None
     drill_geom = None
 
-    if 'top-copper' in layers:
-        fname, fdata = layers['top-copper']
-        top_trace_geom, top_iso_geoms = pcb_isolation_mill(
-            gerber_data=fdata,
-            gerber_file=fname,
-            stepovers=options.stepovers,
-            depth=options.depth,
-            border=options.border,
-        )
-
-        # minx, miny, maxx, maxy = bounds
-        # width = maxx - minx
-        # height = maxy - miny
-        # rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
+    # if 'top-copper' in layers:
+    #     fname, fdata = layers['top-copper']
+    #     top_trace_geom, top_iso_geoms = pcb_isolation_mill(
+    #         gerber_data=fdata,
+    #         gerber_file=fname,
+    #         stepovers=options.stepovers,
+    #         depth=options.depth,
+    #         border=options.border,
+    #     )
 
     if 'bottom-copper' in layers:
         fname, fdata = layers['bottom-copper']
@@ -122,11 +122,6 @@ if __name__ == '__main__':
             zprobe_radius=None,
         )
 
-        # minx, miny, maxx, maxy = bounds
-        # width = maxx - minx
-        # height = maxy - miny
-        # rect_stock(width, height, options.thickness, origin=(0, -options.thickness, 0))
-
     if 'drill' in layers:
         machine.set_tool('tiny-0.8mm')
         fname, fdata = layers['drill']
@@ -138,7 +133,7 @@ if __name__ == '__main__':
         )
 
     machine.set_tool('1/16in spiral upcut')
-    # pcb_cutout(bounds=bounds, depth=options.thickness)
+    pcb_cutout(bounds=bounds, depth=options.thickness)
 
     geoms = [x for x in [
         bottom_trace_geom,

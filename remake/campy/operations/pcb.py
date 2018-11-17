@@ -224,18 +224,18 @@ def pcb_isolation_geometry(
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, stepover='20%', stepovers=1, depth=None, clearz=None,
-    border=0.1, auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
+    auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
     def _cut_coords(c):
         machine().goto(z=clearz)
 
         if simplify:
             coords = c.simplify(simplify).coords
-        machine().goto(coords[0][0] + border, coords[0][1] + border)
+        machine().goto(coords[0][0], coords[0][1])
         machine().cut(z=-depth)
 
         for c in coords:
-            machine().cut(c[0] + border, c[1] + border)
+            machine().cut(c[0], c[1])
 
     clearz = clearz or 0.25
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
@@ -248,33 +248,34 @@ def pcb_isolation_mill(
         flipx=flipx, flipy=flipy,
     )
 
-    if zprobe_radius:
-        points = []
-        minx, miny, maxx, maxy = geom.bounds
-        even = True
-        cy = (miny + maxy) / 2.
-        while cy > 0:
-            if even:
-                cx = (minx + maxx) / 2.
-            else:
-                cx = (minx + maxx - zprobe_radius) / 2.
-
-            while cx > 0:
-                points.append(shapely.geometry.Point(cx, cy))
-                cx -= zprobe_radius
-
-            cy -= zprobe_radius/math.sqrt(2)
-            even = not even
-
-        cx = (minx + maxx) / 2.
-        cy = (miny + maxy) / 2.
-
-        pg = shapely.geometry.MultiPoint(points)
-        pg = pg.union(shapely.affinity.scale(pg, xfact=-1, origin=(cx, cy)))
-        pg = pg.union(shapely.affinity.scale(pg, yfact=-1, origin=(cy, cy)))
-        delauney = shapely.ops.triangulate(pg, edges=False)
-        geometry.shapely_to_svg('points.svg', [pg, shapely.geometry.MultiPolygon(delauney)])
-        print pg
+    # FIXME
+    # if zprobe_radius:
+    #     points = []
+    #     minx, miny, maxx, maxy = geom.bounds
+    #     even = True
+    #     cy = (miny + maxy) / 2.
+    #     while cy > 0:
+    #         if even:
+    #             cx = (minx + maxx) / 2.
+    #         else:
+    #             cx = (minx + maxx - zprobe_radius) / 2.
+    #
+    #         while cx > 0:
+    #             points.append(shapely.geometry.Point(cx, cy))
+    #             cx -= zprobe_radius
+    #
+    #         cy -= zprobe_radius/math.sqrt(2)
+    #         even = not even
+    #
+    #     cx = (minx + maxx) / 2.
+    #     cy = (miny + maxy) / 2.
+    #
+    #     pg = shapely.geometry.MultiPoint(points)
+    #     pg = pg.union(shapely.affinity.scale(pg, xfact=-1, origin=(cx, cy)))
+    #     pg = pg.union(shapely.affinity.scale(pg, yfact=-1, origin=(cy, cy)))
+    #     delauney = shapely.ops.triangulate(pg, edges=False)
+    #     geometry.shapely_to_svg('points.svg', [pg, shapely.geometry.MultiPolygon(delauney)])
+    #     print pg
 
     for g in geoms:
         for p in g:
@@ -318,18 +319,16 @@ def pcb_drill(
 
 
 # FIXME - tabs not supported, add if I ever need
-@operation(required=['bounds', 'depth'], operation_feedrate='cut')
+@operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
 def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True):
     clearz = clearz or 0.25
 
     minx, miny, maxx, maxy = bounds
-    width = maxx - minx
-    height = maxy - miny
 
-    x1 = 0-machine().tool.diameter/2
-    x2 = width+machine().tool.diameter/2
-    y1 = 0-machine().tool.diameter/2
-    y2 = height+machine().tool.diameter/2
+    x1 = minx-machine().tool.diameter/2
+    x2 = maxx+machine().tool.diameter/2
+    y1 = miny-machine().tool.diameter/2
+    y2 = maxy+machine().tool.diameter/2
     for Z in machine().zstep(0, -depth, stepdown):
         machine().goto(x1, y1)
         machine().cut(z=Z)
