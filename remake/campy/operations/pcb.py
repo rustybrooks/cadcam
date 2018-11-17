@@ -2,12 +2,14 @@ import gerber
 from gerber.render import render
 import gerber.primitives as primitives
 import math
+import os
 import shapely.affinity
 import shapely.geometry
 import shapely.ops
+import zipfile
 
-from . import operation, machine, helical_drill
-from .. import geometry
+from . import operation, machine, helical_drill, rect_stock
+from .. import geometry, constants
 
 
 class OurRenderContext(render.GerberContext):
@@ -172,26 +174,6 @@ class GerberDrillContext(render.GerberContext):
         self.hole_pos.append(shapely.geometry.Point(primitive.position[0], primitive.position[1], primitive.radius))
 
 
-def pcb_trace_geometry(gerber_file=None, gerber_data=None):
-    if gerber_file is not None:
-        b = gerber.load_layer_data(gerber_data, gerber_file)
-    else:
-        b = gerber.load_layer(gerber_file)
-
-    ctx = GerberGeometryContext()
-    return ctx.render_layer(b)
-
-
-def pcb_drill_geometry(gerber_file=None, gerber_data=None):
-    if gerber_data is not None:
-        b = gerber.load_layer_data(gerber_data, gerber_file)
-    else:
-        b = gerber.load_layer(gerber_file)
-
-    ctx = GerberDrillContext()
-    return ctx.render_layer(b)
-
-
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
 @operation(required=['gerber_file', 'tool_radius'])
 def pcb_isolation_geometry(
@@ -219,7 +201,6 @@ def pcb_isolation_geometry(
         geoms.append(bgeom)
 
     return geom, geoms
-
 
 @operation(required=['gerber_file', 'depth'], operation_feedrate='cut')
 def pcb_isolation_mill(
@@ -288,6 +269,25 @@ def pcb_isolation_mill(
 
     return geom, geoms
 
+def pcb_trace_geometry(gerber_file=None, gerber_data=None):
+    if gerber_file is not None:
+        b = gerber.load_layer_data(gerber_data, gerber_file)
+    else:
+        b = gerber.load_layer(gerber_file)
+
+    ctx = GerberGeometryContext()
+    return ctx.render_layer(b)
+
+
+def pcb_drill_geometry(gerber_file=None, gerber_data=None):
+    if gerber_data is not None:
+        b = gerber.load_layer_data(gerber_data, gerber_file)
+    else:
+        b = gerber.load_layer(gerber_file)
+
+    ctx = GerberDrillContext()
+    return ctx.render_layer(b)
+
 
 @operation(required=['gerber_file', 'depth'], operation_feedrate='drill')
 def pcb_drill(
@@ -319,8 +319,9 @@ def pcb_drill(
 
 
 # FIXME - tabs not supported, add if I ever need
+# FIXME - Actually I don't think I need to do anything for flips... let me think...
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
-def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True):
+def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, flipx=False, flipy=True):
     clearz = clearz or 0.25
 
     minx, miny, maxx, maxy = bounds
@@ -341,3 +342,187 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=
         machine().goto(z=clearz)
 
 
+class PCBProject(object):
+    def __init__(self, gerber_input, border=None, thickness=1.7*constants.MM, flip='y'):
+        self.gerber_input = gerber_input
+        if isinstance(border, (int, float)):
+            self.border = [border, border, border, border]
+        else:
+            self.border = border
+
+        self.thickness = thickness
+        self.layers = None
+        self.load(gerber_input)
+        self.flip = flip
+
+    def identify_file(self, fname):
+        ext = os.path.splitext(fname)[-1].lower()
+        if ext == ".gbl":
+            return 'bottom-copper'
+        elif ext == '.gtl':
+            return 'top-copper'
+        elif ext == '.drl':
+            return 'drill'
+        else:
+            return None
+
+    def load(self, gerber_input):
+        self.layers = {
+        }
+
+        union_geom = shapely.geometry.MultiPolygon()
+        if os.path.isdir(gerber_input):
+            for fname in os.listdir(gerber_input):
+                ftype = self.identify_file(fname)
+                if ftype is None:
+                    continue
+
+                self.layers[ftype] = {
+                    'filename': fname,
+                    'data': open(fname).read()
+                }
+
+        elif os.path.splitext(gerber_input)[-1].lower() == '.zip':
+            z = zipfile.ZipFile(gerber_input)
+            for i in z.infolist():
+                ftype = self.identify_file(i.filename)
+                if ftype is None:
+                    continue
+
+                self.layers[ftype] = {
+                    'filename': i.filename,
+                    'data': z.read(i.filename),
+                }
+        else:
+            raise Exception("Input not supported: supply either a directory or zip file containing gerber files")
+
+        union_geom = shapely.geometry.GeometryCollection()
+        for k, v in self.layers.items():
+            if k == 'drill':
+                g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
+            else:
+                g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'])
+
+            union_geom = union_geom.union(g)
+
+        self.bounds = union_geom.bounds
+
+    def auto_set_stock(self):
+        minx, miny, maxx, maxy = self.bounds
+        width = maxx - minx
+        height = maxy - miny
+        rect_stock(
+            width * 1.2, height * 1.2, self.thickness,
+            origin=(minx - width * .1, -self.thickness, maxy - height - height * .1)
+        )
+
+    # drill = 'top' or 'bottom' depending on which side to drill from
+    # cutout = 'top' or 'bottom' depending on which side to cut out from
+    @operation(required=['output_directory', 'iso_bit', 'drill_bit', 'cutout_bit'])
+    def pcb_job(
+        self,
+        output_directory=None, file_per_operation=True, outline_stepovers=2, outline_depth=0.010,
+        cutout=None, drill=None,
+        iso_bit=None, drill_bit=None, cutout_bit=None
+    ):
+
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        if not file_per_operation:
+            machine().set_file(os.path.join(output_directory, 'pcb_all.ngc'))
+            self.auto_set_stock()
+
+        # .... TOP ....
+        if file_per_operation:
+            machine().set_file(os.path.join(output_directory, 'pcb_top_iso.ngc'))
+            self.auto_set_stock()
+
+        machine().set_tool(iso_bit)
+
+        l = self.layers['top-copper']
+        pcb_isolation_mill(
+            gerber_data=l['data'],
+            gerber_file=l['filename'],
+            stepovers=outline_stepovers,
+            depth=outline_depth,
+        )
+
+        if drill == 'top':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_drill.ngc'))
+                self.auto_set_stock()
+
+            machine().set_tool(drill_bit)
+
+            l = self.layers['drill']
+            pcb_drill(
+                gerber_data=l['data'],
+                gerber_file=l['filename'],
+                depth=self.thickness,
+                flipy=False
+            )
+
+        if cutout == 'top':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_cutout.ngc'))
+                self.auto_set_stock()
+
+            machine().set_tool(cutout_bit)
+            pcb_cutout(bounds=self.bounds, depth=self.thickness, flipx=False, flipy=False)
+
+        # .... BOTTOM ....
+        l = self.layers['bottom-copper']
+
+        if file_per_operation:
+            machine().set_file(os.path.join(output_directory, 'pcb_top_iso.ngc'))
+            self.auto_set_stock()
+
+        machine().set_tool(iso_bit)
+
+        pcb_isolation_mill(
+            gerber_data=l['data'],
+            gerber_file=l['filename'],
+            stepovers=outline_stepovers,
+            depth=outline_depth,
+        )
+
+        if drill == 'bottom':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_drill.ngc'))
+                self.auto_set_stock()
+
+            machine().set_tool(drill_bit)
+
+            l = self.layers['drill']
+            pcb_drill(
+                gerber_data=l['data'],
+                gerber_file=l['filename'],
+                depth=self.thickness,
+                flipx=self.bounds if self.flip=='x' else False,
+                flipy=self.bounds if self.flip=='y' else False,
+            )
+
+        if cutout == 'bottom':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_cutout.ngc'))
+                self.auto_set_stock()
+
+            machine().set_tool(cutout_bit)
+            pcb_cutout(
+                bounds=self.bounds,
+                depth=self.thickness,
+                flipx=self.bounds if self.flip=='x' else False,
+                flipy=self.bounds if self.flip=='y' else False,
+            )
+
+    #
+    #
+    #     geoms = [x for x in [
+    #         bottom_trace_geom,
+    #         #        # top_trace_geom,
+    #         drill_geom
+    #     ] if x]
+    #     geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
+    #     geometry.shapely_to_svg('drill2.svg', list(reversed(bottom_iso_geoms)) + [drill_geom], marginpct=0)
+    # #    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)

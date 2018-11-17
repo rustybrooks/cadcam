@@ -15,6 +15,8 @@ class Tool(object):
         self.flutes = flutes
         self.feeds = {
             'cut': None,
+            'raster_engrave': None,
+            'vector_engrave': None,
             'plunge': None,
             'leadin': None,
             'leadout': None,
@@ -92,6 +94,8 @@ class Tool(object):
 
         self.feeds['cut'] = feedrate
         self.feeds['plunge'] = feedrate*0.40  # FIXME?
+        self.feeds['raster_engrave'] = 0  # FIXME?
+        self.feeds['vector_engrave'] = 0  # FIXME?
         self.feeds['leadin'] = 0
         self.feeds['leadout'] = 0
         self.feeds['ramp'] = 0
