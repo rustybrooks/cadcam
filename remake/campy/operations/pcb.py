@@ -470,7 +470,7 @@ class PCBProject(object):
             self.auto_set_stock()
 
         if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_top_iso.ngc'))
+            machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
             self.auto_set_stock()
 
         machine().set_tool(iso_bit)
@@ -484,7 +484,7 @@ class PCBProject(object):
 
         if drill == 'top':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_drill.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(drill_bit)
@@ -498,7 +498,7 @@ class PCBProject(object):
 
         if cutout == 'top':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_cutout.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_top_3_cutout.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(cutout_bit)
@@ -512,7 +512,7 @@ class PCBProject(object):
             self.auto_set_stock()
 
         if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_bottom_iso.ngc'))
+            machine().set_file(os.path.join(output_directory, 'pcb_bottom_1_iso.ngc'))
             self.auto_set_stock()
 
         machine().set_tool(iso_bit)
@@ -527,7 +527,7 @@ class PCBProject(object):
 
         if drill == 'bottom':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_bottom_drill.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(drill_bit)
@@ -542,7 +542,7 @@ class PCBProject(object):
 
         if cutout == 'bottom':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_bottom_cutout.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_3_cutout.ngc'))
                 self.auto_set_stock()
 
             machine().set_tool(cutout_bit)
