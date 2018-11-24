@@ -43,4 +43,3 @@ if __name__ == '__main__':
         outline_depth=options.depth,
         outline_stepovers=options.stepovers,
     )
-p
