@@ -22,7 +22,6 @@ if __name__ == '__main__':
     parser.add_option('-t', '--thickness', help="Thickness of PCB (for drill/cutout)", type=float, default=1.7*constants.MM)
     parser.add_option('-o', '--output', help='output directory, will be created if it doesn\'t exist', type=str)
     parser.add_option('--one-file', help='if passed, will put each layer in one file', action='store_true')
-    # parser.add_option()
     options, args = parser.parse_args()
 
     pcb = PCBProject(gerber_input=args[0], border=0.1, flip='y', thickness=options.thickness)
@@ -43,4 +42,3 @@ if __name__ == '__main__':
         outline_depth=options.depth,
         outline_stepovers=options.stepovers,
     )
-p
