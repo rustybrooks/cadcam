@@ -126,8 +126,9 @@ class Environment(object):
         self.write("M30")
         self.write("%")
 
-    def comment(self, str):
-        self.write("(%s)" % (str,))
+    def comment(self, c):
+        c = c.replace('(', '[').replace(')', ']')
+        self.write("(%s)" % (c,))
 
     def goto(self, x=None, y=None, z=None, a=None, point=None, rate=None):
         if point is not None:
