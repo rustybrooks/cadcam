@@ -159,7 +159,7 @@ class Tool(object):
                 raise Exception("Unknown feed_class value: %r", feed_class)
 
             # print "!!!!!", feedrate
-            feedrate = feedrate / 5.  # This is entirely pulled out of my ass, but intuitively we can't plunge
+            feedrate = feedrate / 10.  # This is entirely pulled out of my ass, but intuitively we can't plunge
                                       # or drill at the same x-y feed rate?
         else:
             feedrate = feed_class
