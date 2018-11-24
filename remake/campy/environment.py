@@ -311,6 +311,7 @@ tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_dia
 
 tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
 tools['tiny-0.9mm'] = StraightRouterBit(diameter=.9*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-3mm'] = StraightRouterBit(diameter=3*constants.MM, tool_material='hss', flutes=2)
 
 tools['k40-laser'] = Laser(focused_beam_width=0.010)  # Just a guess - measure...
 
