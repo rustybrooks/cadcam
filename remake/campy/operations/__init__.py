@@ -100,7 +100,7 @@ def zprobe(
     operation_feedrate='plunge',
     comment="Cutting HelicalDrill at {center}, outter_rad={outer_rad:.3f}, depth={depth:.3f}",
 )
-def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None):
+def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None, auto_clear=True):
     R = machine().tool.diameter / 2.0
     x1, y1 = center
     z1 = z
@@ -131,10 +131,13 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
 
         machine().cut_arc_center_rad(x1, y1, rad, start_angle=0, end_angle=0, z=z2, clockwise=clockwise, cut_to=True)
 
+    if auto_clear:
+        machine().goto(z=clearz)
+
 
 @operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut', comment='HSM Circle Pocket')
 def hsm_circle_pocket(
-    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, climb=True,
+    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, climb=True, auto_clear=True,
 ):
     depth = depth or 0
     xc, yc = center
@@ -162,6 +165,9 @@ def hsm_circle_pocket(
                 xc, yc, radius=rad - R, start_angle=0, end_angle=0, clockwise=climb,
                 cut_to=True, return_to=False
             )
+
+    if auto_clear:
+        machine().goto(z=clearz)
 
 
 # type is x (movement parallel to x axis) or y (y axis)
