@@ -9,7 +9,7 @@ import shapely.ops
 import zipfile
 
 from . import operation, machine, helical_drill, rect_stock
-from .. import geometry, constants
+from .. import constants, environment
 
 
 class OurRenderContext(render.GerberContext):
@@ -328,9 +328,8 @@ def pcb_drill(
 
 
 # FIXME - tabs not supported, add if I ever need
-# FIXME - Actually I don't think I need to do anything for flips... let me think...
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
-def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, flipx=False, flipy=True):
+def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
     clearz = clearz or 0.25
 
     minx, miny, maxx, maxy = bounds
@@ -339,20 +338,24 @@ def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=
     x2 = maxx+machine().tool.diameter/2
     y1 = miny-machine().tool.diameter/2
     y2 = maxy+machine().tool.diameter/2
+    print x1, y1, x2, y2
+    print xoff, yoff
     for Z in machine().zstep(0, -depth, stepdown):
-        machine().goto(x1, y1)
+        machine().goto(xoff+x1, yoff+y1)
         machine().cut(z=Z)
-        machine().cut(x=x1, y=y2)
-        machine().cut(x=x2, y=y2)
-        machine().cut(x=x2, y=y1)
-        machine().cut(x=x1, y=y1)
+        machine().cut(x=xoff+x1, y=yoff+y2)
+        machine().cut(x=xoff+x2, y=yoff+y2)
+        machine().cut(x=xoff+x2, y=yoff+y1)
+        machine().cut(x=xoff+x1, y=yoff+y1)
 
     if auto_clear:
         machine().goto(z=clearz)
 
 
 class PCBProject(object):
-    def __init__(self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM, flip='y'):
+    def __init__(
+        self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM
+    ):
         self.gerber_input = gerber_input
         if isinstance(border, (int, float)):
             self.border = [border, border, border, border]
@@ -361,7 +364,6 @@ class PCBProject(object):
 
         self.thickness = thickness
         self.layers = None
-        self.flip = flip
         self.auto_zero = auto_zero
 
         self.load(gerber_input)
@@ -381,7 +383,7 @@ class PCBProject(object):
         self.layers = {
         }
 
-        union_geom = shapely.geometry.MultiPolygon()
+        union_geom = shapely.geometry.GeometryCollection()
         if os.path.isdir(gerber_input):
             for fname in os.listdir(gerber_input):
                 ftype = self.identify_file(fname)
@@ -407,7 +409,6 @@ class PCBProject(object):
         else:
             raise Exception("Input not supported: supply either a directory or zip file containing gerber files")
 
-        union_geom = shapely.geometry.GeometryCollection()
         for k, v in self.layers.items():
             if k == 'drill':
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
@@ -441,6 +442,8 @@ class PCBProject(object):
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
 
+        print self.bounds
+
     def auto_set_stock(self):
         minx, miny, maxx, maxy = self.bounds
         width = maxx - minx
@@ -457,12 +460,19 @@ class PCBProject(object):
         self,
         output_directory=None, file_per_operation=True, outline_stepovers=2, outline_depth=0.010,
         cutout=None, drill=None,
-        iso_bit=None, drill_bit=None, cutout_bit=None
+        iso_bit=None, drill_bit=None, cutout_bit=None,
+        panelx=1, panely=1, flip='y'
     ):
+        def _xoff(xi):
+            minx, miny, maxx, maxy = self.bounds
+            return xi*(maxx-minx+environment.tools[cutout_bit].diameter)
+
+        def _yoff(yi):
+            minx, miny, maxx, maxy = self.bounds
+            return yi*(maxy-miny+environment.tools[cutout_bit].diameter)
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
-
 
         # .... TOP ....
         if not file_per_operation:
@@ -476,11 +486,13 @@ class PCBProject(object):
         machine().set_tool(iso_bit)
 
         l = self.layers['top-copper']
-        pcb_isolation_mill(
-            gerber_geometry=l['geometry'],
-            stepovers=outline_stepovers,
-            depth=outline_depth,
-        )
+        for x in range(panelx):
+            for y in range(panely):
+                pcb_isolation_mill(
+                    gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                    stepovers=outline_stepovers,
+                    depth=outline_depth,
+                )
 
         if drill == 'top':
             if file_per_operation:
@@ -490,11 +502,13 @@ class PCBProject(object):
             machine().set_tool(drill_bit)
 
             l = self.layers['drill']
-            pcb_drill(
-                gerber_geometry=l['geometry'],
-                depth=self.thickness,
-                flipy=False
-            )
+            for x in range(panelx):
+                for y in range(panely):
+                    pcb_drill(
+                        gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                        depth=self.thickness,
+                        flipy=False
+                    )
 
         if cutout == 'top':
             if file_per_operation:
@@ -502,7 +516,9 @@ class PCBProject(object):
                 self.auto_set_stock()
 
             machine().set_tool(cutout_bit)
-            pcb_cutout(bounds=self.bounds, depth=self.thickness, flipx=False, flipy=False)
+            for x in range(panelx):
+                for y in range(panely):
+                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
 
         # .... BOTTOM ....
         l = self.layers['bottom-copper']
@@ -517,13 +533,15 @@ class PCBProject(object):
 
         machine().set_tool(iso_bit)
 
-        pcb_isolation_mill(
-            gerber_geometry=l['geometry'],
-            stepovers=outline_stepovers,
-            depth=outline_depth,
-            flipx=self.bounds if self.flip == 'x' else False,
-            flipy=self.bounds if self.flip == 'y' else False,
-        )
+        for x in range(panelx):
+            for y in range(panely):
+                pcb_isolation_mill(
+                    gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                    stepovers=outline_stepovers,
+                    depth=outline_depth,
+                    flipx=self.bounds if flip == 'x' else False,
+                    flipy=self.bounds if flip == 'y' else False,
+                )
 
         if drill == 'bottom':
             if file_per_operation:
@@ -533,12 +551,14 @@ class PCBProject(object):
             machine().set_tool(drill_bit)
 
             l = self.layers['drill']
-            pcb_drill(
-                gerber_geometry=l['geometry'],
-                depth=self.thickness,
-                flipx=self.bounds if self.flip == 'x' else False,
-                flipy=self.bounds if self.flip == 'y' else False,
-            )
+            for x in range(panelx):
+                for y in range(panely):
+                    pcb_drill(
+                        gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                        depth=self.thickness,
+                        flipx=self.bounds if flip == 'x' else False,
+                        flipy=self.bounds if flip == 'y' else False,
+                    )
 
         if cutout == 'bottom':
             if file_per_operation:
@@ -546,12 +566,9 @@ class PCBProject(object):
                 self.auto_set_stock()
 
             machine().set_tool(cutout_bit)
-            pcb_cutout(
-                bounds=self.bounds,
-                depth=self.thickness,
-                #flipx=self.bounds if self.flip=='x' else False,
-                #flipy=self.bounds if self.flip=='y' else False,
-            )
+            for x in range(panelx):
+                for y in range(panely):
+                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
 
     #
     #
