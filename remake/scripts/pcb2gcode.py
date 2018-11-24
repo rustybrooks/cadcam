@@ -36,10 +36,11 @@ if __name__ == '__main__':
         output_directory=options.output,
         drill='top',
         cutout='top',
-        iso_bit='engrave-0.1-10',
+        iso_bit='engrave-0.1-30',
         drill_bit='tiny-0.9mm',
         cutout_bit='1/16in spiral upcut',
         file_per_operation=not options.one_file,
         outline_depth=options.depth,
         outline_stepovers=options.stepovers,
     )
+p
