@@ -310,8 +310,18 @@ tools['probe'].feeds['probe'] = 1
 tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
 
+tools['tiny-0.6mm'] = StraightRouterBit(diameter=.6*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-0.7mm'] = StraightRouterBit(diameter=.7*constants.MM, tool_material='hss', flutes=2)
 tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
 tools['tiny-0.9mm'] = StraightRouterBit(diameter=.9*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-1.0mm'] = StraightRouterBit(diameter=1.0*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-1.2mm'] = StraightRouterBit(diameter=1.2*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-1.4mm'] = StraightRouterBit(diameter=1.4*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-1.6mm'] = StraightRouterBit(diameter=1.6*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-1.8mm'] = StraightRouterBit(diameter=1.8*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-2.0mm'] = StraightRouterBit(diameter=2.0*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-2.2mm'] = StraightRouterBit(diameter=2.2*constants.MM, tool_material='hss', flutes=2)
+tools['tiny-2.4mm'] = StraightRouterBit(diameter=2.4*constants.MM, tool_material='hss', flutes=2)
 tools['tiny-3mm'] = StraightRouterBit(diameter=3*constants.MM, tool_material='hss', flutes=2)
 
 tools['k40-laser'] = Laser(focused_beam_width=0.010)  # Just a guess - measure...
