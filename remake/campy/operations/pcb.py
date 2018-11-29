@@ -340,7 +340,7 @@ def pcb_drill(
 # FIXME - tabs not supported, add if I ever need
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
 def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
-    clearz = clearz or 0.25
+    clearz = clearz or 0.125
 
     # if gerber_geometry:
     #     geom = gerber_geometry
