@@ -295,9 +295,19 @@ def pcb_drill_geometry(gerber_file=None, gerber_data=None):
     return ctx.render_layer(b)
 
 
+def pcb_outline_geometry(gerber_file=None, gerber_data=None):
+    if gerber_data is not None:
+        b = gerber.load_layer_data(gerber_data, gerber_file)
+    else:
+        b = gerber.load_layer(gerber_file)
+
+    ctx = GerberGeometryContext()
+    return ctx.render_layer(b)
+
+
 @operation(required=['depth'], operation_feedrate='drill')
 def pcb_drill(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
+        gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
 ):
     clearz = clearz or 0.125
 
@@ -329,17 +339,23 @@ def pcb_drill(
 
 # FIXME - tabs not supported, add if I ever need
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
-def pcb_cutout(bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
+def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
     clearz = clearz or 0.25
 
+    # if gerber_geometry:
+    #     geom = gerber_geometry
+    #     minx, miny, maxx, maxy = geom.bounds
+    # elif gerber_data or gerber_file:
+    #     geom = pcb_outline_geometry(gerber_file=gerber_file, gerber_data=gerber_data)
+    #     minx, miny, maxx, maxy = geom.bounds
+    # else:
     minx, miny, maxx, maxy = bounds
+    print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
 
     x1 = minx-machine().tool.diameter/2
     x2 = maxx+machine().tool.diameter/2
     y1 = miny-machine().tool.diameter/2
     y2 = maxy+machine().tool.diameter/2
-    print x1, y1, x2, y2
-    print xoff, yoff
     for Z in machine().zstep(0, -depth, stepdown):
         machine().goto(xoff+x1, yoff+y1)
         machine().cut(z=Z)
@@ -376,6 +392,8 @@ class PCBProject(object):
             return 'top-copper'
         elif ext == '.drl':
             return 'drill'
+        elif ext == '.gko':
+            return 'outline'
         else:
             return None
 
@@ -412,6 +430,8 @@ class PCBProject(object):
         for k, v in self.layers.items():
             if k == 'drill':
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
+            elif k == 'outline':
+                g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'])
             else:
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'])
 
@@ -441,8 +461,6 @@ class PCBProject(object):
             newminx + (maxx - minx) + self.border[0] + self.border[2],
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
-
-        print self.bounds
 
     def auto_set_stock(self):
         minx, miny, maxx, maxy = self.bounds
