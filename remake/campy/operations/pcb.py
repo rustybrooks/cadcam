@@ -266,14 +266,20 @@ def pcb_isolation_mill(
         #yoff = (height - (samplesy*yspace))/2.0
 
         print xspace, yspace, samplesx, samplesy, width/samplesx, height/samplesy
+        varnum = 500
+        pointmap = {}
         for y in range(samplesy):
             rowspace = 0 if y % 2 == 0 else xspace/2.0
             sx = samplesx if y % 2 == 0 else samplesx - 1
             for x in range(sx):
                 print ".....", x, y
-                cx = minx + xspace*x + rowspace
-                cy = miny + yspace*y
-                points.append(shapely.geometry.Point(cx, cy))
+                cx = round(minx + xspace*x + rowspace, 3)
+                cy = round(miny + yspace*y, 3)
+                point = shapely.geometry.Point(cx, cy)
+                points.append(point)
+                zprobe(center=(cx, cy), z=.125, depth=.25, rate=5, tries=1, storez=varnum)
+                pointmap[(cx, cy)] = [varnum, point]
+                varnum += 1
 
         pg = shapely.geometry.MultiPoint(points)
         delauney = shapely.ops.triangulate(pg, edges=False)
