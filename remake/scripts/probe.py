@@ -17,6 +17,7 @@ safe = 0.05
 rate = 1
 tries = 2
 
+
 def doprobe():
     machine.write("(PROBEOPEN /tmp/probe.txt)")
     for x in frange(offset, width-offset, step):

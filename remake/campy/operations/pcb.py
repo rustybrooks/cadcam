@@ -8,8 +8,8 @@ import shapely.geometry
 import shapely.ops
 import zipfile
 
-from . import operation, machine, helical_drill, rect_stock
-from .. import constants, environment
+from . import operation, machine, helical_drill, rect_stock, zprobe
+from .. import constants, environment, geometry
 
 
 class OurRenderContext(render.GerberContext):
@@ -235,33 +235,50 @@ def pcb_isolation_mill(
     )
 
     # FIXME
-    # if zprobe_radius:
-    #     points = []
-    #     minx, miny, maxx, maxy = geom.bounds
-    #     even = True
-    #     cy = (miny + maxy) / 2.
-    #     while cy > 0:
-    #         if even:
-    #             cx = (minx + maxx) / 2.
-    #         else:
-    #             cx = (minx + maxx - zprobe_radius) / 2.
-    #
-    #         while cx > 0:
-    #             points.append(shapely.geometry.Point(cx, cy))
-    #             cx -= zprobe_radius
-    #
-    #         cy -= zprobe_radius/math.sqrt(2)
-    #         even = not even
-    #
-    #     cx = (minx + maxx) / 2.
-    #     cy = (miny + maxy) / 2.
-    #
-    #     pg = shapely.geometry.MultiPoint(points)
-    #     pg = pg.union(shapely.affinity.scale(pg, xfact=-1, origin=(cx, cy)))
-    #     pg = pg.union(shapely.affinity.scale(pg, yfact=-1, origin=(cy, cy)))
-    #     delauney = shapely.ops.triangulate(pg, edges=False)
-    #     geometry.shapely_to_svg('points.svg', [pg, shapely.geometry.MultiPolygon(delauney)])
-    #     print pg
+    if zprobe_radius:
+        # first lets get a good zero
+        zprobe(center=(0, 0), z=0, zretract=1/16., depth=0.5, rate=5, tries=3, setz=True, clearz=True)
+
+        points = []
+        minx, miny, maxx, maxy = geom.bounds
+        width = maxx - miny
+        height = maxy - miny
+
+        if zprobe_radius == 'auto':
+            autox = width/5.
+            autoy = height/5.
+            print autox, autoy
+            zprobe_radius = min(max(0.25, autox, autoy), 1)  # just a guess really
+
+        xspace = zprobe_radius
+        yspace = zprobe_radius/math.sqrt(2)
+
+        divx = width/xspace
+        divy = height/yspace
+        xspace *= divx/round(divx)
+        yspace *= divy/round(divy)
+
+        samplesx = int(width/xspace)+1
+        samplesy = int(height/yspace)+1
+        print divx, samplesx
+        print divy, samplesy
+        #xoff = (width - (samplesx*xspace))/2.0
+        #yoff = (height - (samplesy*yspace))/2.0
+
+        print xspace, yspace, samplesx, samplesy, width/samplesx, height/samplesy
+        for y in range(samplesy):
+            rowspace = 0 if y % 2 == 0 else xspace/2.0
+            sx = samplesx if y % 2 == 0 else samplesx - 1
+            for x in range(sx):
+                print ".....", x, y
+                cx = minx + xspace*x + rowspace
+                cy = miny + yspace*y
+                points.append(shapely.geometry.Point(cx, cy))
+
+        pg = shapely.geometry.MultiPoint(points)
+        delauney = shapely.ops.triangulate(pg, edges=False)
+        box = shapely.geometry.box(minx, miny, maxx, maxy)
+        geometry.shapely_to_svg('points.svg', [box, pg, shapely.geometry.MultiPolygon(delauney)])
 
     for g in geoms:
         for p in g:
@@ -479,7 +496,7 @@ class PCBProject(object):
         output_directory=None, file_per_operation=True, outline_stepovers=2, outline_depth=0.010,
         cutout=None, drill=None,
         iso_bit=None, drill_bit=None, cutout_bit=None,
-        panelx=1, panely=1, flip='y'
+        panelx=1, panely=1, flip='y', zprobe_radius=None,
     ):
         def _xoff(xi):
             minx, miny, maxx, maxy = self.bounds
@@ -510,6 +527,7 @@ class PCBProject(object):
                     gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
                     stepovers=outline_stepovers,
                     depth=outline_depth,
+                    zprobe_radius=zprobe_radius,
                 )
 
         if drill == 'top':
@@ -559,6 +577,7 @@ class PCBProject(object):
                     depth=outline_depth,
                     flipx=self.bounds if flip == 'x' else False,
                     flipy=self.bounds if flip == 'y' else False,
+                    zprobe_radius=zprobe_radius,
                 )
 
         if drill == 'bottom':

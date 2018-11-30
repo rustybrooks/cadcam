@@ -19,7 +19,7 @@ def spoil_holes():
 
     for x in range(1, width, 2):
         for y in range(1, height, 2):
-
+            raise Exception("what did I mean to put here")
 
 
 machine = set_machine('k2cnc')
