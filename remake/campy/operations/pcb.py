@@ -211,16 +211,56 @@ def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, depth=None, clearz=None,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
+    def _zadjust(x, y):
+        if not delauney:
+            machine().write("#100=0")
+            return "#100"
+
+        pt = shapely.geometry.Point(x, y)
+
+        try:
+            match = next(x for x in delauney if x.contains(pt))
+        except StopIteration:
+            raise Exception("Did not find triangle for point {}".format(list(pt.coords)))
+
+        # px = w1*x1 + w2*x2 + w3*x3
+        # py = w1*y1 + w2*y2 + w3*y3
+        # w1 = ((y2-y3)(px-x3) + (x3-x2)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
+        # w2 = ((y3-y1)(px-x3) + (x1-x3)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
+        # w3 = 1 - w2 - w1
+        # z = w1*z1 + w2*z2 + z3*z3
+
+        vars = {
+            'px': x,
+            'py': y,
+        }
+        for i, p in enumerate(match.exterior.coords):
+            vars['x{}'.format(i+1)] = p[0]
+            vars['y{}'.format(i+1)] = p[1]
+            vars['z{}'.format(i+1)] = "#{}".format(int(round(p[2])))
+
+        machine().write("#100=[[{y2}-{y3}]*[{x1}-{x3}] + [{x3}-{x2}]*[{y1}-{y3}]]".format(**vars))  # denom
+        machine().write("#102=[[[{y2}-{y3}]*[{px}-{x3}] + [{x3}-{x2}]*[{py}-{y3}]]/#100".format(**vars))  # w1 num
+        machine().write("#103=[[[{y3}-{y1}]*[{px}-{x3}] + [{x1}-{x3}]*[{py}-{y3}]]/#100".format(**vars))  # w2 num
+        machine().write("#104=[1 - #102 - #103]")
+        machine().write("#105=[#102*{z1} + #103*{z2} + #104*{z3}]".format(**vars))
+        return "#105"
+
     def _cut_coords(c):
         machine().goto(z=clearz)
 
         if simplify:
             coords = c.simplify(simplify).coords
+        else:
+            coords = c.coords
+
         machine().goto(coords[0][0], coords[0][1])
-        machine().cut(z=-depth)
+        zvar = _zadjust(coords[0][0], coords[0][1])
+        machine().cut(z="[{}-depth]".format(zvar))
 
         for c in coords:
-            machine().cut(c[0], c[1])
+            zvar = _zadjust(coords[0][0], coords[0][1])
+            machine().cut(c[0], c[1], "[{}-depth]".format(zvar))
 
     clearz = clearz or 0.125
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
@@ -234,6 +274,8 @@ def pcb_isolation_mill(
         flipx=flipx, flipy=flipy,
     )
 
+    delauney = None
+
     # FIXME
     if zprobe_radius:
         # first lets get a good zero
@@ -241,13 +283,21 @@ def pcb_isolation_mill(
 
         points = []
         minx, miny, maxx, maxy = geom.bounds
-        width = maxx - miny
+        print "bounds", list(geom.bounds)
+
+        # This is a little BS - we go outside our BB a little because of offsets.  Probably better to calc this
+        o = .08
+        minx -= o
+        miny -= o
+        maxx += o
+        maxy += o
+
+        width = maxx - minx
         height = maxy - miny
 
         if zprobe_radius == 'auto':
             autox = width/5.
             autoy = height/5.
-            print autox, autoy
             zprobe_radius = min(max(0.25, autox, autoy), 1)  # just a guess really
 
         xspace = zprobe_radius
@@ -255,31 +305,28 @@ def pcb_isolation_mill(
 
         divx = width/xspace
         divy = height/yspace
-        xspace *= divx/round(divx)
-        yspace *= divy/round(divy)
+        xspace = width/round(divx)
+        yspace = height/round(divy)
 
-        samplesx = int(width/xspace)+1
-        samplesy = int(height/yspace)+1
-        print divx, samplesx
-        print divy, samplesy
-        #xoff = (width - (samplesx*xspace))/2.0
-        #yoff = (height - (samplesy*yspace))/2.0
+        samplesx = int(round(divx)) + 1
+        samplesy = int(round(divy)) + 1
 
-        print xspace, yspace, samplesx, samplesy, width/samplesx, height/samplesy
+        print "w, h =", width, height
+        print xspace, yspace, samplesx, samplesy
+
         varnum = 500
-        pointmap = {}
         for y in range(samplesy):
             rowspace = 0 if y % 2 == 0 else xspace/2.0
             sx = samplesx if y % 2 == 0 else samplesx - 1
             for x in range(sx):
-                print ".....", x, y
-                cx = round(minx + xspace*x + rowspace, 3)
-                cy = round(miny + yspace*y, 3)
-                point = shapely.geometry.Point(cx, cy)
+                cx = minx + xspace*x + rowspace
+                cy = miny + yspace*y
+                point = shapely.geometry.Point(cx, cy, varnum)
                 points.append(point)
                 zprobe(center=(cx, cy), z=.125, depth=.25, rate=5, tries=1, storez=varnum)
-                pointmap[(cx, cy)] = [varnum, point]
                 varnum += 1
+
+            print y, cy
 
         pg = shapely.geometry.MultiPoint(points)
         delauney = shapely.ops.triangulate(pg, edges=False)

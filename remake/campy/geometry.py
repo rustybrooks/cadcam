@@ -626,14 +626,14 @@ def graph_lines():
 def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
     def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
-            poly.exterior.coords,
+            [foo[:2] for foo in poly.exterior.coords],
             stroke=stroke, stroke_width=0.0005,
             fill_opacity=0
         ))
 
         for i in poly.interiors:
             dwg.add(dwg.polygon(
-                i.coords,
+                [foo[:2] for foo in i.coords],
                 stroke='red', stroke_width=0.0005,
                 fill_opacity=0
             ))
@@ -646,11 +646,11 @@ def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
                 for g2 in g:
                     _drawpoly(g2)
             elif isinstance(g, shapely.geometry.Point):
-                x, y = g.coords[0]
+                x, y = g.coords[0][:2]
                 dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
             elif isinstance(g, shapely.geometry.MultiPoint):
                 for g2 in g:
-                    x, y = g2.coords[0]
+                    x, y = g2.coords[0][:2]
                     dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
             elif isinstance(g, shapely.geometry.GeometryCollection):
                 _draw_geoms(g)
