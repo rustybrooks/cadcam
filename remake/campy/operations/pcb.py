@@ -550,7 +550,7 @@ class PCBProject(object):
         if side == 'bottom' and self.fixture_width > 0:
             rect_stock(
                 (width * 1.2)+px, height * 1.2, self.thickness,
-                origin=(self.fixture_width - width + minx - width * .1, -self.thickness, maxy - height - height * .1)
+                origin=(self.fixture_width + minx - width - width*.1, -self.thickness, maxy - height - height*.1)
             )
         else:
             rect_stock(
