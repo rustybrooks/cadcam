@@ -247,7 +247,31 @@ def pcb_isolation_mill(
         machine().write("#105=[#102*{z1} + #103*{z2} + #104*{z3}]".format(**vars))
         return "#105"
 
-    def _cut_coords(c):
+    def _zadjust_geom(_coords, zrad):
+        outcoords = []
+        lastc = None
+        for c in _coords:
+            if lastc:
+                length = abs(geometry.distance(c, lastc)) if lastc else 0
+                xl = c[0] - lastc[0]
+                yl = c[1] - lastc[1]
+                if length > zrad/1.5:
+                    print length, ">", zrad / 1.5, length > zrad / 1.5
+                    segments = int(1.5*math.ceil(length/zrad))
+                    for i in range(segments-1):
+                        tc = (
+                            round(lastc[0] + xl * i / segments, 3),
+                            round(lastc[1] + yl * i / segments, 3),
+                        )
+                        print i, lastc, c, tc
+                        outcoords.append(tc)
+
+            outcoords.append(c)
+            lastc = c
+
+        return outcoords
+
+    def _cut_coords(c, zrad):
         machine().goto(z=clearz)
 
         if simplify:
@@ -255,12 +279,12 @@ def pcb_isolation_mill(
         else:
             coords = c.coords
 
-        machine().goto(coords[0][0], coords[0][1])
-        zvar = _zadjust(coords[0][0], coords[0][1])
+        machine().goto(*coords[0])
+        zvar = _zadjust(*coords[0])
         machine().cut(z="[{}-{}]".format(zvar, depth))
 
-        for c in coords:
-            zvar = _zadjust(coords[0][0], coords[0][1])
+        for c in _zadjust_geom(coords, zrad):
+            zvar = _zadjust(*coords[0])
             machine().cut(c[0], c[1], "[{}-{}]".format(zvar, depth))
 
     clearz = clearz or 0.125
@@ -334,9 +358,9 @@ def pcb_isolation_mill(
     for g in geoms:
         g = shapely.affinity.translate(g, xoff=xoff, yoff=yoff)
         for p in g:
-            _cut_coords(p.exterior)
+            _cut_coords(p.exterior, zprobe_radius)
             for i in p.interiors:
-                _cut_coords(i)
+                _cut_coords(i, zprobe_radius)
 
     if auto_clear:
         machine().goto(z=clearz)
@@ -587,17 +611,18 @@ class PCBProject(object):
             machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
             self.auto_set_stock(side='top')
 
-        if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
-            self.auto_set_stock(side='top')
+        if self.posts != 'none':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
+                self.auto_set_stock(side='top')
 
-        machine().set_tool(post_bit)
-        if self.posts == 'x':
-            minx, miny, maxx, maxy = self.bounds
-            helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
-            helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
-        elif self.posts == 'y':
-            raise Exception("not implemented")
+            machine().set_tool(post_bit)
+            if self.posts == 'x':
+                minx, miny, maxx, maxy = self.bounds
+                helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
+                helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
+            elif self.posts == 'y':
+                raise Exception("not implemented")
 
         if file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
