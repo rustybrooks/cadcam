@@ -187,7 +187,6 @@ def pcb_isolation_geometry(
 
     if flipx:
         minx, miny, maxx, maxy = flipx
-        print "FLIPX offset = ", maxx+minx
         geom = shapely.affinity.scale(geom, xfact=-1, origin=(0, 0))
         geom = shapely.affinity.translate(geom, xoff=maxx+minx)
 
@@ -285,7 +284,6 @@ def pcb_isolation_mill(
 
         points = []
         minx, miny, maxx, maxy = geom.bounds
-        print "bounds", list(geom.bounds)
 
         # This is a little BS - we go outside our BB a little because of offsets.  Probably better to calc this
         o = .08
@@ -300,7 +298,7 @@ def pcb_isolation_mill(
         if zprobe_radius == 'auto':
             autox = width/5.
             autoy = height/5.
-            zprobe_radius = min(max(0.25, autox, autoy), 1)  # just a guess really
+            zprobe_radius = min(max(0.325, autox, autoy), 1)  # just a guess really
 
         xspace = zprobe_radius
         yspace = zprobe_radius/math.sqrt(2)
@@ -327,8 +325,6 @@ def pcb_isolation_mill(
                 points.append(point)
                 zprobe(center=(cx, cy), z=.125, depth=.25, rate=5, tries=1, storez=varnum)
                 varnum += 1
-
-            print y, cy
 
         pg = shapely.geometry.MultiPoint(points)
         delauney = shapely.ops.triangulate(pg, edges=False)
@@ -425,7 +421,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
     #     minx, miny, maxx, maxy = geom.bounds
     # else:
     minx, miny, maxx, maxy = bounds
-    print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
+    # print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
 
     x1 = minx-machine().tool.diameter/2
     x2 = maxx+machine().tool.diameter/2
