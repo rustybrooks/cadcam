@@ -74,11 +74,22 @@ def rect_stock(width, height, thickness, origin=(0, 0, 0)):
     machine().write("(RectSolid %f %f %f origin=%f %f %f)" % (width, height, thickness, origin[0], origin[1], origin[2]))
 
 
+# G0 X0 Y0 Z0
+# G38.2 Z-0.375 F5
+# G10 L20 P0 Z0
+# G0 Z0.125
+# G38.2 Z-0.0625 F2.5
+# G10 L20 P0 Z0
+# G0 Z0.125
+# G0 X0 Y0
+# G38.2 Z-0.0625 F5
 @operation(required=['center', 'z', 'depth'], operation_feedrate='probe')
 def zprobe(
     center=None, z=None, zretract=0.025, depth=None, rate=None, toward=True, halt_on_error=True,
-    tries=1, backoff=.5
+    tries=1, backoff=.5, setz=False, auto_clear=True, clearz=None, storez=False,
 ):
+    clearz = clearz or 0.125
+
     x, y = center
     machine().goto(z=z)
     machine().goto(x, y)
@@ -88,6 +99,15 @@ def zprobe(
         if i +1 != tries:
             machine().goto(z="[#5063+{}]".format(zretract))
 #        machine().probe(axis='Z', to=z, rate=rate, toward=not toward, halt_on_error=False)
+
+    if setz:
+        machine().write("G10 L20 P0 Z0")  # set Z
+
+    if storez:
+        machine().write("#{}=#5422".format(storez))
+
+    if auto_clear:
+        machine().goto(z=clearz)
 
 
 # This will make a helical arc with the outter radius = outter-rad

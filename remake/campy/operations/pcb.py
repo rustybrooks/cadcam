@@ -8,8 +8,8 @@ import shapely.geometry
 import shapely.ops
 import zipfile
 
-from . import operation, machine, helical_drill, rect_stock
-from .. import constants, environment
+from . import operation, machine, helical_drill, rect_stock, zprobe
+from .. import constants, environment, geometry
 
 
 class OurRenderContext(render.GerberContext):
@@ -209,18 +209,83 @@ def pcb_isolation_geometry(
 @operation(required=['depth'], operation_feedrate='vector_engrave')
 def pcb_isolation_mill(
     gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, depth=None, clearz=None,
+    xoff=0, yoff=0,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
-    def _cut_coords(c):
+    def _zadjust(x, y):
+        if not delauney:
+            machine().write("#100=0")
+            return "#100"
+
+        pt = shapely.geometry.Point(x, y)
+
+        try:
+            match = next(x for x in delauney if x.contains(pt))
+        except StopIteration:
+            raise Exception("Did not find triangle for point {}".format(list(pt.coords)))
+
+        # px = w1*x1 + w2*x2 + w3*x3
+        # py = w1*y1 + w2*y2 + w3*y3
+        # w1 = ((y2-y3)(px-x3) + (x3-x2)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
+        # w2 = ((y3-y1)(px-x3) + (x1-x3)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
+        # w3 = 1 - w2 - w1
+        # z = w1*z1 + w2*z2 + z3*z3
+
+        vars = {
+            'px': x,
+            'py': y,
+        }
+        for i, p in enumerate(match.exterior.coords):
+            vars['x{}'.format(i+1)] = p[0]
+            vars['y{}'.format(i+1)] = p[1]
+            vars['z{}'.format(i+1)] = "#{}".format(int(round(p[2])))
+
+        machine().write("#100=[[{y2}-{y3}]*[{x1}-{x3}] + [{x3}-{x2}]*[{y1}-{y3}]]".format(**vars))  # denom
+        machine().write("#102=[[[[{y2}-{y3}]*[{px}-{x3}] + [{x3}-{x2}]*[{py}-{y3}]]]/#100]".format(**vars))  # w1 num
+        machine().write("#103=[[[[{y3}-{y1}]*[{px}-{x3}] + [{x1}-{x3}]*[{py}-{y3}]]]/#100]".format(**vars))  # w2 num
+        machine().write("#104=[1 - #102 - #103]")
+        machine().write("#105=[#102*{z1} + #103*{z2} + #104*{z3}]".format(**vars))
+        return "#105"
+
+    def _zadjust_geom(_coords, zrad):
+        outcoords = []
+        lastc = None
+        for c in _coords:
+            if lastc:
+                length = abs(geometry.distance(c, lastc)) if lastc else 0
+                xl = c[0] - lastc[0]
+                yl = c[1] - lastc[1]
+                if length > zrad/1.5:
+                    print length, ">", zrad / 1.5, length > zrad / 1.5
+                    segments = int(1.5*math.ceil(length/zrad))
+                    for i in range(segments-1):
+                        tc = (
+                            round(lastc[0] + xl * i / segments, 3),
+                            round(lastc[1] + yl * i / segments, 3),
+                        )
+                        print i, lastc, c, tc
+                        outcoords.append(tc)
+
+            outcoords.append(c)
+            lastc = c
+
+        return outcoords
+
+    def _cut_coords(c, zrad):
         machine().goto(z=clearz)
 
         if simplify:
             coords = c.simplify(simplify).coords
-        machine().goto(coords[0][0], coords[0][1])
-        machine().cut(z=-depth)
+        else:
+            coords = c.coords
 
-        for c in coords:
-            machine().cut(c[0], c[1])
+        machine().goto(*coords[0])
+        zvar = _zadjust(*coords[0])
+        machine().cut(z="[{}-{}]".format(zvar, depth))
+
+        for c in _zadjust_geom(coords, zrad):
+            zvar = _zadjust(*coords[0])
+            machine().cut(c[0], c[1], "[{}-{}]".format(zvar, depth))
 
     clearz = clearz or 0.125
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
@@ -233,41 +298,69 @@ def pcb_isolation_mill(
         tool_radius=tool_radius,
         flipx=flipx, flipy=flipy,
     )
+    geom = shapely.affinity.translate(geom, xoff=xoff, yoff=yoff)
+    delauney = None
 
     # FIXME
-    # if zprobe_radius:
-    #     points = []
-    #     minx, miny, maxx, maxy = geom.bounds
-    #     even = True
-    #     cy = (miny + maxy) / 2.
-    #     while cy > 0:
-    #         if even:
-    #             cx = (minx + maxx) / 2.
-    #         else:
-    #             cx = (minx + maxx - zprobe_radius) / 2.
-    #
-    #         while cx > 0:
-    #             points.append(shapely.geometry.Point(cx, cy))
-    #             cx -= zprobe_radius
-    #
-    #         cy -= zprobe_radius/math.sqrt(2)
-    #         even = not even
-    #
-    #     cx = (minx + maxx) / 2.
-    #     cy = (miny + maxy) / 2.
-    #
-    #     pg = shapely.geometry.MultiPoint(points)
-    #     pg = pg.union(shapely.affinity.scale(pg, xfact=-1, origin=(cx, cy)))
-    #     pg = pg.union(shapely.affinity.scale(pg, yfact=-1, origin=(cy, cy)))
-    #     delauney = shapely.ops.triangulate(pg, edges=False)
-    #     geometry.shapely_to_svg('points.svg', [pg, shapely.geometry.MultiPolygon(delauney)])
-    #     print pg
+    if zprobe_radius:
+        # first lets get a good zero
+        zprobe(center=(0, 0), z=0, zretract=1/16., depth=0.5, rate=5, tries=3, setz=True, clearz=True)
+
+        points = []
+        minx, miny, maxx, maxy = geom.bounds
+
+        # This is a little BS - we go outside our BB a little because of offsets.  Probably better to calc this
+        o = .08
+        minx -= o
+        miny -= o
+        maxx += o
+        maxy += o
+
+        width = maxx - minx
+        height = maxy - miny
+
+        if zprobe_radius == 'auto':
+            autox = width/5.
+            autoy = height/5.
+            zprobe_radius = min(max(0.325, autox, autoy), 1)  # just a guess really
+
+        xspace = zprobe_radius
+        yspace = zprobe_radius/math.sqrt(2)
+
+        divx = width/xspace
+        divy = height/yspace
+        xspace = width/round(divx)
+        yspace = height/round(divy)
+
+        samplesx = int(round(divx)) + 1
+        samplesy = int(round(divy)) + 1
+
+        print "w, h =", width, height
+        print xspace, yspace, samplesx, samplesy
+
+        varnum = 500
+        for y in range(samplesy):
+            rowspace = 0 if y % 2 == 0 else xspace/2.0
+            sx = samplesx if y % 2 == 0 else samplesx - 1
+            for x in range(sx):
+                cx = minx + xspace*x + rowspace
+                cy = miny + yspace*y
+                point = shapely.geometry.Point(cx, cy, varnum)
+                points.append(point)
+                zprobe(center=(cx, cy), z=.125, depth=.25, rate=5, tries=1, storez=varnum)
+                varnum += 1
+
+        pg = shapely.geometry.MultiPoint(points)
+        delauney = shapely.ops.triangulate(pg, edges=False)
+        box = shapely.geometry.box(minx, miny, maxx, maxy)
+        geometry.shapely_to_svg('points.svg', [box, pg, shapely.geometry.MultiPolygon(delauney)])
 
     for g in geoms:
+        g = shapely.affinity.translate(g, xoff=xoff, yoff=yoff)
         for p in g:
-            _cut_coords(p.exterior)
+            _cut_coords(p.exterior, zprobe_radius)
             for i in p.interiors:
-                _cut_coords(i)
+                _cut_coords(i, zprobe_radius)
 
     if auto_clear:
         machine().goto(z=clearz)
@@ -307,7 +400,8 @@ def pcb_outline_geometry(gerber_file=None, gerber_data=None):
 
 @operation(required=['depth'], operation_feedrate='drill')
 def pcb_drill(
-        gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True
+        gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True,
+        xoff=0, yoff=0,
 ):
     clearz = clearz or 0.125
 
@@ -327,6 +421,7 @@ def pcb_drill(
         hole_geom = shapely.affinity.scale(hole_geom, yfact=-1, origin=(0, 0))
         hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
+    hole_geom = shapely.affinity.translate(hole_geom, xoff=xoff, yoff=yoff)
     for h in hole_geom:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
         helical_drill(center=h.coords[0][:2], outer_rad=h.coords[0][2], z=0, depth=depth, stepdown="10%")
@@ -350,7 +445,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
     #     minx, miny, maxx, maxy = geom.bounds
     # else:
     minx, miny, maxx, maxy = bounds
-    print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
+    # print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
 
     x1 = minx-machine().tool.diameter/2
     x2 = maxx+machine().tool.diameter/2
@@ -370,7 +465,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
 
 class PCBProject(object):
     def __init__(
-        self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM
+        self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM, posts=None, fixture_width=None,
     ):
         self.gerber_input = gerber_input
         if isinstance(border, (int, float)):
@@ -381,6 +476,8 @@ class PCBProject(object):
         self.thickness = thickness
         self.layers = None
         self.auto_zero = auto_zero
+        self.posts = posts
+        self.fixture_width = fixture_width
 
         self.load(gerber_input)
 
@@ -448,10 +545,9 @@ class PCBProject(object):
             yoff = -miny
         else:
             newminx = minx - self.border[0]
-            newminy = miny - self.border[0]
+            newminy = miny - self.border[1]
             xoff = yoff = 0
 
-        # union_geom = shapely.affinity.translate(union_geom, xoff=minx, yoff=miny)
         for k, v in self.layers.items():
             v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
 
@@ -462,14 +558,25 @@ class PCBProject(object):
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
 
-    def auto_set_stock(self):
+    def auto_set_stock(self, side='top'):
         minx, miny, maxx, maxy = self.bounds
         width = maxx - minx
         height = maxy - miny
-        rect_stock(
-            width * 1.2, height * 1.2, self.thickness,
-            origin=(minx - width * .1, -self.thickness, maxy - height - height * .1)
-        )
+
+        px = 0
+        if self.posts == 'x':
+            px = 0.5
+
+        if side == 'bottom' and self.fixture_width > 0:
+            rect_stock(
+                (width * 1.2)+px, height * 1.2, self.thickness,
+                origin=(self.fixture_width + minx - width - width*.1, -self.thickness, maxy - height - height*.1)
+            )
+        else:
+            rect_stock(
+                (width * 1.2)+px, height * 1.2, self.thickness,
+                origin=(minx - width * .1, -self.thickness, maxy - height - height * .1)
+            )
 
     # drill = 'top' or 'bottom' depending on which side to drill from
     # cutout = 'top' or 'bottom' depending on which side to cut out from
@@ -478,12 +585,19 @@ class PCBProject(object):
         self,
         output_directory=None, file_per_operation=True, outline_stepovers=2, outline_depth=0.010,
         cutout=None, drill=None,
-        iso_bit=None, drill_bit=None, cutout_bit=None,
-        panelx=1, panely=1, flip='y'
+        iso_bit=None, drill_bit=None, cutout_bit=None, post_bit=None,
+        panelx=1, panely=1, flip='y', zprobe_radius=None,
     ):
-        def _xoff(xi):
+        def _xoff(xi, side='top'):
             minx, miny, maxx, maxy = self.bounds
-            return xi*(maxx-minx+environment.tools[cutout_bit].diameter)
+            pxoff = 0
+#            if self.posts == 'x':
+#                pxoff = 1/4.
+
+            if self.fixture_width > 0 and side == 'bottom':
+                return self.fixture_width - (xi+1) * (maxx - minx + environment.tools[cutout_bit].diameter)
+            else:
+                return xi*(maxx-minx+environment.tools[cutout_bit].diameter)
 
         def _yoff(yi):
             minx, miny, maxx, maxy = self.bounds
@@ -495,27 +609,41 @@ class PCBProject(object):
         # .... TOP ....
         if not file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
-            self.auto_set_stock()
+            self.auto_set_stock(side='top')
+
+        if self.posts != 'none':
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
+                self.auto_set_stock(side='top')
+
+            machine().set_tool(post_bit)
+            if self.posts == 'x':
+                minx, miny, maxx, maxy = self.bounds
+                helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
+                helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
+            elif self.posts == 'y':
+                raise Exception("not implemented")
 
         if file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
-            self.auto_set_stock()
+            self.auto_set_stock(side='top')
 
         machine().set_tool(iso_bit)
-
         l = self.layers['top-copper']
         for x in range(panelx):
             for y in range(panely):
                 pcb_isolation_mill(
-                    gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                    gerber_geometry=l['geometry'],
+                    xoff=_xoff(x), yoff=_yoff(y),
                     stepovers=outline_stepovers,
                     depth=outline_depth,
+                    zprobe_radius=zprobe_radius,
                 )
 
         if drill == 'top':
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
-                self.auto_set_stock()
+                self.auto_set_stock(side='top')
 
             machine().set_tool(drill_bit)
 
@@ -523,7 +651,8 @@ class PCBProject(object):
             for x in range(panelx):
                 for y in range(panely):
                     pcb_drill(
-                        gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                        gerber_geometry=l['geometry'],
+                        xoff=_xoff(x), yoff=_yoff(y),
                         depth=self.thickness,
                         flipy=False
                     )
@@ -531,7 +660,7 @@ class PCBProject(object):
         if cutout == 'top':
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_top_3_cutout.ngc'))
-                self.auto_set_stock()
+                self.auto_set_stock(side='top')
 
             machine().set_tool(cutout_bit)
             for x in range(panelx):
@@ -543,28 +672,30 @@ class PCBProject(object):
 
         if not file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))
-            self.auto_set_stock()
+            self.auto_set_stock(side='bottom')
 
         if file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_bottom_1_iso.ngc'))
-            self.auto_set_stock()
+            self.auto_set_stock(side='bottom')
 
         machine().set_tool(iso_bit)
 
         for x in range(panelx):
             for y in range(panely):
                 pcb_isolation_mill(
-                    gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                    gerber_geometry=l['geometry'],
+                    xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
                     stepovers=outline_stepovers,
                     depth=outline_depth,
                     flipx=self.bounds if flip == 'x' else False,
                     flipy=self.bounds if flip == 'y' else False,
+                    zprobe_radius=zprobe_radius,
                 )
 
         if drill == 'bottom':
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
-                self.auto_set_stock()
+                self.auto_set_stock(side='bottom')
 
             machine().set_tool(drill_bit)
 
@@ -572,7 +703,8 @@ class PCBProject(object):
             for x in range(panelx):
                 for y in range(panely):
                     pcb_drill(
-                        gerber_geometry=shapely.affinity.translate(l['geometry'], xoff=_xoff(x), yoff=_yoff(y)),
+                        gerber_geometry=l['geometry'],
+                        xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
                         depth=self.thickness,
                         flipx=self.bounds if flip == 'x' else False,
                         flipy=self.bounds if flip == 'y' else False,
@@ -581,12 +713,12 @@ class PCBProject(object):
         if cutout == 'bottom':
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_bottom_3_cutout.ngc'))
-                self.auto_set_stock()
+                self.auto_set_stock(side='bottom')
 
             machine().set_tool(cutout_bit)
             for x in range(panelx):
                 for y in range(panely):
-                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
+                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y))
 
     #
     #

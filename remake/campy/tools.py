@@ -176,6 +176,8 @@ class Tool(object):
             base = self.drill_feedrate(material, machine, feed_class=feed_class)
         elif feed_type in ['vector_engrave']:
             base = self.engrave_feedrate(material, machine, feed_class=feed_class)
+        elif feed_type in ['probe']:
+            base = 5
         else:
             raise Exception("Unsupported feed type: {}".format(feed_type))
 
