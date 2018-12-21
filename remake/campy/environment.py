@@ -307,8 +307,9 @@ tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='
 tools['probe'] = Tool('hss', 1, 1)
 tools['probe'].feeds['probe'] = 1
 
-tools['engrave-0.1-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
-tools['engrave-0.1-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.1mm-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.1mm-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+tools['engrave-0.01in-15'] = VRouterBit(included_angle=15.0, diameter=1/8., tip_diameter=0.01, tool_material='hss', flutes=3)
 
 tools['tiny-0.6mm'] = StraightRouterBit(diameter=.6*constants.MM, tool_material='hss', flutes=2)
 tools['tiny-0.7mm'] = StraightRouterBit(diameter=.7*constants.MM, tool_material='hss', flutes=2)
