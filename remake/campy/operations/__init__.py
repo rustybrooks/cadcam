@@ -45,10 +45,10 @@ def operation(required=None, operation_feedrate=None, comment=None):
             pop_speed = False
 
             if 'stepover' in foo:
-                kwargs['stepover'] = machine().calc_stepover(foo['stepover'])
+                kwargs['stepover'] = machine().calc_stepover(foo['stepover'], depth=foo.get('depth', 0))
 
             if 'stepdown' in foo:
-                kwargs['stepdown'] = machine().calc_stepover(foo['stepdown'])
+                kwargs['stepdown'] = machine().calc_stepover(foo['stepdown'], depth=foo.get('depth', 0))
 
             #if '_speed' in foo:
             #    machine().push_speed(foo['_speed'])
@@ -120,7 +120,7 @@ def zprobe(
     operation_feedrate='plunge',
     comment="Cutting HelicalDrill at {center}, outter_rad={outer_rad:.3f}, depth={depth:.3f}",
 )
-def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None, clockwise=True, clearz=None, auto_clear=True):
+def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown="25%", clockwise=True, clearz=None, auto_clear=True):
     R = machine().tool.diameter / 2.0
     x1, y1 = center
     z1 = z
@@ -157,7 +157,7 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown=None
 
 @operation(required=['center', 'stepdown', 'stepover', 'inner_rad', 'outer_rad'], operation_feedrate='cut', comment='HSM Circle Pocket')
 def hsm_circle_pocket(
-    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover=None, stepdown=None, clearz=None, climb=True, auto_clear=True,
+    center=None, z=None, inner_rad=None, outer_rad=None, depth=None, stepover='50%', stepdown="50%", clearz=None, climb=True, auto_clear=True,
 ):
     depth = depth or 0
     xc, yc = center
@@ -193,7 +193,7 @@ def hsm_circle_pocket(
 # type is x (movement parallel to x axis) or y (y axis)
 # probably needs to stop short of boundaries and then trim
 @operation(required=['stepdown', 'stepover'])
-def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough_margin=0, clearz=None, auto_clear=True, **kwargs):
+def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown="50%", type='x', rough_margin=0, clearz=None, auto_clear=True, **kwargs):
     R = machine().tool.diameter / 2.
 
     x1p, y1p = p1
@@ -254,7 +254,7 @@ def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown=None, type='x', rough
 
 
 @operation(required=['stepdown'])
-def rect_pocket_corner_relief(p1, p2, z, depth, stepdown=None, auto_clear=True, clearz=None, **kwargs):
+def rect_pocket_corner_relief(p1, p2, z, depth, stepdown="50%", auto_clear=True, clearz=None, **kwargs):
     px1, py1 = p1
     px2, py2 = p2
     r = 1.1 * machine().tool.diameter / 2.

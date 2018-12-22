@@ -60,13 +60,14 @@ bool parse_gcode_comment(std::string line, vector<double> &stock_args, Bit *b) {
     } else if (vec[0] == "VMill") {
         fprintf(stderr, "Setting to VMill\n");
         double length = boost::lexical_cast<double>(vec[1]);
-        double radius = boost::lexical_cast<double>(vec[2]);
-        double included_angle = boost::lexical_cast<double>(vec[3]);
-        double height = radius / tan(DEG2RAD*included_angle/2.0);
+        double tiprad = boost::lexical_cast<double>(vec[2]);
+        double rad = boost::lexical_cast<double>(vec[3]);
+        double included_angle = boost::lexical_cast<double>(vec[4]);
+        double height = rad / tan(DEG2RAD*included_angle/2.0);
 
         b->clear();
-        b->add(new BitCylinder(height, length-height, radius));
-        b->add(new BitCone(0, height, 1/1000., radius));
+        b->add(new BitCylinder(height, length-height, rad));
+        b->add(new BitCone(0, height, tiprad, rad));
     } else if (vec[0] == "BallMill") {
         fprintf(stderr, "Setting to BallMill\n");
         double length = boost::lexical_cast<double>(vec[1]);

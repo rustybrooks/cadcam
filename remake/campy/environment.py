@@ -221,22 +221,31 @@ class Environment(object):
 
         self.write("{} {}{} {}".format(gcode, axis.upper(), to, feed))
 
-    def calc_stepover(self, stepover=None, max_stepover=0.95):
-        # stepover = stepover or self.stepover
-        if str(stepover)[-1] == '%':
-            stepover = self.tool.diameter*float(stepover[:-1])
-        factor = self.material_factor
-        tool = self.tool
-        return min(stepover * factor, max_stepover) * tool.diameter
+    def calc_stepover(self, stepover=None, max_stepover=None, depth=None):
+        diam = self.tool.diameter_at_depth(depth or 0)
+        max_stepover = max_stepover or diam*0.95
 
-    def calc_stepdown(self, stepdown=None, max_stepdown=3):
-        # stepdown = stepdown or self.stepdown
+        if str(stepover)[-1] == '%':
+            stepover = diam*float(stepover[:-1])/100.
+
+        if str(max_stepover)[-1] == '%':
+            max_stepover = diam*float(max_stepover[:-1])/100.
+
+        factor = self.material_factor
+        return min(stepover * factor, max_stepover)
+
+    def calc_stepdown(self, stepdown=None, max_stepdown=3, depth=None):
+        diam = self.tool.diameter_at_depth(depth or 0)
+        max_stepdown = max_stepdown or diam*2
+
         if str(stepdown)[1] == '%':
             stepdown = self.tool.diameter*float(stepdown[:-1])
 
+        if str(max_stepdown)[-1] == '%':
+            max_stepdown = diam*float(max_stepdown[:-1])/100.
+
         factor = self.material_factor
-        tool = self.tool
-        return min(stepdown * factor, max_stepdown) * tool.diameter
+        return min(stepdown * factor, max_stepdown)
 
     def zstep(self, z1, z2, stepdown=None, auto_step=False):
         if stepdown is None:

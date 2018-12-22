@@ -177,8 +177,8 @@ class GerberDrillContext(render.GerberContext):
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
 @operation(required=['tool_radius'])
 def pcb_isolation_geometry(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, tool_radius=None,
-    flipx=False, flipy=False,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', stepovers=1, tool_radius=None,
+    flipx=False, flipy=False, depth=None,
 ):
     if gerber_geometry:
         geom = gerber_geometry
@@ -197,7 +197,8 @@ def pcb_isolation_geometry(
 
     geoms = []
     for step in range(1, stepovers+1):
-        bgeom = geom.buffer(tool_radius*step*(1-stepover))
+        print "stepover =", step*stepover
+        bgeom = geom.buffer(step*stepover)
         if isinstance(bgeom, shapely.geometry.Polygon):
             bgeom = shapely.geometry.MultiPolygon([bgeom])
 
@@ -208,7 +209,7 @@ def pcb_isolation_geometry(
 
 @operation(required=['depth'], operation_feedrate='vector_engrave')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='20%', stepovers=1, depth=None, clearz=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', stepovers=1, depth=None, clearz=None,
     xoff=0, yoff=0,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
@@ -256,14 +257,14 @@ def pcb_isolation_mill(
                 xl = c[0] - lastc[0]
                 yl = c[1] - lastc[1]
                 if length > zrad/1.5:
-                    print length, ">", zrad / 1.5, length > zrad / 1.5
+                    # print length, ">", zrad / 1.5, length > zrad / 1.5
                     segments = int(1.5*math.ceil(length/zrad))
                     for i in range(segments-1):
                         tc = (
                             round(lastc[0] + xl * i / segments, 3),
                             round(lastc[1] + yl * i / segments, 3),
                         )
-                        print i, lastc, c, tc
+                        # print i, lastc, c, tc
                         outcoords.append(tc)
 
             outcoords.append(c)
@@ -296,7 +297,7 @@ def pcb_isolation_mill(
         stepover=stepover,
         stepovers=stepovers,
         tool_radius=tool_radius,
-        flipx=flipx, flipy=flipy,
+        flipx=flipx, flipy=flipy, depth=depth,
     )
     geom = shapely.affinity.translate(geom, xoff=xoff, yoff=yoff)
     delauney = None
@@ -335,8 +336,8 @@ def pcb_isolation_mill(
         samplesx = int(round(divx)) + 1
         samplesy = int(round(divy)) + 1
 
-        print "w, h =", width, height
-        print xspace, yspace, samplesx, samplesy
+        # print "w, h =", width, height
+        # print xspace, yspace, samplesx, samplesy
 
         varnum = 500
         for y in range(samplesy):

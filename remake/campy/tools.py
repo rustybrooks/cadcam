@@ -225,7 +225,7 @@ class VRouterBit(Tool):
         self.tip_diameter = tip_diameter
 
     def comment(self, cam):
-        cam.comment("VMill %f %f %f" % (1, self.diameter/2.0, self.included_angle))  # FIXME fixed cutting length
+        cam.comment("VMill %f %f %f %f" % (1, self.tip_diameter/2.0, self.diameter/2.0, self.included_angle))  # FIXME fixed cutting length
 
     def diameter_at_depth(self, depth=0):
         return self.tip_diameter + math.tan(math.radians(self.included_angle/2.))*depth*2
