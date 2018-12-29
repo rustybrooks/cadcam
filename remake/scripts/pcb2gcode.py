@@ -16,7 +16,7 @@ logging.basicConfig()
 if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-d', '--depth',     help="Engraving depth", type=float, default=0.005)
-    parser.add_option('-s', '--stepovers', help='# of isolation paths to engrave', type=int, default=2)
+    parser.add_option('-s', '--separation', help='Trace separation', type=int, default=0.020)
     parser.add_option('-b', '--border',    help='Width of border for PCB', type=float, default=0)
     parser.add_option('-t', '--thickness', help="Thickness of PCB (for drill/cutout)", type=float, default=1.7*constants.MM)
     parser.add_option('-o', '--output',    help='output directory, will be created if it doesn\'t exist', type=str)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         post_bit='1/8in spiral upcut',
         file_per_operation=not options.one_file,
         outline_depth=options.depth,
-        outline_stepovers=options.stepovers,
+        outline_separation=options.separation,
         panelx=options.panelx,
         panely=options.panely,
         flip='x',

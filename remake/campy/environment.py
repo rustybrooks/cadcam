@@ -97,7 +97,7 @@ class Environment(object):
         if self.f is None:
             print "Can't write, f=None", txt
         else:
-            prefix = " "*(self.level*4)
+            prefix = " "*((self.level-1)*4)
             self.f.write(prefix + txt + '\n')
             # sys.stdout.write(txt + '\n');
 
@@ -125,6 +125,10 @@ class Environment(object):
     def end_program(self):
         self.write("M30")
         self.write("%")
+
+    def pause_program(self):
+        self.comment("PAUSE")
+        self.write("M0")
 
     def comment(self, c):
         c = c.replace('(', '[').replace(')', ']')

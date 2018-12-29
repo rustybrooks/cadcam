@@ -96,7 +96,7 @@ def zprobe(
 
     for i in range(tries):
         machine().probe(axis='Z', to=z-depth, rate=rate*(backoff**i), toward=toward, halt_on_error=halt_on_error)
-        if i +1 != tries:
+        if i + 1 != tries:
             machine().goto(z="[#5063+{}]".format(zretract))
 #        machine().probe(axis='Z', to=z, rate=rate, toward=not toward, halt_on_error=False)
 

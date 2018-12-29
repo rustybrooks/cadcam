@@ -177,7 +177,7 @@ class GerberDrillContext(render.GerberContext):
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
 @operation(required=['tool_radius'])
 def pcb_isolation_geometry(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', stepovers=1, tool_radius=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', outline_separation=0.020, tool_radius=None,
     flipx=False, flipy=False, depth=None,
 ):
     if gerber_geometry:
@@ -196,6 +196,9 @@ def pcb_isolation_geometry(
         geom = shapely.affinity.translate(geom, yoff=maxy+miny)
 
     geoms = []
+    offset = (outline_separation - tool_radius)
+    stepovers = int(math.ceil(offset/stepover))
+    stepover = offset/stepovers
     for step in range(1, stepovers+1):
         print "stepover =", step*stepover
         bgeom = geom.buffer(step*stepover)
@@ -207,9 +210,9 @@ def pcb_isolation_geometry(
     return geom, geoms
 
 
-@operation(required=['depth'], operation_feedrate='vector_engrave')
+@operation(required=['depth', 'outline_separation'], operation_feedrate='vector_engrave')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', stepovers=1, depth=None, clearz=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', outline_separation=None, depth=None, clearz=None,
     xoff=0, yoff=0,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
@@ -295,7 +298,7 @@ def pcb_isolation_mill(
         gerber_data=gerber_data,
         gerber_geometry=gerber_geometry,
         stepover=stepover,
-        stepovers=stepovers,
+        outline_separation=outline_separation,
         tool_radius=tool_radius,
         flipx=flipx, flipy=flipy, depth=depth,
     )
@@ -355,6 +358,8 @@ def pcb_isolation_mill(
         delauney = shapely.ops.triangulate(pg, edges=False)
         box = shapely.geometry.box(minx, miny, maxx, maxy)
         geometry.shapely_to_svg('points.svg', [box, pg, shapely.geometry.MultiPolygon(delauney)])
+
+        machine().pause_program()
 
     for g in geoms:
         g = shapely.affinity.translate(g, xoff=xoff, yoff=yoff)
@@ -584,7 +589,7 @@ class PCBProject(object):
     @operation(required=['output_directory', 'iso_bit', 'drill_bit', 'cutout_bit'])
     def pcb_job(
         self,
-        output_directory=None, file_per_operation=True, outline_stepovers=2, outline_depth=0.010,
+        output_directory=None, file_per_operation=True, outline_separation=0.020, outline_depth=0.010,
         cutout=None, drill=None,
         iso_bit=None, drill_bit=None, cutout_bit=None, post_bit=None,
         panelx=1, panely=1, flip='y', zprobe_radius=None,
@@ -636,7 +641,7 @@ class PCBProject(object):
                 pcb_isolation_mill(
                     gerber_geometry=l['geometry'],
                     xoff=_xoff(x), yoff=_yoff(y),
-                    stepovers=outline_stepovers,
+                    outline_separation=outline_separation,
                     depth=outline_depth,
                     zprobe_radius=zprobe_radius,
                 )
@@ -686,7 +691,7 @@ class PCBProject(object):
                 pcb_isolation_mill(
                     gerber_geometry=l['geometry'],
                     xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
-                    stepovers=outline_stepovers,
+                    outline_separation=outline_separation,
                     depth=outline_depth,
                     flipx=self.bounds if flip == 'x' else False,
                     flipy=self.bounds if flip == 'y' else False,
