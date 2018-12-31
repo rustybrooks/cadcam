@@ -1,4 +1,3 @@
-import appenlight_client.ext.flask as appenlight
 from collections import defaultdict
 import copy
 from flask import Flask, request, render_template, request

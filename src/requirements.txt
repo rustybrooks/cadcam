@@ -5,3 +5,4 @@ pcb-tools
 meta
 ocl
 svgwrite
+pytz
