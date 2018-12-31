@@ -1,7 +1,5 @@
 FROM ubuntu:16.04
 
-ENV CNCHOME=/srv/
-
 RUN apt-get -y update \
   && apt-get -y install \
      sudo nano \
@@ -13,30 +11,18 @@ RUN apt-get -y update \
   && apt-get clean \
   && rm -rf /var/cache/apt/archives/*
 
-RUN mkdir -p $CNCHOME $CNCHOME/src $CNCHOME/api
+RUN mkdir -p /srv/src 
 
-WORKDIR $CNCHOME/src
-RUN git clone https://github.com/aewallin/opencamlib.git
-RUN git clone https://github.com/aewallin/openvoronoi.git
-RUN git clone https://github.com/aewallin/truetype-tracer.git
-RUN mkdir $CNCHOME/src/opencamlib/build $CNCHOME/src/openvoronoi/build $CNCHOME/src/truetype-tracer/build
+WORKDIR /tmp
+RUN git clone https://github.com/aewallin/opencamlib.git && mkdir opencamlib/build && cd opencamlib/build && cmake ../src && make install && rm -rf /tmp/opencamlib
+RUN git clone https://github.com/aewallin/openvoronoi.git && mkdir openvoronoi/build && cd openvoronoi/build && cmake ../src && make install && rm -rf /tmp/openvoronoi
+RUN git clone https://github.com/aewallin/truetype-tracer.git && mkdir truetype-tracer/build && cd truetype-tracer/build && cmake ../src && make install && rm -rf /tmp/truetype-tracer
 
-# build awallin's libraries
-WORKDIR $CNCHOME/src/opencamlib/build
-RUN cmake ../src/ && make install
-WORKDIR $CNCHOME/src/openvoronoi/build
-RUN cmake ../src/ && make install
-WORKDIR $CNCHOME/src/truetype-tracer/build
-RUN cmake ../src/ && make install
-
-COPY ./requirements.txt $CNCHOME/requirements.txt
+COPY . /srv/src
 RUN pip install setuptools==9.1 \
-  && pip install -r $CNCHOME/requirements.txt
+  && pip install -r /srv/src/requirements.txt
 
-# COPY api/ $CNCHOME/api
-# COPY python/api_framework /usr/local/lib/python2.7/dist-packages/api_framework
-
-WORKDIR $CNCHOME
+WORKDIR /srv
 
 ENTRYPOINT ["bash"]
 
