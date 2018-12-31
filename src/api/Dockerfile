@@ -5,7 +5,7 @@ RUN apt-get -y update \
 
 COPY . /srv/src
 
-RUN pip install -r $CNCHOME/requirements_api.txt
+RUN pip install -r /srv/src//requirements_api.txt
 
 ENTRYPOINT ["/srv/src/api/entrypoint.sh"]
 
