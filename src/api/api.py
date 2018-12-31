@@ -5,8 +5,7 @@ from flask import Flask, request, render_template, request
 import logging
 import os
 
-from lib import api_framework, client, config
-from lib.api_framework import api_register, Api, HttpResponse, api_bool
+from lib.api_framework import api_register, Api, HttpResponse, api_bool, app_class_proxy
 from flask_cors import CORS
 
 root = os.path.join(os.path.dirname(__file__))
@@ -25,4 +24,4 @@ class TestApi(Api):
 	return "hi"
 
 
-api_framework.app_class_proxy(app, '', 'api/test', TestApi())
+app_class_proxy(app, '', 'api/test', TestApi())
