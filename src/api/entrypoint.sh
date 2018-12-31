@@ -3,7 +3,7 @@
 cd /srv/src
 
 if [[ "${ENVIRONMENT}" == "prod" ]]; then
-    gunicorn -b 0.0.0.0:5000 --config /srv/src/webapi/gunicorn.py api.api:app
+    gunicorn -b 0.0.0.0:5000 --config /srv/src/api/gunicorn.py api.api:app
 else
     export FLASK_DEBUG=1
     export FLASK_APP=api.api
