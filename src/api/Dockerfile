@@ -4,8 +4,7 @@ RUN apt-get -y update \
  && mkdir /srv/logs && mkdir /var/log/gunicorn
 
 COPY . /srv/src
-
-RUN pip install -r /srv/src//requirements_api.txt
+RUN pip install -r /srv/src/api/requirements_api.txt
 
 ENTRYPOINT ["/srv/src/api/entrypoint.sh"]
 

@@ -1,28 +1,8 @@
 version: '2'
 
 services:
-  cadcam:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: cadcam:latest
-    container_name: cadcam
-    environment:
-      - PYTHONPATH=/src/
-      - DISPLAY=$DISPLAY
-    volumes:
-        - .:/src
-        - /tmp/.X11-unix:/tmp/.X11-unix
-    stdin_open: true
-    tty: true
-
-#  cadcam-api:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.api
-#    image: cadcam-api:latest
-#    container_name: cadcam-api
-#    volumes:
-#       - ./api:/cadcam/api  
-#    ports:
-#      - 8000:8000  
+  cadcam-api:
+    image: cadcam-api:latest
+    container_name: cadcam-api
+    ports:
+      - 5000:5000  
