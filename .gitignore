@@ -1,0 +1,8 @@
+ngc
+venv
+gl.log
+.idea
+*.pyc
+*.d
+*.o
+.DS_Store
