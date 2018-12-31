@@ -1,0 +1,7 @@
+bson
+shapely
+enum34
+pcb-tools
+meta
+ocl
+svgwrite
