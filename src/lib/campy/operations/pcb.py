@@ -308,7 +308,7 @@ def pcb_isolation_mill(
     # FIXME
     if zprobe_radius:
         # first lets get a good zero
-        zprobe(center=(0, 0), z=0, zretract=1/16., depth=0.5, rate=5, tries=3, setz=True, clearz=True)
+        zprobe(center=(0, 0), z=0, zretract=1/16., depth=0.5, rate=5, tries=1, setz=True)
 
         points = []
         minx, miny, maxx, maxy = geom.bounds
@@ -597,13 +597,13 @@ class PCBProject(object):
         def _xoff(xi, side='top'):
             minx, miny, maxx, maxy = self.bounds
             pxoff = 0
-#            if self.posts == 'x':
-#                pxoff = 1/4.
+            if self.posts == 'x':
+                pxoff = 1/4.
 
             if self.fixture_width > 0 and side == 'bottom':
                 return self.fixture_width - (xi+1) * (maxx - minx + environment.tools[cutout_bit].diameter)
             else:
-                return xi*(maxx-minx+environment.tools[cutout_bit].diameter)
+                return pxoff + xi*(maxx-minx+environment.tools[cutout_bit].diameter)
 
         def _yoff(yi):
             minx, miny, maxx, maxy = self.bounds
@@ -629,6 +629,8 @@ class PCBProject(object):
                 helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
             elif self.posts == 'y':
                 raise Exception("not implemented")
+
+            machine().pause_program()
 
         if file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
