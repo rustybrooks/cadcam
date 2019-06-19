@@ -625,8 +625,8 @@ class PCBProject(object):
             machine().set_tool(post_bit)
             if self.posts == 'x':
                 minx, miny, maxx, maxy = self.bounds
-                helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
-                helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/16., z=0, depth=.6, stepdown="10%")
+                helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
+                helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
             elif self.posts == 'y':
                 raise Exception("not implemented")
 

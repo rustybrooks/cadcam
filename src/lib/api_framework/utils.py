@@ -205,6 +205,7 @@ def api_register(_version=None, **register_kwargs):
                     'param_regexp_map': {},
                     'sort_keys': None,
                     'max_page_limit': -1,
+                    'file_keys': None,
                 }
 
                 fn_config[unwrapped].update(register_kwargs)
@@ -332,6 +333,12 @@ def process_api(fn, api_object, app_blob, blob):
                 if val is not sentinel:
                     if arg == 'limit' and app_blob['_config']['max_page_limit'] > 0:
                         val = min(val, app_blob['_config']['max_page_limit'])
+                    elif arg == 'page' and val > app_blob['_config'].get('max_page', -1) > 0:
+                        raise Api.BadRequest(
+                            "Maximum allowed value for page parameter for this endpoint is {}".format(
+                            app_blob['_config']['max_page']
+                            )
+                        )
                     elif arg == 'sort' and val and app_blob['_config']['sort_keys'] is not None:
                         sortkey = val
                         if sortkey[0] == '-':
