@@ -15,5 +15,6 @@ utils.JSONResponse = JSONResponse
 utils.XMLResponse = XMLResponse
 utils.FileResponse = FileResponse
 utils.build_absolute_url = build_absolute_url
-
+utils.RequestFile = RequestFile
+utils.get_file = get_file
 

@@ -2,7 +2,14 @@ version: '2'
 
 services:
   cadcam-api:
+    build:
+      context: ./src/
+      dockerfile: api/Dockerfile
     image: cadcam-api:latest
     container_name: cadcam-api
     ports:
       - 5000:5000  
+    volumes:
+      - ./src/:/srv/src/
+    environment:
+      - ENVIRONMENT=dev

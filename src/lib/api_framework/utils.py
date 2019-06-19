@@ -172,6 +172,7 @@ class Api(object):
 
         self.registry[new_function_name] = app.registry[function_name]
 
+
 def api_register(_version=None, **register_kwargs):
     ignore = ['config']
 
@@ -305,12 +306,15 @@ def urls_from_config(urlroot, fnname, fn, config, canonical=False):
 
 sentinel = object()
 
+
 # @newrelic.agent.function_trace()
 def process_api(fn, api_object, app_blob, blob):
     api_data_orig = blob['api_data']
     blob_api_data = api_data_orig if isinstance(api_data_orig, dict) else {}
 
     fn_kwargs = blob['fn_kwargs']
+
+    file_keys = app_blob['_config']['file_keys'] or []
 
     try:
         stored = {k: v for k, v in app_blob['_kwargs']}
@@ -320,6 +324,8 @@ def process_api(fn, api_object, app_blob, blob):
 
             if arg == 'data':
                 fn_kwargs['data'] = api_data_orig
+            elif arg in file_keys:
+                fn_kwargs[arg] = get_file(blob['request'], arg)
             elif arg in ['_user', '_request']:
                 fn_kwargs[arg] = blob[arg[1:]]
             else:

@@ -34,6 +34,33 @@ class FileResponse(Response):
     pass
 
 
+class RequestFile(object):
+    def __init__(self, fobj):
+        self.fobj = fobj
+
+    @property
+    def name(self):
+        return self.fobj.filename
+
+    @property
+    def size(self):
+        return -1
+
+    def chunks(self):
+        while True:
+            data = self.fobj.read(1024*32)
+            if data:
+                yield data
+
+
+def get_file(_request, key):
+    if key not in _request.files:
+        return None
+
+    return RequestFile(_request.files(key))
+
+
+
 class FlaskUser(object):
     def __init__(self, token, profile, otx_key):
         self.profile = profile

@@ -1,5 +1,6 @@
 from django.conf import settings as rs_settings
 from django.conf.urls import url
+from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse, FileResponse
 from django.http.multipartparser import MultiPartParserError
 import functools
@@ -46,6 +47,9 @@ class XMLResponse(HttpResponse):
             status=status,
             content_type='application/xml'
         )
+
+
+RequestFile = UploadedFile
 
 
 @function_trace()
