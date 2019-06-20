@@ -24,12 +24,14 @@ initial.add_statement("""
         password varchar(200),
         email varchar(200),
         username varchar(50),
-        is_admin bool default false
+        is_admin bool default false,
+        api_key char(64)
     )
 """)
 initial.add_statement("create index users_user_id on users(user_id)")
 initial.add_statement("create index users_user_id on users(username)")
 initial.add_statement("create index users_user_id on users(email)")
+initial.add_statement("create index users_user_id on users(api_key)")
 
 initial.add_statement("""
     create table machines(

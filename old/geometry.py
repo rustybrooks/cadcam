@@ -9,7 +9,7 @@ import shapely.affinity
 from shapely.coords import CoordinateSequence
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing
 import svg
-import stl
+# import stl
 
 
 def make_vector(p1, p2):

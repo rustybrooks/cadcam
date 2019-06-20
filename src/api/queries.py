@@ -1,10 +1,13 @@
+import bcrypt
+import hashlib
 import logging
 import os
+import random
+
+
 from lib.database.sql import SQLBase
 from lib import config
-
 logger = logging.getLogger(__name__)
-
 
 
 _SQL = None
@@ -36,7 +39,6 @@ else:
 SQL = SQLFactory(sql_url, flask_storage=os.environ.get('FLASK_STORAGE', "0'") != "0")
 
 
-
 class User(object):
     def __unicode__(self):
         return u"User(username={}, user_id={})".format(getattr(self, 'username'), getattr(self, 'user_id'))
@@ -52,13 +54,13 @@ class User(object):
             'user_id': self.user_id,
         }
 
-    def __init__(self, user_id=None, username=None, email=None, password=None, is_authenticated=False):
+    def __init__(self, api_key=None, user_id=None, username=None, email=None, password=None, is_authenticated=False):
         self.is_authenticated = is_authenticated
         self.is_active = False
         self.is_anonymous = False
         self.user_id = 0
 
-        where, bindvars = SQL.auto_where(username=username, user_id=user_id, email=email)
+        where, bindvars = SQL.auto_where(api_key=api_key, username=username, user_id=user_id, email=email)
 
         query = "select * from users {}".format(SQL.where_clause(where))
         r = SQL.select_0or1(query, bindvars)
@@ -66,6 +68,10 @@ class User(object):
         if r:
             for k, v in r.items():
                 setattr(self, k, v)
+
+            if api_key is not None:
+                self.is_authenticated = True
+                self.is_active = self.is_authenticated
 
             if password is not None:
                 self.authenticate(password)
@@ -93,6 +99,7 @@ def add_user(username=None, email=None, password=None):
         'username': username,
         'email': email,
         'password': User.generate_password_hash(password, salt).decode('utf-8'),
+        'api_key': hashlib.sha256(str(random.getrandbits(128))).hexdigest(),
     })
 
 

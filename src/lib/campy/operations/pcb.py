@@ -9,7 +9,7 @@ import shapely.ops
 import zipfile
 
 from . import operation, machine, helical_drill, rect_stock, zprobe
-from .. import constants, environment, geometry
+from lib.campy import *
 
 
 class OurRenderContext(render.GerberContext):

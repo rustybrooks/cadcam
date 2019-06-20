@@ -7,7 +7,7 @@ RUN apt-get -y update \
      python2.7 python2.7-dev  python-tk python-pip \
      unzip cmake git libgomp1 \
      libboost-all-dev doxygen libvtk5.10 graphviz libqd-dev libfreetype6-dev \
-     libgeos-dev libvtk5-dev python-vtk \
+     libgeos-dev libvtk5-dev python-vtk libffi-dev \
   && apt-get clean \
   && rm -rf /var/cache/apt/archives/*
 

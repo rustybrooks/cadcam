@@ -26,6 +26,10 @@ login_manager.init_app(app)
 
 
 def is_logged_in(request, api_data, url_data):
+    if 'X-API-KEY' in request.headers:
+        user = queries.User(api_key=request.headers['X-API-KEY'])
+        return user
+
     return flask_login.current_user
 
 
@@ -46,7 +50,7 @@ class AdminApi(Api):
         )
 
 
-@api_register(None, require_login=is_logged_in())
+@api_register(None, require_login=is_logged_in)
 class UserApi(Api):
     @classmethod
     @Api.config(require_login=False)
@@ -62,5 +66,6 @@ class UserApi(Api):
 
 
 
-app_class_proxy(app, '', 'api/test', AdminApi())
+app_class_proxy(app, '', 'api/admin', AdminApi())
+app_class_proxy(app, '', 'api/user', UserApi())
 app_class_proxy(app, '', 'api/pcb', pcb.PCBApi())

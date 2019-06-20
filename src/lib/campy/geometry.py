@@ -6,7 +6,7 @@ import ocl
 import shapely.affinity
 from shapely.coords import CoordinateSequence
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing, MultiPolygon
-import svg
+from lib import svg
 import stl
 import textwrap
 import svgwrite
