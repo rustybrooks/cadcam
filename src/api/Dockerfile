@@ -1,5 +1,5 @@
-# FROM rustybrooks/cadcam-base
-FROM cadcam-base
+FROM rustybrooks/cadcam-base
+# FROM cadcam-base
 
 RUN apt-get -y update \
  && mkdir /srv/logs && mkdir /var/log/gunicorn
