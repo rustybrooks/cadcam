@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-from descartes import PolygonPatch
+# from descartes import PolygonPatch
 import math
 import ocl
 import shapely.affinity
 from shapely.coords import CoordinateSequence
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, LinearRing, MultiPolygon
 from lib import svg
-import stl
-import textwrap
+# import stl
+# import textwrap
 import svgwrite
 
 
