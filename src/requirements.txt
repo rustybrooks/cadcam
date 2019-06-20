@@ -6,9 +6,11 @@ meta
 ocl
 svgwrite
 pytz
-descartes
-stl
 
 # for py2 compatibility
 matplotlib==2.2.4
 sphinx==2.0.0 
+
+descartes
+stl
+
