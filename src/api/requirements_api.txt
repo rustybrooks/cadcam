@@ -3,3 +3,8 @@ flask
 flask-cors
 gevent
 gunicorn
+flask_login
+sqlalchemy
+psycopg2-binary
+bcrypt
+python-dateutil

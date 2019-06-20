@@ -6,3 +6,4 @@ gl.log
 *.d
 *.o
 .DS_Store
+data/**

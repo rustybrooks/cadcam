@@ -13,3 +13,18 @@ services:
       - ./src/:/srv/src/
     environment:
       - ENVIRONMENT=dev
+    links:
+      - postgres:local-cadcam-postgres.aveng.us
+
+  postgres:
+    image: postgres:10.6
+    restart: always
+    environment:
+      - POSTGRES_DB=cadcam
+      - POSTGRES_USER=wombat
+      - POSTGRES_PASSWORD=1wombat2
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432

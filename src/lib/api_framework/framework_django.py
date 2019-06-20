@@ -17,6 +17,9 @@ app_registry = {}
 logger = logging.getLogger(__name__)
 
 
+RequestFile = UploadedFile
+
+
 def build_absolute_url(path, params):
     return os.path.join(rs_settings.SITE_URL, path.lstrip('/') + "?" + urllib.urlencode(params))
 
@@ -47,9 +50,6 @@ class XMLResponse(HttpResponse):
             status=status,
             content_type='application/xml'
         )
-
-
-RequestFile = UploadedFile
 
 
 @function_trace()
