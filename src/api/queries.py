@@ -103,12 +103,18 @@ def add_user(username=None, email=None, password=None):
     })
 
 
-def update_user(user_id=None, refresh_token=None, access_token=None, expires_at=None):
-    data = {
+def update_user(user_id=None, refresh_token=None, access_token=None, expires_at=None, password=None):
+    if password is not None:
+        salt = bcrypt.gensalt(12)
+        password = User.generate_password_hash(password, salt)
+
+    new_data = {
         'refresh_token': refresh_token,
         'access_token': access_token,
-        'expires_at': expires_at
+        'expires_at': expires_at,
+        'password': password,
     }
+    data = {k: v for k, v in new_data.items() if v is not None}
     SQL.update('users', 'user_id=:user_id', where_data={'user_id': user_id}, data=data)
 
 

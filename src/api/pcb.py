@@ -1,7 +1,8 @@
 import logging
 import tempfile
+import zipfile
 
-from lib.api_framework import api_register, Api
+from lib.api_framework import api_register, Api, FileResponse
 from lib.campy import *
 
 logger = logging.getLogger(__name__)
@@ -21,14 +22,14 @@ class PCBApi(Api):
                 tf.write(chunk)
             tf.flush()
 
-        pcb = PCBProject(
-            gerber_input=tf.name,
-            border=border,
-            auto_zero=True,
-            thickness=thickness,
-            posts=posts,
-            # fixture_width=fixture_width,
-        )
+            pcb = PCBProject(
+                gerber_input=tf.name,
+                border=border,
+                auto_zero=True,
+                thickness=thickness,
+                posts=posts,
+                # fixture_width=fixture_width,
+            )
 
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
@@ -41,8 +42,9 @@ class PCBApi(Api):
         else:
             zprobe_radius = float(zprobe)
 
+        outdir = tempfile.mkdtemp()
+
         pcb.pcb_job(
-            # output_directory=output,
             drill='top',
             cutout='bottom',
             iso_bit='engrave-0.01in-15',
@@ -56,6 +58,12 @@ class PCBApi(Api):
             panely=panely,
             flip='x',
             zprobe_radius=zprobe_radius,
+            output_directory=outdir,
         )
 
-        return "hi"
+        with tempfile.NamedTemporaryFile(suffix='.zip') as tf:
+            with zipfile.ZipFile(tf.name, 'w') as zip:
+                for file in os.listdir(outdir):
+                    zip.write(file)
+
+            return FileResponse(content=tf, content_type='application/zip')

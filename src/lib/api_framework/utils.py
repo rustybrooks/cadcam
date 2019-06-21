@@ -12,8 +12,6 @@ import logging
 import os
 import pytz
 
-logger = logging.getLogger(__name__)
-
 import logging
 import time
 

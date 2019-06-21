@@ -17,7 +17,7 @@ services:
       - postgres:local-cadcam-postgres.aveng.us
 
   postgres:
-    image: postgres:10.6
+    image: postgres:10.8
     restart: always
     environment:
       - POSTGRES_DB=cadcam

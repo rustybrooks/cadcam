@@ -72,6 +72,7 @@ class FlaskUser(object):
     def is_authenticated(self):
         return self.id != 0
 
+
 class JSONResponse(Response):
     # @newrelic.agent.function_trace()
     def __init__(self, data=None, detail=None, err=False, status=None, indent=None):
