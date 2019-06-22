@@ -16,6 +16,20 @@ services:
     links:
       - postgres:local-cadcam-postgres.aveng.us
 
+  cadcam-buildui:
+    build:
+      context: ./src/
+      dockerfile: ui/Dockerfile
+    image: cadcam-ui:latest
+    container_name: cadcam-buildui
+    volumes:
+      - ./data/:/srv/data
+      - ./src/:/srv/src
+    environment:
+      - ENVIRONMENT=dev
+    ports:
+      - 3000:3000
+
   postgres:
     image: postgres:10.8
     restart: always
