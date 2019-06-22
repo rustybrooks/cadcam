@@ -52,6 +52,8 @@ class OurJSONEncoder(json.JSONEncoder):
         #     return str(obj)
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
+        elif callable(obj):
+            return obj.__name__
 
         return json.JSONEncoder.default(self, obj)
 
@@ -380,7 +382,8 @@ def process_api(fn, api_object, app_blob, blob):
 
     # return results
     if isinstance(retval, (HttpResponse, FileResponse, JSONResponse)):
-        return retval
+        logger.warn("Returning special response")
+        return retval.response
 
     if hasattr(retval, 'items') and 'results' in retval and 'count' in retval \
             and stored.get('page') is not None and stored.get('limit') is not None:

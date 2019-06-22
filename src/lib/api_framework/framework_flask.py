@@ -33,7 +33,10 @@ class HttpResponse(Response):
 
 
 class FileResponse(Response):
-    pass
+    def __init__(self, content=None, content_type=None):
+        super(FileResponse, self).__init__(
+            response=content, content_type=content_type
+        )
 
 
 class RequestFile(object):
@@ -53,6 +56,8 @@ class RequestFile(object):
             data = self.fobj.read(1024*32)
             if data:
                 yield data
+            else:
+                return
 
 
 def get_file(_request, key):

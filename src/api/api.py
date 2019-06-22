@@ -3,11 +3,11 @@ from flask import Flask, render_template, redirect
 import logging
 import os
 
-from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, HttpResponse
+from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, HttpResponse, utils
 from . import migrations
 from flask_cors import CORS
 
-from . import pcb, queries
+from . import pcb, queries, login
 
 
 root = os.path.join(os.path.dirname(__file__))
@@ -25,21 +25,13 @@ app.secret_key = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8
 # login_manager.init_app(app)
 
 
-def is_logged_in(request, api_data, url_data):
-    if 'X-API-KEY' in request.headers:
-        user = queries.User(api_key=request.headers['X-API-KEY'])
-        return user
-
-    return None
-#    return flask_login.current_user
 
 
 # @login_manager.user_loader
 # def load_user(user_id):
 #     return queries.User(user_id=user_id, is_authenticated=True)
 
-
-@api_register(None, require_login=is_logged_in, require_admin=True)
+@api_register(None, require_login=login.is_logged_in, require_admin=True)
 class AdminApi(Api):
     @classmethod
     def migrate(cls, apply=None, initial=False):
@@ -61,7 +53,7 @@ class AdminApi(Api):
         queries.add_user(username='rbrooks', password='test', email='me@rustybrooks.com')
 
 
-@api_register(None, require_login=is_logged_in)
+@api_register(None, require_login=login.is_logged_in)
 class UserApi(Api):
     # @classmethod
     # @Api.config(require_login=False)
@@ -83,3 +75,4 @@ class UserApi(Api):
 app_class_proxy(app, '', 'api/admin', AdminApi())
 app_class_proxy(app, '', 'api/user', UserApi())
 app_class_proxy(app, '', 'api/pcb', pcb.PCBApi())
+app_class_proxy(app, '', 'api/framework', utils.FrameworkApi())

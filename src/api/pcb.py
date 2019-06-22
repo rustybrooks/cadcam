@@ -1,9 +1,12 @@
+from flask import send_file
 import logging
 import tempfile
 import zipfile
 
 from lib.api_framework import api_register, Api, FileResponse
 from lib.campy import *
+
+from . import login
 
 logger = logging.getLogger(__name__)
 
@@ -12,15 +15,18 @@ logger = logging.getLogger(__name__)
 class PCBApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
-    def index(
+    def generate(
         cls, file=None,
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x'
     ):
-        with tempfile.NamedTemporaryFile(mode="w+b") as tf:
+        logger.warn("step 1")
+        with tempfile.NamedTemporaryFile(mode="w+b", suffix=os.path.splitext(file.name)[-1]) as tf:
+            logger.warn("fil = %r", file)
             for chunk in file.chunks():
                 tf.write(chunk)
             tf.flush()
+            logger.warn("step 1a")
 
             pcb = PCBProject(
                 gerber_input=tf.name,
@@ -31,9 +37,13 @@ class PCBApi(Api):
                 # fixture_width=fixture_width,
             )
 
+        logger.warn("step 2")
+
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 15000
+
+        logger.warn("step 3")
 
         if zprobe_type is None:
             zprobe_radius = None
@@ -61,9 +71,16 @@ class PCBApi(Api):
             output_directory=outdir,
         )
 
-        with tempfile.NamedTemporaryFile(suffix='.zip') as tf:
-            with zipfile.ZipFile(tf.name, 'w') as zip:
-                for file in os.listdir(outdir):
-                    zip.write(file)
+        logger.warn("step 4")
 
-            return FileResponse(content=tf, content_type='application/zip')
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tf:
+            with zipfile.ZipFile(tf.name, 'w') as zip:
+                for filename in os.listdir(outdir):
+                    zip.write(
+                        os.path.join(outdir, filename),
+                        arcname=os.path.split(filename)[-1]
+                    )
+
+            logger.warn("step 5")
+            return FileResponse(content=send_file(tf.name, mimetype='application/zip'), content_type='application/zip')
+
