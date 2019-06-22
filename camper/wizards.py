@@ -1,7 +1,7 @@
 from Tkinter import *
 import ttk
 
-import campy
+#import campy
 
 
 class Wizard(object):

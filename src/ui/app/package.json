@@ -1,0 +1,44 @@
+{
+  "name": "cadcam",
+  "version": "0.1.0",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "babel-preset-es2016": "^6.24.1",
+    "babel-preset-stage-3": "^6.24.1",
+    "connected-react-router": "^4.3.0",
+    "extract-text-webpack-plugin": "^3.0.2",
+    "history": "^4.7.2",
+    "moment": "^2.22.2",
+    "prop-types": "^15.6.2",
+    "react": "^16.4.1",
+    "react-dom": "^16.4.1",
+    "react-router": "^4.3.1",
+    "react-router-dom": "^4.3.1",
+    "react-scripts": "^1.1.5",
+    "sprintf-js": "^1.1.1",
+    "uglifyjs-webpack-plugin": "^1.2.7",
+    "url-loader": "^1.1.1",
+    "webpack-merge": "^4.1.4"
+  },
+  "scripts": {
+    "start": "webpack-dev-server --public local-otxp.aveng.us:3000 --host 0.0.0.0 --config webpack.config.dev.js",
+    "build": "webpack --mode production --config webpack.config.prod.js",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.5",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-react": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1",
+    "css-loader": "^1.0.0",
+    "html-webpack-plugin": "^3.2.0",
+    "style-loader": "^0.21.0",
+    "webpack": "^4.17.1",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.5"
+  }
+}
