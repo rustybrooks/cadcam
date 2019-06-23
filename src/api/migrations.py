@@ -37,7 +37,7 @@ initial.add_statement("""
     create table machines(
         machine_id serial primary key,
         user_id bigint not null references users(user_id),
-        machine_key varchar(100) not null unique,
+        machine_key varchar(100) not null,
         name varchar(100),
         min_rpm real not null default 0,
         max_rpm real not null,
@@ -47,5 +47,17 @@ initial.add_statement("""
     )
 """)
 initial.add_statement("create index machines_machine_id on machines(machine_id)")
-initial.add_statement("create index machines_user_id on machines(user_id)")
+initial.add_statement("create unique index machines_unique in machines(user_id, machine_key")
 
+initial.add_statement("""
+    create table projects(
+        project_id serial primary key,
+        user_id bigint not null references users(user_id),
+        project_key varchar(100) not null,
+        name varchar(100),
+        s3_key varchar(200),
+        date_created timestamp,
+        date_modified timestamp,
+    )
+""")
+initial.add_statement("create unique index projects_unique in machines(user_id, project_key")

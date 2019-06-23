@@ -25,6 +25,7 @@ services:
     volumes:
       - ./data/:/srv/data
       - ./src/:/srv/src
+      - /srv/src/ui/app/node_modules
     environment:
       - ENVIRONMENT=dev
     ports:

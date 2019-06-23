@@ -3,12 +3,7 @@ import createStore from './global-store/createStore'
 
 import { BrowserRouter, Route } from 'react-router-dom'
 import Home from './components/Home'
-
-
-
-/*
-*/
-
+import Header from './components/Header'
 
 
 class App extends Component {
