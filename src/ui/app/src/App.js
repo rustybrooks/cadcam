@@ -1,15 +1,36 @@
 import React, { Component } from 'react'
+import createStore from './global-store/createStore'
+
+import { BrowserRouter, Route } from 'react-router-dom'
+import Home from './components/Home'
+
+
+
+/*
+*/
+
+
 
 class App extends Component {
-  componentDidMount() {
-  }
+
 
   render() {
     return (
-      <div className="App">Loading app...</div>
+      <BrowserRouter basename={process.env.PUBLIC_URL}>
+        <div>
+          <Route exact path="/" component={Home} />
+        </div>
+      </BrowserRouter>
     )
   }
 }
 
+const initialValue = {
+}
 
-export default App
+const config = {}
+
+export default createStore(App, initialValue, config)
+// export default App
+
+

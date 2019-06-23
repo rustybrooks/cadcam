@@ -44,8 +44,8 @@ class Frameworks {
   }
 }
 
-let fetchFrameworks = (site) => {
-  let url = site + '/otxapi/framework/endpoints'
+let fetchFrameworks = (site, prefix) => {
+  let url = site + prefix + '/framework/endpoints'
 
   return fetch(url)
     .then(response => response.json())

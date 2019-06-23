@@ -4,6 +4,8 @@
   "main": "index.js",
   "private": true,
   "dependencies": {
+    "@material-ui/core": "^1.4.0",
+    "@material-ui/icons": "^1.1.0",
     "babel-preset-es2016": "^6.24.1",
     "babel-preset-stage-3": "^6.24.1",
     "extract-text-webpack-plugin": "^3.0.2",
