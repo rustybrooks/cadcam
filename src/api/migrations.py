@@ -33,6 +33,7 @@ initial.add_statement("create index users_username on users(username)")
 initial.add_statement("create index users_email on users(email)")
 initial.add_statement("create index users_api_key on users(api_key)")
 
+
 initial.add_statement("""
     create table machines(
         machine_id serial primary key,
@@ -48,6 +49,24 @@ initial.add_statement("""
 """)
 initial.add_statement("create index machines_machine_id on machines(machine_id)")
 initial.add_statement("create unique index machines_unique in machines(user_id, machine_key")
+
+initial.add_statement("""
+    create table tools(
+        tool_id serial primary key,
+        user_id bigint not null references users(user_id),
+        tool_key varchar(100) not null,
+        description varchar(300),
+        type varchar(100),
+        material varchar(100),
+        flutes integer,
+        xoffset real,
+        yoffset real,
+        zoffset real,
+        diameter real
+    )
+""")
+initial.add_statement("create index tools_tool_id on tools(tool_id)")
+initial.add_statement("create unique index tools_unique on tools(user_id, tool_key)")
 
 initial.add_statement("""
     create table projects(

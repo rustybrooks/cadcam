@@ -13,6 +13,7 @@ class App extends Component {
     return (
       <BrowserRouter basename={process.env.PUBLIC_URL}>
         <div>
+          <Header/>
           <Route exact path="/" component={Home} />
         </div>
       </BrowserRouter>

@@ -4,6 +4,7 @@ import logging
 import os
 
 from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, HttpResponse, utils
+from lib import config
 from . import migrations
 from flask_cors import CORS
 
@@ -18,7 +19,7 @@ logging.basicConfig()
 app = Flask('cadcam-api', template_folder=os.path.join(root, 'templates'), static_folder=os.path.join(root, 'static'))
 CORS(app)
 
-app.secret_key = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+app.secret_key = config.get_config_key('app_secret')
 
 
 # login_manager = flask_login.LoginManager()

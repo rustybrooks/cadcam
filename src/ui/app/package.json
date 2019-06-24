@@ -12,6 +12,7 @@
     "react-router-dom": "latest",
     "react-scripts": "latest",
     "react-hot-loader": "latest",
+    "react-signup-login-component": "latest",
     "history": "latest",
     "moment": "latest",
     "prop-types": "latest",

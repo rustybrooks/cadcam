@@ -5,6 +5,8 @@ cd /srv/src
 if [[ "${ENVIRONMENT}" == "prod" ]]; then
     gunicorn -b 0.0.0.0:5000 --config /srv/src/api/gunicorn.py api.api:app
 else
+    pip install -U -r /srv/src/api/requirements_api.txt
+
     export FLASK_DEBUG=1
     export FLASK_APP=api.api
 #    export LC_ALL=C.UTF-8

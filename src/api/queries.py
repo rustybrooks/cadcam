@@ -1,5 +1,7 @@
 import bcrypt
+import datetime
 import hashlib
+import jwt
 import logging
 import os
 import random
@@ -11,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 _SQL = None
+JWT_SECRET = config.get_config_key('jwt_secreet')
 
 
 def SQLFactory(sql_url=None, flask_storage=False):
@@ -91,6 +94,13 @@ class User(object):
 
     def get_id(self):
         return str(self.user_id)
+
+    def generate_token(self):
+        payload = {
+            'user_id': self.user_id,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        }
+        return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 
 def add_user(username=None, email=None, password=None):

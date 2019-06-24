@@ -7,7 +7,6 @@ module.exports = merge(baseConfig, {
   mode: 'development',
   devServer: {
     inline: true,
-    // contentBase: 'src',
     port: '3000',
     historyApiFallback: true,
   },
@@ -17,8 +16,15 @@ module.exports = merge(baseConfig, {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
-          'css-loader?importLoaders=1',
+          {
+            loader: 'style-loader' ,
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+            },
+          },
         ],
       },
     ],
