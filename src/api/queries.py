@@ -134,6 +134,6 @@ def delete_user(username=None, email=None):
     SQL.delete('users', where, bindvars)
 
 
-def users():
+def users(username=None):
     query = "select * from users"
     return list(SQL.select_foreach(query))

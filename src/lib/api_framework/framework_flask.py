@@ -167,8 +167,9 @@ def app_proxy(sa, fn, fnname, config, urlroot, cleanup_callback=None):
                 return JSONResponse(detail='Authentication required', status=403)
 
         # ensure user is admin if required
-        if _require_admin:
-            return JSONResponse(detail="Admin accounts not enabled", status=403)
+        if _require_admin and not blob['user'].is_admin:
+            return JSONResponse(detail="Authentication required", status=403)
+
         # This does not handle file uploads, fix later
         val = utils.process_api(fn, doer, app_blob, blob)
         if cleanup_callback:

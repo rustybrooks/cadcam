@@ -13,7 +13,7 @@ filterwarnings('ignore', message='Duplicate entry')
 
 initial = Migration(1, "initial version")
 for table in [
-    'users', 'machines',
+    'machines', 'tools', 'projects', 'users',
 ]:
     initial.add_statement("drop table if exists {}".format(table))
 
@@ -33,7 +33,6 @@ initial.add_statement("create index users_username on users(username)")
 initial.add_statement("create index users_email on users(email)")
 initial.add_statement("create index users_api_key on users(api_key)")
 
-
 initial.add_statement("""
     create table machines(
         machine_id serial primary key,
@@ -48,7 +47,7 @@ initial.add_statement("""
     )
 """)
 initial.add_statement("create index machines_machine_id on machines(machine_id)")
-initial.add_statement("create unique index machines_unique in machines(user_id, machine_key")
+initial.add_statement("create unique index machines_unique on machines(user_id, machine_key)")
 
 initial.add_statement("""
     create table tools(
@@ -76,7 +75,7 @@ initial.add_statement("""
         name varchar(100),
         s3_key varchar(200),
         date_created timestamp,
-        date_modified timestamp,
+        date_modified timestamp
     )
 """)
-initial.add_statement("create unique index projects_unique in machines(user_id, project_key")
+initial.add_statement("create unique index projects_unique on projects(user_id, project_key)")

@@ -25,33 +25,37 @@ app.secret_key = config.get_config_key('app_secret')
 # login_manager = flask_login.LoginManager()
 # login_manager.init_app(app)
 
-
-
-
 # @login_manager.user_loader
 # def load_user(user_id):
 #     return queries.User(user_id=user_id, is_authenticated=True)
+
 
 @api_register(None, require_login=login.is_logged_in, require_admin=True)
 class AdminApi(Api):
     @classmethod
     def migrate(cls, apply=None, initial=False):
-        return migrations.Migration.migrate(
+        val = migrations.Migration.migrate(
             SQL=queries.SQL,
             dry_run=False,
             initial=api_bool(initial),
             apply_versions=api_list(apply)
         )
 
-    # @classmethod
-    # @Api.config(require_login=False, require_admin=False)
-    # def bootstrap(cls):
-    #     migrations.Migration.migrate(
-    #         SQL=queries.SQL,
-    #         dry_run=False,
-    #         initial=True,
-    #     )
-    #     queries.add_user(username='rbrooks', password='test', email='me@rustybrooks.com')
+        user = queries.User(username='rbrooks')
+        if not user:
+            queries.add_user(username='rbrooks', password=config.get_config_key('admin_password'),
+                             email='me@rustybrooks.com')
+
+        return val
+
+    @classmethod
+    @Api.config(require_login=False, require_admin=False)
+    def bootstrap(cls):
+        if queries.SQL.table_exists('migrations'):
+            if queries.SQL.select_0or1("select count(*) as count from migrations").count > 0:
+                return "Already bootstrapped"
+
+        return cls.migrate(apply=None, initial=False)
 
 
 @api_register(None, require_login=login.is_logged_in)
