@@ -75,8 +75,8 @@ class Header extends React.Component {
         <Drawer anchor="top" open={this.state['login-open']} onClose={this.toggleDrawer(false)}>
           <div
               role="presentation"
-              onClick={this.toggleDrawer(false)}
-              onKeyDown={this.toggleDrawer(false)}
+              // onClick={this.toggleDrawer(false)}
+              // onKeyDown={this.toggleDrawer(false)}
             >
             <LoginPage/>
           </div>

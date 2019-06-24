@@ -1,3 +1,5 @@
+import "regenerator-runtime/runtime";
+
 class Framework {
   constructor(base_url, data) {
     // console.log(data)
@@ -8,25 +10,14 @@ class Framework {
       const whole_url = base_url + '/' + cmd['simple_url']
       this[k] = (context) => {
         // console.log("posting ", JSON.stringify(context), "to", whole_url)
-        fetch(whole_url, {
+        return fetch(whole_url, {
           method: 'POST',
           body: JSON.stringify(context),
           headers: {
             "Content-Type": "application/json; charset=utf-8",
+            "X-API-KEY": localStorage.getItem('api-key'),
           },
-        }).then(
-          (response) => {
-            // console.log("response ok", response.ok)
-            response.json().then(
-              (json) => {
-                return json
-              }
-            )
-          },
-          (err) => {
-            console.log("ERROR!!", err)
-          }
-        )
+        }).then(response => response.json()).then((json) => { return json })
       }
     })
   }

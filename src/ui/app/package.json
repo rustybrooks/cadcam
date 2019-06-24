@@ -13,6 +13,7 @@
     "react-scripts": "latest",
     "react-hot-loader": "latest",
     "react-signup-login-component": "latest",
+    "regenerator-runtime": "latest",
     "history": "latest",
     "moment": "latest",
     "prop-types": "latest",

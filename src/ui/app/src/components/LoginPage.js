@@ -1,6 +1,8 @@
 import React from 'react'
 
 import ReactSignupLoginComponent from 'react-signup-login-component'
+import { withStore } from '../global-store'
+
 
 class LoginPage extends React.Component {
   signupWasClickedCallback = (data) => {
@@ -9,8 +11,12 @@ class LoginPage extends React.Component {
   }
 
   loginWasClickedCallback = (data) => {
+    const { store } = this.props
+
     console.log(data);
-    alert('Login callback, see log on the console to see the data.')
+    let fw = store.get('frameworks')
+    let val = fw.UserApi.api_login({'username': data.username, 'password': data.password})
+    val.then(data => localStorage.setItem('api-key', data))
   }
 
   recoverPasswordWasClickedCallback = (data) => {
@@ -22,7 +28,7 @@ class LoginPage extends React.Component {
     return (
       <div>
         <ReactSignupLoginComponent
-          title="My awesome company"
+          title="CADCAM thingy"
           handleSignup={this.signupWasClickedCallback}
           handleLogin={this.loginWasClickedCallback}
           handleRecoverPassword={this.recoverPasswordWasClickedCallback}
@@ -32,4 +38,4 @@ class LoginPage extends React.Component {
   }
 }
 
-export default LoginPage
+export default withStore(LoginPage)

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 _SQL = None
-JWT_SECRET = config.get_config_key('jwt_secreet')
+JWT_SECRET = config.get_config_key('jwt_secret')
 
 
 def SQLFactory(sql_url=None, flask_storage=False):
@@ -100,6 +100,7 @@ class User(object):
             'user_id': self.user_id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }
+        logger.warn("payload = %r, secret=%r", payload, JWT_SECRET)
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 

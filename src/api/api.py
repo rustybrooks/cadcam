@@ -43,15 +43,15 @@ class AdminApi(Api):
             apply_versions=api_list(apply)
         )
 
-    @classmethod
-    @Api.config(require_login=False, require_admin=False)
-    def bootstrap(cls):
-        migrations.Migration.migrate(
-            SQL=queries.SQL,
-            dry_run=False,
-            initial=True,
-        )
-        queries.add_user(username='rbrooks', password='test', email='me@rustybrooks.com')
+    # @classmethod
+    # @Api.config(require_login=False, require_admin=False)
+    # def bootstrap(cls):
+    #     migrations.Migration.migrate(
+    #         SQL=queries.SQL,
+    #         dry_run=False,
+    #         initial=True,
+    #     )
+    #     queries.add_user(username='rbrooks', password='test', email='me@rustybrooks.com')
 
 
 @api_register(None, require_login=login.is_logged_in)
@@ -67,6 +67,28 @@ class UserApi(Api):
     #             return HttpResponse(render_template('login.html'))
     #     else:
     #         return HttpResponse(render_template('login.html'))
+
+    @classmethod
+    @Api.config(require_login=False)
+    def signup(cls, username, email, password1, password2):
+        if password1 != password2:
+            return cls.BadRequest("Passwords don't match")
+
+        if len(password1) < 8:
+            return cls.BadRequest("Passwords must be at least 8 characters")
+
+        queries.add_user(username=username, password=password1, email=email)
+
+    @classmethod
+    @Api.config(require_login=False)
+    def api_login(cls, username=None, password=None):
+        if username and password:
+            user = queries.User(username=username, password=password)
+            if user and user.is_authenticated:
+                logger.warn("user = %r - %r", user, user.generate_token())
+                return user.generate_token()
+
+        return None
 
     @classmethod
     def change_password(cls, new_password=None, _user=None):
