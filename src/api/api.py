@@ -40,7 +40,8 @@ class AdminApi(Api):
             queries.add_user(
                 username='rbrooks',
                 password=config.get_config_key('admin_password'),
-                email='me@rustybrooks.com'
+                email='me@rustybrooks.com',
+                is_admin=True,
             )
 
     @classmethod

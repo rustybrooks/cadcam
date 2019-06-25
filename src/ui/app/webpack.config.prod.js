@@ -13,8 +13,15 @@ module.exports = merge(baseConfig, {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
-          'css-loader?importLoaders=1',
+          {
+            loader: 'style-loader' ,
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+            },
+          },
         ],
       },
     ]

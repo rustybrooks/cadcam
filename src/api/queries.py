@@ -104,13 +104,14 @@ class User(object):
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 
-def add_user(username=None, email=None, password=None):
+def add_user(username=None, email=None, password=None, is_admin=False):
     salt = bcrypt.gensalt(12)
     return SQL.insert('users', {
         'username': username,
         'email': email,
         'password': User.generate_password_hash(password, salt).decode('utf-8'),
         'api_key': hashlib.sha256(str(random.getrandbits(128))).hexdigest(),
+        'is_admin': is_admin,
     })
 
 
