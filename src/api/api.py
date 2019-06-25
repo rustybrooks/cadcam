@@ -33,6 +33,17 @@ app.secret_key = config.get_config_key('app_secret')
 @api_register(None, require_login=login.is_logged_in, require_admin=True)
 class AdminApi(Api):
     @classmethod
+    def _bootstrap_admin(cls):
+        user = queries.User(username='rbrooks')
+        if not user.user_id:
+            logger.warn("Adding bootstrapped admin user")
+            queries.add_user(
+                username='rbrooks',
+                password=config.get_config_key('admin_password'),
+                email='me@rustybrooks.com'
+            )
+
+    @classmethod
     def migrate(cls, apply=None, initial=False):
         val = migrations.Migration.migrate(
             SQL=queries.SQL,
@@ -41,21 +52,17 @@ class AdminApi(Api):
             apply_versions=api_list(apply)
         )
 
-        user = queries.User(username='rbrooks')
-        if not user:
-            queries.add_user(username='rbrooks', password=config.get_config_key('admin_password'),
-                             email='me@rustybrooks.com')
+        cls._bootstrap_admin()
 
         return val
 
     @classmethod
     @Api.config(require_login=False, require_admin=False)
     def bootstrap(cls):
-        if queries.SQL.table_exists('migrations'):
-            if queries.SQL.select_0or1("select count(*) as count from migrations").count > 0:
-                return "Already bootstrapped"
-
-        return cls.migrate(apply=None, initial=False)
+        if not queries.SQL.table_exists('migrations') or not queries.SQL.select_0or1("select count(*) as count from migrations").count > 0:
+            val = cls.migrate(apply=None, initial=False)
+        else:
+            cls._bootstrap_admin()
 
 
 @api_register(None, require_login=login.is_logged_in)

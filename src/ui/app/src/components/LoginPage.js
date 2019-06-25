@@ -32,6 +32,16 @@ class LoginPage extends React.Component {
           handleSignup={this.signupWasClickedCallback}
           handleLogin={this.loginWasClickedCallback}
           handleRecoverPassword={this.recoverPasswordWasClickedCallback}
+          // usernameCustomLabel="Anything you want"
+          // passwordCustomLabel="Anything you want"
+          // passwordConfirmationCustomLabel="Anything you want"
+          // recoverPasswordCustomLabel="Anything you want"
+          signupCustomLabel="Sign Up"
+          submitLoginCustomLabel="Login"
+          goToLoginCustomLabel="Login"
+          submitSignupCustomLabel="Sign Up"
+          goToSignupCustomLabel="Sign Up"
+          // submitRecoverPasswordCustomLabel="Anything you want"
         />
       </div>
     )
