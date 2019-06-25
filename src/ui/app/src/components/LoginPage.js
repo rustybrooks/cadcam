@@ -1,6 +1,6 @@
 import React from 'react'
 
-import ReactSignupLoginComponent from 'react-signup-login-component'
+import ReactSignupLoginComponent from './login/ReactSignupLoginComponent'
 import { withStore } from '../global-store'
 
 
@@ -28,7 +28,6 @@ class LoginPage extends React.Component {
     return (
       <div>
         <ReactSignupLoginComponent
-          title="CADCAM thingy"
           handleSignup={this.signupWasClickedCallback}
           handleLogin={this.loginWasClickedCallback}
           handleRecoverPassword={this.recoverPasswordWasClickedCallback}

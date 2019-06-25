@@ -35,46 +35,39 @@ const localStyles = {
 
 const RecoverPassword = ({
   handleShowLogin,
-  styles,
   handleChange,
   handleRecoverPassword,
   username,
-  usernameCustomLabel,
-  goToLoginCustomLabel,
-  submitRecoverPasswordCustomLabel,
 }) => (
-  <section
-    id="recover-password-form"
-    style={Object.assign({}, localStyles.wrapper, styles.wrapper)}
-  >
-    <div id="fields" style={Object.assign({}, localStyles.inputWrapper, styles.inputWrapper)}>
+  <section id="recover-password-form" style={localStyles.wrapper}>
+    <div id="fields" style={localStyles.inputWrapper}>
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="text"
         id="username"
         name="username"
-        placeholder={usernameCustomLabel}
+        placeholder='Username'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={username}
       />
     </div>
-    <div style={Object.assign({}, localStyles.buttonsWrapper, styles.buttonsWrapper)}>
+    <div style={localStyles.buttonsWrapper}>
       <button
         id="login-button"
         type="button"
-        style={Object.assign({}, localStyles.button, styles.button)}
+        style={localStyles.button}
         onClick={() => {
           handleShowLogin('isRecoveringPassword', false);
         }}
       >
-        {goToLoginCustomLabel}
+        Login
       </button>
       <input
         id="submit-recover-password"
         name="submit-recover-password"
         type="submit"
-        value={submitRecoverPasswordCustomLabel}
-        style={Object.assign({}, localStyles.button, styles.button)}
+        value='Recover'
+        style={localStyles.button}
         onClick={handleRecoverPassword}
       />
     </div>
@@ -86,20 +79,6 @@ RecoverPassword.propTypes = {
   handleChange: PropTypes.func.isRequired,
   handleRecoverPassword: PropTypes.func.isRequired,
   username: PropTypes.string.isRequired,
-  styles: PropTypes.shape({
-    wrapper: PropTypes.object,
-    inputWrapper: PropTypes.object,
-    buttonsWrapper: PropTypes.object,
-    input: PropTypes.object,
-    button: PropTypes.object,
-  }),
-  usernameCustomLabel: PropTypes.string.isRequired,
-  goToLoginCustomLabel: PropTypes.string.isRequired,
-  submitRecoverPasswordCustomLabel: PropTypes.string.isRequired,
-};
-
-RecoverPassword.defaultProps = {
-  styles: {},
 };
 
 export default RecoverPassword;

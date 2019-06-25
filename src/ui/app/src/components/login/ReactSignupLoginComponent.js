@@ -17,8 +17,8 @@ class ReactSignupLoginComponent extends React.Component {
     this.bubleUpRecoverPassword = this.bubleUpRecoverPassword.bind(this);
 
     this.state = {
-      isLogin: this.props.isLogin,
-      isRecoveringPassword: this.props.isRecoveringPassword,
+      isLogin: true,
+      isRecoveringPassword: false,
       username: '',
       password: '',
       passwordConfirmation: '',
@@ -85,16 +85,10 @@ class ReactSignupLoginComponent extends React.Component {
             key="login-form"
             handleShowSignup={this.updateState}
             handleShowRecover={this.updateState}
-            styles={this.props.styles.login}
             handleLogin={this.bubleUpLogin}
             handleChange={this.updateState}
             username={this.state.username}
             password={this.state.password}
-            usernameCustomLabel={this.props.usernameCustomLabel}
-            passwordCustomLabel={this.props.passwordCustomLabel}
-            recoverPasswordCustomLabel={this.props.recoverPasswordCustomLabel}
-            goToSignupCustomLabel={this.props.goToSignupCustomLabel}
-            submitLoginCustomLabel={this.props.submitLoginCustomLabel}
           />
         );
       } else if (!this.state.isLogin && !this.state.isRecoveringPassword) {
@@ -102,17 +96,11 @@ class ReactSignupLoginComponent extends React.Component {
           <Signup
             key="signup-form"
             handleShowLogin={this.updateState}
-            styles={this.props.styles.signup}
             handleSignup={this.bubleUpSignup}
             handleChange={this.updateState}
             username={this.state.username}
             password={this.state.password}
             passwordConfirmation={this.state.passwordConfirmation}
-            usernameCustomLabel={this.props.usernameCustomLabel}
-            passwordCustomLabel={this.props.passwordCustomLabel}
-            passwordConfirmationCustomLabel={this.props.passwordConfirmationCustomLabel}
-            goToLoginCustomLabel={this.props.goToLoginCustomLabel}
-            submitSignupCustomLabel={this.props.submitSignupCustomLabel}
           />
         );
       }
@@ -121,87 +109,26 @@ class ReactSignupLoginComponent extends React.Component {
           handleShowLogin={this.updateState}
           handleRecoverPassword={this.bubleUpRecoverPassword}
           handleChange={this.updateState}
-          styles={this.props.styles.recoverPassword}
           username={this.state.username}
-          usernameCustomLabel={this.props.usernameCustomLabel}
-          goToLoginCustomLabel={this.props.goToLoginCustomLabel}
-          submitRecoverPasswordCustomLabel={this.props.submitRecoverPasswordCustomLabel}
         />
       );
     };
     return (
       <section
         id="main-wrapper"
-        style={Object.assign(styles.wrapper, this.props.styles.mainWrapper)}
+        style={styles.wrapper}
       >
-        <h1 style={Object.assign(styles.title, this.props.styles.mainTitle)}>{this.props.title}</h1>
-        <div style={Object.assign(styles.flipper, this.props.styles.flipper)}>{showCard()}</div>
+        <h1 style={styles.title}>{this.props.title}</h1>
+        <div style={styles.flipper}>{showCard()}</div>
       </section>
     );
   }
 }
 
 ReactSignupLoginComponent.propTypes = {
-  title: PropTypes.string,
-  isLogin: PropTypes.bool,
-  isRecoveringPassword: PropTypes.bool,
-  styles: PropTypes.shape({
-    mainWrapper: PropTypes.object,
-    mainTitle: PropTypes.object,
-    flipper: PropTypes.object,
-    signup: PropTypes.shape({
-      wrapper: PropTypes.object,
-      inputWrapper: PropTypes.object,
-      buttonsWrapper: PropTypes.object,
-      input: PropTypes.object,
-      recoverPassword: PropTypes.object,
-      button: PropTypes.object,
-    }),
-    login: PropTypes.shape({
-      wrapper: PropTypes.object,
-      inputWrapper: PropTypes.object,
-      buttonsWrapper: PropTypes.object,
-      input: PropTypes.object,
-      recoverPasswordWrapper: PropTypes.object,
-      recoverPasswordButton: PropTypes.object,
-      button: PropTypes.object,
-    }),
-    recoverPassword: PropTypes.shape({
-      wrapper: PropTypes.object,
-      inputWrapper: PropTypes.object,
-      buttonsWrapper: PropTypes.object,
-      input: PropTypes.object,
-      button: PropTypes.object,
-    }),
-  }),
   handleSignup: PropTypes.func.isRequired,
   handleLogin: PropTypes.func.isRequired,
   handleRecoverPassword: PropTypes.func.isRequired,
-  usernameCustomLabel: PropTypes.string,
-  passwordCustomLabel: PropTypes.string,
-  passwordConfirmationCustomLabel: PropTypes.string,
-  recoverPasswordCustomLabel: PropTypes.string,
-  goToSignupCustomLabel: PropTypes.string,
-  submitLoginCustomLabel: PropTypes.string,
-  goToLoginCustomLabel: PropTypes.string,
-  submitSignupCustomLabel: PropTypes.string,
-  submitRecoverPasswordCustomLabel: PropTypes.string,
-};
-
-ReactSignupLoginComponent.defaultProps = {
-  title: 'Company Name',
-  isLogin: true,
-  isRecoveringPassword: false,
-  styles: {},
-  usernameCustomLabel: 'Username',
-  passwordCustomLabel: 'Password',
-  passwordConfirmationCustomLabel: 'Confirm password',
-  recoverPasswordCustomLabel: 'Recover Password',
-  goToSignupCustomLabel: 'Signup',
-  goToLoginCustomLabel: 'Login',
-  submitLoginCustomLabel: 'Signup',
-  submitSignupCustomLabel: 'Signup',
-  submitRecoverPasswordCustomLabel: 'Recover',
 };
 
 export default ReactSignupLoginComponent;

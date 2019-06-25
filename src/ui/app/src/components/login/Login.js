@@ -50,69 +50,63 @@ const localStyles = {
 const Login = ({
   handleShowSignup,
   handleShowRecover,
-  styles,
   handleLogin,
   handleChange,
   username,
   password,
-  usernameCustomLabel,
-  passwordCustomLabel,
-  recoverPasswordCustomLabel,
-  goToSignupCustomLabel,
-  submitLoginCustomLabel,
 }) => (
-  <section id="login-form" style={Object.assign({}, localStyles.wrapper, styles.wrapper)}>
-    <div id="fields" style={Object.assign({}, localStyles.inputWrapper, styles.inputWrapper)}>
+  <section id="login-form" style={localStyles.wrapper}>
+    <div id="fields" style={localStyles.inputWrapper}>
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="text"
         id="username"
         name="username"
-        placeholder={usernameCustomLabel}
+        placeholder='Username'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={username}
       />
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="password"
         id="password"
         name="password"
-        placeholder={passwordCustomLabel}
+        placeholder='Password'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={password}
       />
     </div>
-    <div style={Object.assign({}, localStyles.buttonsWrapper, styles.buttonsWrapper)}>
+    <div style={localStyles.buttonsWrapper}>
       <div
-        style={Object.assign({}, localStyles.recoverPasswordWrapper, styles.recoverPasswordWrapper)}
+        style={localStyles.recoverPasswordWrapper}
       >
-        <button
-          id="recorver-password"
-          type="button"
-          style={Object.assign({}, localStyles.recoverPassword, styles.recoverPasswordButton)}
-          onClick={() => {
-            handleShowRecover('isRecoveringPassword', true);
-          }}
-        >
-          {recoverPasswordCustomLabel}
-        </button>
+        {/*<button*/}
+          {/*id="recorver-password"*/}
+          {/*type="button"*/}
+          {/*style={localStyles.recoverPassword}*/}
+          {/*onClick={() => {*/}
+            {/*handleShowRecover('isRecoveringPassword', true);*/}
+          {/*}}*/}
+        {/*>*/}
+          {/*Recover*/}
+        {/*</button>*/}
       </div>
       <button
         id="signup-button"
         type="button"
-        style={Object.assign({}, localStyles.button, styles.button)}
+        style={localStyles.button}
         onClick={() => {
           handleShowSignup('isLogin', false);
         }}
       >
-        {goToSignupCustomLabel}
+        Signup
       </button>
       <input
         id="submit-login"
         name="submit-login"
-        value={submitLoginCustomLabel}
+        value='Login'
         type="submit"
-        style={Object.assign({}, localStyles.button, styles.button)}
+        style={localStyles.button}
         onClick={handleLogin}
       />
     </div>
@@ -126,24 +120,7 @@ Login.propTypes = {
   handleChange: PropTypes.func.isRequired,
   username: PropTypes.string.isRequired,
   password: PropTypes.string.isRequired,
-  styles: PropTypes.shape({
-    wrapper: PropTypes.object,
-    inputWrapper: PropTypes.object,
-    buttonsWrapper: PropTypes.object,
-    input: PropTypes.object,
-    recoverPasswordWrapper: PropTypes.object,
-    recoverPasswordButton: PropTypes.object,
-    button: PropTypes.object,
-  }),
-  usernameCustomLabel: PropTypes.string.isRequired,
-  passwordCustomLabel: PropTypes.string.isRequired,
-  recoverPasswordCustomLabel: PropTypes.string.isRequired,
-  goToSignupCustomLabel: PropTypes.string.isRequired,
-  submitLoginCustomLabel: PropTypes.string.isRequired,
 };
 
-Login.defaultProps = {
-  styles: {},
-};
 
 export default Login;

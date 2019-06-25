@@ -39,64 +39,58 @@ const localStyles = {
 
 const Signup = ({
   handleShowLogin,
-  styles,
   handleSignup,
   handleChange,
   username,
   password,
   passwordConfirmation,
-  usernameCustomLabel,
-  passwordCustomLabel,
-  passwordConfirmationCustomLabel,
-  goToLoginCustomLabel,
-  submitSignupCustomLabel,
 }) => (
-  <section id="signup-form" style={Object.assign({}, localStyles.wrapper, styles.wrapper)}>
-    <div id="fields" style={Object.assign({}, localStyles.inputWrapper, styles.inputWrapper)}>
+  <section id="signup-form" style={localStyles.wrapper}>
+    <div id="fields" style={localStyles.inputWrapper}>
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="text"
         id="username"
         name="username"
-        placeholder={usernameCustomLabel}
+        placeholder='Username'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={username}
       />
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="password"
         id="password"
         name="password"
-        placeholder={passwordCustomLabel}
+        placeholder='Password'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={password}
       />
       <input
-        style={Object.assign({}, localStyles.input, styles.input)}
+        style={localStyles.input}
         type="password"
         id="passwordConfirmation"
         name="passwordConfirmation"
-        placeholder={passwordConfirmationCustomLabel}
+        placeholder='Confirm Password'
         onChange={e => handleChange(e.target.name, e.target.value)}
         value={passwordConfirmation}
       />
     </div>
-    <div style={Object.assign({}, localStyles.buttonsWrapper, styles.buttonsWrapper)}>
+    <div style={localStyles.buttonsWrapper}>
       <button
         id="login-button"
         type="button"
-        style={Object.assign({}, localStyles.button, styles.button)}
+        style={localStyles.button}
         onClick={() => {
           handleShowLogin('isLogin', true);
         }}
       >
-        {goToLoginCustomLabel}
+        Login
       </button>
       <input
         id="submit-signup"
         type="submit"
-        value={submitSignupCustomLabel}
-        style={Object.assign({}, localStyles.button, styles.button)}
+        value='Signup'
+        style={localStyles.button}
         onClick={handleSignup}
       />
     </div>
@@ -110,23 +104,6 @@ Signup.propTypes = {
   username: PropTypes.string.isRequired,
   password: PropTypes.string.isRequired,
   passwordConfirmation: PropTypes.string.isRequired,
-  styles: PropTypes.shape({
-    wrapper: PropTypes.object,
-    inputWrapper: PropTypes.object,
-    buttonsWrapper: PropTypes.object,
-    input: PropTypes.object,
-    recoverPassword: PropTypes.object,
-    button: PropTypes.object,
-  }),
-  usernameCustomLabel: PropTypes.string.isRequired,
-  passwordCustomLabel: PropTypes.string.isRequired,
-  passwordConfirmationCustomLabel: PropTypes.string.isRequired,
-  goToLoginCustomLabel: PropTypes.string.isRequired,
-  submitSignupCustomLabel: PropTypes.string.isRequired,
-};
-
-Signup.defaultProps = {
-  styles: {},
 };
 
 export default Signup;
