@@ -1,13 +1,15 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
-RUN apt-get -y update \
-  && apt-get -y install \
+RUN DEBIAN_FRONTEND=noninteractive apt-get -yq update \
+  && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
      sudo nano \
      build-essential \
      python2.7 python2.7-dev  python-tk python-pip \
      unzip cmake git libgomp1 \
-     libboost-all-dev doxygen libvtk5.10 graphviz libqd-dev libfreetype6-dev \
-     libgeos-dev libvtk5-dev python-vtk libffi-dev \
+     libboost-all-dev doxygen \
+     libvtk6.3 libvtk6-dev python-vtk6 \
+     graphviz libqd-dev libfreetype6-dev \
+     libgeos-dev  libffi-dev python-cffi \
   && apt-get clean \
   && rm -rf /var/cache/apt/archives/*
 
