@@ -73,9 +73,20 @@ initial.add_statement("""
         user_id bigint not null references users(user_id),
         project_key varchar(100) not null,
         name varchar(100),
+        project_type varchar(100),
         s3_key varchar(200),
         date_created timestamp,
         date_modified timestamp
     )
 """)
 initial.add_statement("create unique index projects_unique on projects(user_id, project_key)")
+
+initial.add_statement("""
+    create table pcb_projects(
+        pcb_project_id serial primary key,
+        project_id bigint not null references projects(project_id),
+        s3_key varchar(100)
+    )
+""")
+initial.add_statement("create index pcb_projects_pcb_project_id on pcb_projects(pcb_project_id)")
+initial.add_statement("create index pcb_projects_project_id on pcb_projects(project_id)")
