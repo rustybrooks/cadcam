@@ -1,3 +1,4 @@
+import boto3
 from flask import send_file
 import logging
 import tempfile
@@ -11,8 +12,18 @@ from . import login
 logger = logging.getLogger(__name__)
 
 
-@api_register(None, require_login=False)
+@api_register(None, require_login=login.is_logged_in)
 class PCBApi(Api):
+    @classmethod
+    @Api.config(file_keys=['file'])
+    def upload(cls, project_key=None, file=None, file_key=None):
+        bucket = "rustybrooks-cadcam"
+        file_key = "{}".format(project_key)
+        storage_key = '{}/{}'.format(project_key, file_key)
+
+        s3 = boto3.client('s3')
+        s3.upload_file(file, bucket, storage_key)
+
     @classmethod
     @Api.config(file_keys=['file'])
     def generate(
@@ -20,7 +31,6 @@ class PCBApi(Api):
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x'
     ):
-        logger.warn("step 1")
         with tempfile.NamedTemporaryFile(mode="w+b", suffix=os.path.splitext(file.name)[-1]) as tf:
             logger.warn("fil = %r", file)
             for chunk in file.chunks():
@@ -37,13 +47,9 @@ class PCBApi(Api):
                 # fixture_width=fixture_width,
             )
 
-        logger.warn("step 2")
-
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 15000
-
-        logger.warn("step 3")
 
         if zprobe_type is None:
             zprobe_radius = None
@@ -70,8 +76,6 @@ class PCBApi(Api):
             zprobe_radius=zprobe_radius,
             output_directory=outdir,
         )
-
-        logger.warn("step 4")
 
         with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tf:
             with zipfile.ZipFile(tf.name, 'w') as zip:

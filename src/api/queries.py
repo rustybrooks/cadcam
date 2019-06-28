@@ -138,3 +138,43 @@ def delete_user(username=None, email=None):
 def users(username=None):
     query = "select * from users"
     return list(SQL.select_foreach(query))
+
+
+#############################################
+# projects
+
+def project(user_id=None, project_key=None):
+    r = projects(user_id=user_id, project_key=project_key, limit=2)
+
+    if len(r) > 1:
+        raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
+
+    return r[0] if r else None
+
+
+def projects(user_id=None, project_key=None, page=None, limit=None, sort=None):
+    where, bindvars = SQL.auto_where(user_id=user_id, project_key=project_key)
+    query = """
+        select * 
+        from projects
+        {where}
+        {sort} {limit}
+    """.format(
+        where=SQL.where_clause(where),
+        sort=SQL.orderby(sort),
+        limit=SQL.limit(page=page, limit=limit)
+    )
+
+    return list(SQL.select_foreach(query, bindvars))
+
+
+def add_project(user_id=None, project_key=None, name=None, project_type=None):
+    now = datetime.datetime.utcnow()
+    SQL.insert('projects', {
+        'user_id': user_id,
+        'project_key': project_key,
+        'name': name,
+        'project_type': project_type,
+        'date_created': now,
+        'date_updated': now,
+    })

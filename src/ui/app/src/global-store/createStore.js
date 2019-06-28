@@ -69,7 +69,7 @@ const createStore = (
     render() {
       return (
         <StoreContext.Provider value={{ store: this.state.store }}>
-          <WrappedComponent {...this.props} />
+          <WrappedComponent {...this.props} store={this.state.store}/>
         </StoreContext.Provider>
       )
     }

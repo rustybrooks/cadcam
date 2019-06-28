@@ -59,6 +59,9 @@ class RequestFile(object):
             else:
                 return
 
+    def read(self, *args, **kwargs):
+        self.fobj.read(*args, **kwargs)
+
 
 def get_file(_request, key):
     if key not in _request.files:

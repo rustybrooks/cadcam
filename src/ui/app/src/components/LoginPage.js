@@ -17,6 +17,7 @@ class LoginPage extends React.Component {
     let fw = store.get('frameworks')
     let val = fw.UserApi.api_login({'username': data.username, 'password': data.password})
     val.then(data => localStorage.setItem('api-key', data))
+    store.get('login-widget').toggleDrawer(false)
   }
 
   recoverPasswordWasClickedCallback = (data) => {
@@ -31,16 +32,6 @@ class LoginPage extends React.Component {
           handleSignup={this.signupWasClickedCallback}
           handleLogin={this.loginWasClickedCallback}
           handleRecoverPassword={this.recoverPasswordWasClickedCallback}
-          // usernameCustomLabel="Anything you want"
-          // passwordCustomLabel="Anything you want"
-          // passwordConfirmationCustomLabel="Anything you want"
-          // recoverPasswordCustomLabel="Anything you want"
-          signupCustomLabel="Sign Up"
-          submitLoginCustomLabel="Login"
-          goToLoginCustomLabel="Login"
-          submitSignupCustomLabel="Sign Up"
-          goToSignupCustomLabel="Sign Up"
-          // submitRecoverPasswordCustomLabel="Anything you want"
         />
       </div>
     )
