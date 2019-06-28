@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 def is_logged_in(request, api_data, url_data):
     if 'X-API-KEY' in request.headers:
         api_key = request.headers['X-API-KEY']
-        logger.warn("%r - %r", api_key, queries.JWT_SECRET)
 
         try:
             payload = jwt.decode(api_key, secret=queries.JWT_SECRET, verify=False)
@@ -21,6 +20,7 @@ def is_logged_in(request, api_data, url_data):
             logger.warn("%r", e)
 
         user = queries.User(api_key=api_key)
+        logger.warn("%r", user)
         return user
 
     return None

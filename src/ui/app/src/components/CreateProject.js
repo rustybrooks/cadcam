@@ -3,7 +3,9 @@ import TextField from '@material-ui/core/TextField';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogActions from '@material-ui/core/DialogActions';
 import Button from '@material-ui/core/Button'
+
 import { withStyles } from '@material-ui/core/styles'
+import { withRouter } from 'react-router'
 
 
 import { withStore } from '../global-store'
@@ -74,4 +76,4 @@ class CreateProject extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(CreateProject))
+export default withRouter(withStore(withStyles(style)(CreateProject)))

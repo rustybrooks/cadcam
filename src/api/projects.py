@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from lib.api_framework import api_register, Api
@@ -11,9 +12,17 @@ logger = logging.getLogger(__name__)
 class ProjectsApi(Api):
     @classmethod
     def index(cls, page=1, limit=10, _user=None):
-        return {
+        out = {
             'results': queries.projects(user_id=_user.user_id, page=page, limit=limit),
         }
+
+        for r in out['results']:
+            r.update({
+                'created_ago': (datetime.datetime.utcnow() - r.date_created).total_seconds(),
+                'modified_ago': (datetime.datetime.utcnow() - r.date_modified).total_seconds(),
+            })
+
+        return out
 
     @classmethod
     def create(cls, project_key=None, project_type='pcb', name=None, _user=None):

@@ -9,7 +9,9 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
+import Typography from '@material-ui/core/Typography'
 import DialogTitle from '@material-ui/core/DialogTitle';
+import * as moment from 'moment'
 
 import { withRouter } from 'react-router'
 
@@ -23,6 +25,22 @@ const style = theme => ({
     marginTop: theme.spacing(1),
     // backgroundColor: 'green',
   },
+  matchrow_even: {
+    background: '#eee',
+  },
+
+  matchrow_odd: {
+    background: '#ccc',
+  },
+
+  matchrow_select_even: {
+    background: '#ccf',
+  },
+
+  matchrow_select_odd: {
+    background: '#ccf',
+  },
+
 })
 
 
@@ -42,13 +60,10 @@ class ProjectRow extends React.Component {
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
     }>
-      <td className={classes.matchlist}>
-        <Typography gutterBottom>
-          {x.map_name === 'Erangel_Main' ? 'Erangel' : (x.map_name === 'Desert_Main' ? 'Miramar' : (x.map_name === 'Savage_Main' ? 'Sanhok' : 'Vikendi'))}
-        </Typography>
-        <Typography gutterBottom>{x.game_mode}</Typography>
-        <Typography color="textSecondary">{sprintf("%2d / %2dm", x.timesurvived / 60, x.duration / 60)}</Typography>
-      </td>
+      <td><Link to={'/projects/' + x.project_key}>{x.project_key}</Link></td>
+      <td>{x.name}</td>
+      <td>{moment.duration(x.created_ago, 'seconds').humanize()} ago</td>
+      <td>{moment.duration(x.modified_ago, 'seconds').humanize()} ago</td>
     </tr>
   }
 }
@@ -177,11 +192,7 @@ class Projects extends React.Component {
                 even = !even
                 return (
                   <ProjectRow
-                    //classes={classes} key={x.match_id} playerName={this.props.playerName} row={x}
-                    //onClick={() => that.setState({showMatch: this.state.showMatch === x.match_id ? null : x.match_id})}
-                    //even={even} buttonLabel={(this.state.showMatch === x.match_id) ? "Less" : "More"}
-                    //fullsize={!this.state.showMatch} selected={x.match_id === this.state.showMatch}
-                    // component={Link} to={"/player/" + x + '/match/' + x.match_id}
+                    key={x.project_id} classes={classes} row={x}
                   />
                 )
               })

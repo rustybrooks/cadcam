@@ -155,7 +155,7 @@ def project(user_id=None, project_key=None):
 def projects(user_id=None, project_key=None, page=None, limit=None, sort=None):
     where, bindvars = SQL.auto_where(user_id=user_id, project_key=project_key)
     query = """
-        select * 
+        select project_id, project_key, name, date_created, date_modified
         from projects
         {where}
         {sort} {limit}
@@ -176,5 +176,5 @@ def add_project(user_id=None, project_key=None, name=None, project_type=None):
         'name': name,
         'project_type': project_type,
         'date_created': now,
-        'date_updated': now,
+        'date_modified': now,
     })
