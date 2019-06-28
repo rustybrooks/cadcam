@@ -68,6 +68,7 @@ class Projects extends React.Component {
 
     // This binding is necessary to make `this` work in the callback
     this.handleClose = this.handleClose.bind(this);
+    // this.handleCreate = this.handleCreate.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -127,6 +128,7 @@ class Projects extends React.Component {
       this.props.history.push('/projects')
 
   }
+
 
   render() {
     const { store, classes } = this.props
@@ -191,16 +193,8 @@ class Projects extends React.Component {
       <Dialog open={this.state.createModal} onClose={this.handlelose} aria-labelledby="form-dialog-title">
         <DialogTitle id="form-dialog-title">Subscribe</DialogTitle>
         <DialogContent>
-          <CreateProject/>
+          <CreateProject handleClose={this.handleClose}/>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={this.handleClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={this.handleClose} color="primary">
-            Subscribe
-          </Button>
-        </DialogActions>
       </Dialog>
       </Paper>
     )

@@ -7,6 +7,7 @@ import { BASE_URL } from './constants/api'
 import fetchFrameworks from './framework_client'
 import Home from './components/Home'
 import Projects from './components/Projects'
+import Project from './components/Project'
 import Header from './components/Header'
 
 
@@ -38,6 +39,7 @@ class App extends Component {
           <Route exact path="/" component={Home} />
           <Route exact path="/projects" component={Projects} />
           <Route exact path="/projects/create" component={Projects} />
+          <Route exact path="/projects/:project_key/" component={Project} />*/}
         </div>
       </BrowserRouter>
     )

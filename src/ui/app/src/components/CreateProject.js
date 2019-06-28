@@ -1,7 +1,8 @@
 import React from 'react'
 import TextField from '@material-ui/core/TextField';
 import DialogContentText from '@material-ui/core/DialogContentText';
-
+import DialogActions from '@material-ui/core/DialogActions';
+import Button from '@material-ui/core/Button'
 import { withStyles } from '@material-ui/core/styles'
 
 
@@ -11,20 +12,64 @@ const style = theme => ({
 })
 
 class CreateProject extends React.Component {
+  constructor(props) {
+    super(props)
+
+    this.handleCreate = this.handleCreate.bind(this)
+    this.handleNameChange = this.handleNameChange.bind(this)
+    this.handleProjectKeyChange = this.handleProjectKeyChange.bind(this)
+
+    this.state = {
+      'name': '',
+      'project_key': '',
+    }
+  }
+
+  handleCreate() {
+    // this.setState({...this.state, 'createModal': false})
+    console.log("closing")
+    const { store } = this.props
+    const fw = store.get('frameworks')
+    fw.ProjectsApi.create({project_key: this.state.project_key, name: this.state.name}).then(data => this.props.history.push('/projects/' + this.state.project_key))
+  }
+
+  handleNameChange = event => {
+    let newname = event.target.value.toLowerCase().split('')
+    let achar = 'a'.charCodeAt()
+    let zchar = 'z'.charCodeAt()
+    newname = newname.map(c => {
+      return (c.charCodeAt() < achar || c.charCodeAt() > zchar) ? '-' : c
+    })
+    newname = newname.join('').replace(/\-+/g, '-').replace(/^\-+|\-+$/g, '');
+    this.setState({...this.state, project_key: newname, name: event.target.value})
+  };
+
+  handleProjectKeyChange = event => {
+    this.setState({...this.state, project_key: event.target.value})
+  };
+
   render() {
     return <div>
         <DialogContentText>
-          To subscribe to this website, please enter your email address here. We will send updates
-          occasionally.
+          Create a new CAM project
         </DialogContentText>
         <TextField
-          autoFocus
-          margin="dense"
-          id="name"
-          label="Email Address"
-          type="email"
-          fullWidth
+          margin="dense" id="name" label="Project Key" type="project_key" fullWidth
+          onChange={this.handleProjectKeyChange} value={this.state.project_key}
         />
+        <TextField
+          autoFocus margin="dense" id="name" label="Project Name" type="name" fullWidth
+          onChange={this.handleNameChange} value={this.state.name}
+        />
+
+        <DialogActions>
+          <Button onClick={this.props.handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={this.handleCreate} color="primary">
+            Create
+          </Button>
+        </DialogActions>
     </div>
   }
 }
