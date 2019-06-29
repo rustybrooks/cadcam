@@ -16,6 +16,8 @@ from . import login, queries, projects
 logger = logging.getLogger(__name__)
 
 
+
+
 @api_register(None, require_login=login.is_logged_in)
 class PCBApi(Api):
     @classmethod
@@ -97,6 +99,9 @@ class PCBApi(Api):
 
     @classmethod
     def render(cls, project_key=None, side='top', encode=True, _user=None):
+        rtheme = theme.THEMES['OSH Park']
+
+
         encode = api_bool(encode)
         p = queries.project(project_key=project_key, user_id=_user.user_id)
         if not p:
@@ -114,10 +119,6 @@ class PCBApi(Api):
 
             fmap[file_type] = frow
 
-        settings_map = {
-            (side, 'silk-screen'): RenderSettings(color=theme.COLORS['white'], alpha=0.85)
-        }
-
         for mapkey in [
             (side, 'copper'),
             (side, 'solder-mask'),
@@ -126,14 +127,16 @@ class PCBApi(Api):
             ('both', 'outline'),
         ]:
             if mapkey not in fmap:
+                logger.warn("Not found: %r", mapkey)
                 continue
 
             frow = fmap[mapkey]
-            with tempfile.NamedTemporaryFile(delete=False) as tf:
-                tf.close()
-                projects.s3.download_file(projects.bucket, frow.s3_key, tf.name)
-            ctx.render_layer(gerber.load_layer(tf.name), settings=settings_map.get(mapkey))
-            os.unlink(tf.name)
+            file_name = projects.s3cache.get(project_file=frow)
+            layer = gerber.load_layer(file_name)
+            ctx.render_layer(
+                layer,
+                settings=rtheme.get(layer.layer_class, RenderSettings()), bgsettings=rtheme['background']
+            )
 
         with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
             ctx.dump(tf.name)

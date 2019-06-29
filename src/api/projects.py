@@ -21,6 +21,36 @@ s3 = boto3.client(
 )
 
 
+class S3Cache(object):
+    basedir = '/srv/data/s3cache'
+
+    def get(self, project_file_id=None, project_file=None):
+        if project_file:
+            pf = project_file.copy()
+        else:
+            pf = queries.project_file(project_file_id=project_file_id)
+
+        project_path = os.path.join(self.basedir, str(pf.project_id))
+        if not os.path.exists(project_path):
+            try:
+                os.makedirs(project_path)
+            except OSError:
+                pass
+
+        file_name = os.path.join(project_path, pf.file_name)
+        if os.path.exists(file_name):
+            file_date = os.path.getmtime(file_name)
+        else:
+            file_date = 0
+
+        if (pf.date_uploaded - datetime.datetime(1970, 1, 1)).total_seconds() > file_date:
+            s3.download_file(bucket, pf.s3_key, file_name)
+
+        return file_name
+
+s3cache = S3Cache()
+
+
 @api_register(None, require_login=login.is_logged_in)
 class ProjectsApi(Api):
     @classmethod

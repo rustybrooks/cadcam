@@ -30,7 +30,7 @@ class PCBRender extends React.Component {
     }
 
     let fw = this.props.store.get('frameworks')
-    fw.PCBApi.render2({project_key: this.props.project_key, 'side': this.props.side}).then(
+    fw.PCBApi.render({project_key: this.props.project_key, 'side': this.props.side}).then(
       data => this.setState({img: 'data:image/jpeg;base64,' + data})
     )
   }

@@ -185,16 +185,19 @@ def add_project(user_id=None, project_key=None, name=None, project_type=None):
 #############################################
 # project_files
 
-def project_file(project_id=None, project_key=None, user_id=None, file_name=None):
-    r = project_files(project_id=project_id, project_key=project_key, user_id=user_id, file_name=file_name)
+def project_file(project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None):
+    r = project_files(project_id=project_id, project_key=project_key, project_file_id=project_file_id, user_id=user_id, file_name=file_name)
     if len(r) > 1:
         raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
 
     return r[0] if r else None
 
 
-def project_files(project_id=None, project_key=None, user_id=None, file_name=None, page=None, limit=None, sort=None):
-    where, bindvars = SQL.auto_where(project_id=project_id, project_key=project_key, user_id=user_id, file_name=file_name)
+def project_files(project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None, page=None, limit=None, sort=None):
+    where, bindvars = SQL.auto_where(
+        project_id=project_id, project_key=project_key, user_id=user_id, file_name=file_name,
+        project_file_id=project_file_id,
+    )
     query = """
         select project_id, project_file_id, user_id, file_name, s3_key, source_project_file_id, date_uploaded
         from projects p 
