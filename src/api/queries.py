@@ -224,7 +224,7 @@ def update_project_file(project_file_id, s3_key=None, source_project_file_id=Non
     SQL.update(
         'project_files',
         where='project_file_id=:project_file_id',
-        where_data=[project_file_id],
+        where_data={'project_file_id': project_file_id},
         data={
             's3_key': s3_key,
             'source_project_file_id': source_project_file_id,

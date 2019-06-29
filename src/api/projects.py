@@ -1,6 +1,9 @@
 import boto3
 import datetime
+import io
 import logging
+import os
+import zipfile
 
 from lib.api_framework import api_register, Api
 from lib import config
@@ -45,6 +48,7 @@ class ProjectsApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
     def upload_file(cls, project_key=None, file=None, _user=None):
+        logger.warn("project_key=%r, file=%r, user=%r", project_key, file, _user)
         p = queries.project(project_key=project_key, user_id=_user.user_id)
         if not p:
             raise cls.NotFound()
@@ -54,10 +58,27 @@ class ProjectsApi(Api):
 
         logger.warn("name=%r, bucket=%r, storage_key=%r", file.name, bucket, storage_key)
         s3.put_object(Body=file, Bucket=bucket, Key=storage_key)
-
         queries.add_or_update_project_file(
             project_id=p.project_id,
             file_name=file.name,
             s3_key=storage_key,
             source_project_file_id=None,
         )
+
+        if os.path.splitext(file.name)[-1].lower() == '.zip':
+            with zipfile.ZipFile(file) as z:
+                for i in z.infolist():
+                    storage_key = '{}/{}/{}'.format(_user.user_id, project_key, i.filename)
+                    with z.open(i) as zf:
+                        logger.warn("uploading %r to %r", i.filename, storage_key)
+                        s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
+                        queries.add_or_update_project_file(
+                            project_id=p.project_id,
+                            file_name=i.filename,
+                            s3_key=storage_key,
+                            source_project_file_id=None,
+                        )
+
+        return {
+            'status': 'ok'
+        }
