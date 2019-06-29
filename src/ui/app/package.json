@@ -6,7 +6,7 @@
   "dependencies": {
     "@material-ui/core": "latest",
     "@material-ui/icons": "latest",
-    "material-ui-dropzone": "latest",
+    "classnames": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-router": "latest",
@@ -14,6 +14,7 @@
     "react-scripts": "latest",
     "react-hot-loader": "latest",
     "react-signup-login-component": "latest",
+    "react-dropzone": "^7.0.1",
     "regenerator-runtime": "latest",
     "history": "latest",
     "moment": "latest",

@@ -2,9 +2,11 @@ import React from 'react'
 import * as material from '@material-ui/core'
 
 import { withStyles } from '@material-ui/core/styles'
-import { DropzoneArea } from 'material-ui-dropzone'
-import { withStore } from '../global-store'
 import { withRouter } from 'react-router'
+
+import { withStore } from '../global-store'
+import DropzoneArea from './dropzone/DropZoneArea'
+
 
 const style = theme => ({
 })
@@ -19,7 +21,14 @@ class PCBRender extends React.Component {
     };
   };
 
-  componentDidMount() {
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    if (prevProps == this.props) return
+
+    console.log('update', this.props)
+    if (this.props.project_key === null) {
+      return
+    }
+
     let fw = this.props.store.get('frameworks')
     fw.PCBApi.render2({project_key: this.props.project_key, 'side': this.props.side}).then(
       data => this.setState({img: 'data:image/jpeg;base64,' + data})
@@ -27,6 +36,10 @@ class PCBRender extends React.Component {
   }
 
   render() {
+    if (this.props.project_key === null) {
+      return <div></div>
+    }
+
     if (!this.state.img.length) {
       return <div></div>
     }
@@ -90,11 +103,13 @@ class Project extends React.Component {
   }
 
   onRouteChanged() {
+    console.log('route', this.props.match.params)
     this.setState({...this.state, project_key: this.props.match.params.project_key})
   }
 
   render() {
     const { store, classes } = this.props
+    console.log('render', this.state)
 
     return <material.Paper className={classes.paper}>
       <table>
@@ -124,10 +139,10 @@ class Project extends React.Component {
             onChange={this.handleChange}
             onSave={this.handleSave}
             dropzoneText="Drag and drop gerber files here or click"
-            // showPreviewsInDropzone={false}
             maxFileSize={1024*1024*10}
             filesLimit={20}
           />
+          <br/><br/>
           <material.Button onClick={this.handleUpload}>Upload</material.Button>
         </material.DialogContent>
       </material.Dialog>

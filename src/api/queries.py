@@ -165,6 +165,8 @@ def projects(user_id=None, project_key=None, page=None, limit=None, sort=None):
         limit=SQL.limit(page=page, limit=limit)
     )
 
+    logger.warn("%r - %r", query, bindvars)
+
     return list(SQL.select_foreach(query, bindvars))
 
 

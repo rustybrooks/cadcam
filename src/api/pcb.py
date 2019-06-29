@@ -148,7 +148,7 @@ class PCBApi(Api):
                 )
 
     @classmethod
-    def render2(cls, project_key=None, side='top', max_width=400, max_height=400, encode=True, _user=None):
+    def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
         encode = api_bool(encode)
 
         p = queries.project(project_key=project_key, user_id=_user.user_id)
