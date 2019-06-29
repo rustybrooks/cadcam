@@ -208,7 +208,7 @@ def project_files(project_id=None, project_key=None, user_id=None, file_name=Non
 
 
 def add_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
-    SQL.insert(
+    r = SQL.insert(
         'project_files',
         {
             'project_id': project_id,
@@ -218,6 +218,7 @@ def add_project_file(project_id=None, file_name=None, s3_key=None, source_projec
             'date_uploaded': datetime.datetime.utcnow(),
         }
     )
+    return r.project_file_id
 
 
 def update_project_file(project_file_id, s3_key=None, source_project_file_id=None):
@@ -230,13 +231,12 @@ def update_project_file(project_file_id, s3_key=None, source_project_file_id=Non
             'source_project_file_id': source_project_file_id,
             'date_uploaded': datetime.datetime.utcnow(),
         }
-
     )
-
+    return project_file_id
 
 def add_or_update_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
     p = project_file(project_id=project_id, file_name=file_name)
     if p:
-        update_project_file(project_file_id=p.project_file_id, s3_key=s3_key, source_project_file_id=source_project_file_id)
+        return update_project_file(project_file_id=p.project_file_id, s3_key=s3_key, source_project_file_id=source_project_file_id)
     else:
-        add_project_file(project_id=project_id, file_name=file_name, s3_key=s3_key, source_project_file_id=source_project_file_id)
+        return add_project_file(project_id=project_id, file_name=file_name, s3_key=s3_key, source_project_file_id=source_project_file_id)

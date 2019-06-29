@@ -58,7 +58,7 @@ class ProjectsApi(Api):
 
         logger.warn("name=%r, bucket=%r, storage_key=%r", file.name, bucket, storage_key)
         s3.put_object(Body=file, Bucket=bucket, Key=storage_key)
-        queries.add_or_update_project_file(
+        project_file_id = queries.add_or_update_project_file(
             project_id=p.project_id,
             file_name=file.name,
             s3_key=storage_key,
@@ -76,7 +76,7 @@ class ProjectsApi(Api):
                             project_id=p.project_id,
                             file_name=i.filename,
                             s3_key=storage_key,
-                            source_project_file_id=None,
+                            source_project_file_id=project_file_id,
                         )
 
         return {
