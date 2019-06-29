@@ -60,7 +60,13 @@ class RequestFile(object):
                 return
 
     def read(self, *args, **kwargs):
-        self.fobj.read(*args, **kwargs)
+        return self.fobj.read(*args, **kwargs)
+
+    def tell(self, *args, **kwargs):
+        return self.fobj.tell(*args, **kwargs)
+
+    def seek(self, *args, **kwargs):
+        return self.fobj.seek(*args, **kwargs)
 
 
 def get_file(_request, key):

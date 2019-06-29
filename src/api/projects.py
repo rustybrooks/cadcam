@@ -3,10 +3,17 @@ import datetime
 import logging
 
 from lib.api_framework import api_register, Api
+from lib import config
 
 from . import login, queries
 
 logger = logging.getLogger(__name__)
+
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=config.get_config_key('aws_access_key_id'),
+    aws_secret_access_key=config.get_config_key('aws_secret_access_key')
+)
 
 
 @api_register(None, require_login=login.is_logged_in)
@@ -38,10 +45,19 @@ class ProjectsApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
     def upload_file(cls, project_key=None, file=None, _user=None):
-        bucket = "rustybrooks-cadcam"
-        file_key = "{}".format(project_key)
-        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_key)
+        p = queries.project(project_key=project_key, user_id=_user.user_id)
+        if not p:
+            raise cls.NotFound()
 
-        logger.warn("name=%r, bucket=%r, file_key=%r, storage_key=%r", file.name, bucket, file_key, storage_key)
-        # s3 = boto3.client('s3')
-        # s3.upload_file(file, bucket, storage_key)
+        bucket = "rustybrooks-cadcam"
+        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file.name)
+
+        logger.warn("name=%r, bucket=%r, storage_key=%r", file.name, bucket, storage_key)
+        s3.put_object(Body=file, Bucket=bucket, Key=storage_key)
+
+        queries.add_or_update_project_file(
+            project_id=p.project_id,
+            file_name=file.name,
+            s3_key=storage_key,
+            source_project_file_id=None,
+        )
