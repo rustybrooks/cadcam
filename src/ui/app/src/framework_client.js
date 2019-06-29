@@ -9,21 +9,29 @@ class Framework {
       let cmd = data[k]
       const whole_url = base_url + '/' + cmd['simple_url']
 
-      let headers = {
-        "Content-Type": "application/json; charset=utf-8",
-      }
-      const api_key = localStorage.getItem('api-key')
-
-      console.log("api-key", api_key, api_key === null, api_key === "null")
-      if (api_key) {
-        headers["X-API-KEY"] = api_key
-      }
 
       this[k] = (context) => {
+        let headers = {}
+
+        const api_key = localStorage.getItem('api-key')
+        if (api_key) {
+          headers["X-API-KEY"] = api_key
+        }
+
+        let body = ""
+        if (context instanceof FormData) {
+          body = context
+          console.log("We've got some form data here", body.getAll('file'), body.getAll('project_key'))
+        } else {
+          console.log("json upload")
+          body = JSON.stringify(context)
+          headers["Content-Type"] = "application/json; charset=utf-8"
+        }
+
         // console.log("posting ", JSON.stringify(context), "to", whole_url)
         return fetch(whole_url, {
           method: 'POST',
-          body: JSON.stringify(context),
+          body: body,
           headers: headers,
         }).then(response => {
           if (response.status === 403) {

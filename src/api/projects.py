@@ -1,3 +1,4 @@
+import boto3
 import datetime
 import logging
 
@@ -33,3 +34,14 @@ class ProjectsApi(Api):
         queries.add_project(user_id=_user.user_id, project_key=project_key, name=name, project_type=project_type)
 
         return {'status': 'ok'}
+
+    @classmethod
+    @Api.config(file_keys=['file'])
+    def upload_file(cls, project_key=None, file=None, _user=None):
+        bucket = "rustybrooks-cadcam"
+        file_key = "{}".format(project_key)
+        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_key)
+
+        logger.warn("name=%r, bucket=%r, file_key=%r, storage_key=%r", file.name, bucket, file_key, storage_key)
+        # s3 = boto3.client('s3')
+        # s3.upload_file(file, bucket, storage_key)

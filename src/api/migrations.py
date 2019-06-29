@@ -80,3 +80,23 @@ initial.add_statement("""
 """)
 initial.add_statement("create unique index projects_unique on projects(user_id, project_key)")
 
+#############################
+
+new = Migration(1, "initial version")
+for table in [
+    'project_files'
+]:
+    new.add_statement("drop table if exists {}".format(table))
+
+new.add_statement("""
+    create table project_files(
+        project_file_id serial primary key,
+        project_id bigint not null references projects(project_id),
+        file_name varchar(200) not null,
+        s3_key varchar(200) not null,
+        source_project_file_id bigint references project_files(project_files_id),
+        date_uploaded timestamp not null
+    )
+""")
+new.add_statement("create index project_files_id on project_files(project_file_id)")
+new.add_statement("create index project_files_project_id on project_files(project_id")

@@ -178,3 +178,37 @@ def add_project(user_id=None, project_key=None, name=None, project_type=None):
         'date_created': now,
         'date_modified': now,
     })
+
+#############################################
+# project_files
+
+def project_files(project_id=None, project_key=None, user_id=None, page=None, limit=None, sort=None):
+    where, bindvars = SQL.auto_where(project_id=project_id, project_key=project_key, user_id=user_id)
+    query = """
+        select project_id, project_file_id, user_id, file_name, s3_key, source_project_file_id, date_uploaded
+        from projects p 
+        join project_files pf using (project_id)
+        {where} {sort} {limit}
+    """.format(
+        where=SQL.where_clause(where),
+        sort=SQL.orderby(sort),
+        limit=SQL.limit(page=page, limit=limit)
+    )
+
+    return list(SQL.select_foreach(query, bindvars))
+
+
+def add_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
+    SQL.insert(
+        'project_files',
+        {
+            'project_id': project_id,
+            'file_name': file_name,
+            's3_key': s3_key,
+            'source_project_file_id': source_project_file_id,
+            'date_uploaded': datetime.datetime.utcnow(),
+        }
+    )
+
+def add_or_update_project_file():
+    pass

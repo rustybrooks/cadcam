@@ -4,12 +4,8 @@ import Paper from '@material-ui/core/Paper'
 import Button from '@material-ui/core/Button'
 import TablePagination from '@material-ui/core/TablePagination'
 import { withStyles } from '@material-ui/core/styles'
-import TextField from '@material-ui/core/TextField';
 import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import Typography from '@material-ui/core/Typography'
 import DialogTitle from '@material-ui/core/DialogTitle';
 import * as moment from 'moment'
 
@@ -20,10 +16,7 @@ import CreateProject from './CreateProject'
 
 const style = theme => ({
   root: {
-    // width: '100%',
-    // maxWidth: 1010,
     marginTop: theme.spacing(1),
-    // backgroundColor: 'green',
   },
   matchrow_even: {
     background: '#eee',
@@ -201,8 +194,8 @@ class Projects extends React.Component {
         </table>
       </div>
 
-      <Dialog open={this.state.createModal} onClose={this.handlelose} aria-labelledby="form-dialog-title">
-        <DialogTitle id="form-dialog-title">Subscribe</DialogTitle>
+      <Dialog open={this.state.createModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
+        <DialogTitle id="form-dialog-title">Create New Project</DialogTitle>
         <DialogContent>
           <CreateProject handleClose={this.handleClose}/>
         </DialogContent>
