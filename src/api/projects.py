@@ -12,6 +12,8 @@ from . import login, queries
 
 logger = logging.getLogger(__name__)
 
+bucket = "rustybrooks-cadcam"
+
 s3 = boto3.client(
     's3',
     aws_access_key_id=config.get_config_key('aws_access_key_id'),
@@ -53,14 +55,12 @@ class ProjectsApi(Api):
         if not p:
             raise cls.NotFound()
 
-        bucket = "rustybrooks-cadcam"
-        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file.name)
-
-        logger.warn("name=%r, bucket=%r, storage_key=%r", file.name, bucket, storage_key)
+        file_name = os.path.split(file.name)[-1]
+        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_name)
         s3.put_object(Body=file, Bucket=bucket, Key=storage_key)
         project_file_id = queries.add_or_update_project_file(
             project_id=p.project_id,
-            file_name=file.name,
+            file_name=file_name,
             s3_key=storage_key,
             source_project_file_id=None,
         )
@@ -68,13 +68,14 @@ class ProjectsApi(Api):
         if os.path.splitext(file.name)[-1].lower() == '.zip':
             with zipfile.ZipFile(file) as z:
                 for i in z.infolist():
-                    storage_key = '{}/{}/{}'.format(_user.user_id, project_key, i.filename)
+                    file_name = os.path.split(i.filename)[-1]
+                    storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_name)
                     with z.open(i) as zf:
                         logger.warn("uploading %r to %r", i.filename, storage_key)
                         s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
                         queries.add_or_update_project_file(
                             project_id=p.project_id,
-                            file_name=i.filename,
+                            file_name=file_name,
                             s3_key=storage_key,
                             source_project_file_id=project_file_id,
                         )

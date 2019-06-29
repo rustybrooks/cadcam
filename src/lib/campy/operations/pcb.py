@@ -9,7 +9,8 @@ import shapely.ops
 import zipfile
 
 from . import operation, machine, helical_drill, rect_stock, zprobe
-from lib.campy import *
+from lib.campy import geometry, constants, environment
+# from lib.campy import *
 
 
 class OurRenderContext(render.GerberContext):
@@ -375,7 +376,7 @@ def pcb_isolation_mill(
 
 
 def pcb_trace_geometry(gerber_file=None, gerber_data=None):
-    if gerber_file is not None:
+    if gerber_data is not None:
         b = gerber.load_layer_data(gerber_data, gerber_file)
     else:
         b = gerber.load_layer(gerber_file)
@@ -487,16 +488,25 @@ class PCBProject(object):
 
         self.load(gerber_input)
 
-    def identify_file(self, fname):
+    @classmethod
+    def identify_file(cls, fname):
         ext = os.path.splitext(fname)[-1].lower()
         if ext == ".gbl":
-            return 'bottom-copper'
+            return 'bottom', 'copper'
         elif ext == '.gtl':
-            return 'top-copper'
+            return 'top', 'copper'
         elif ext == '.drl':
-            return 'drill'
+            return 'both', 'drill'
         elif ext == '.gko':
-            return 'outline'
+            return 'both', 'outline'
+        elif ext == '.gts':
+            return 'top', 'solder-mask'
+        elif ext == '.gbs':
+            return 'bottom', 'solder-mask'
+        elif ext == '.gto':
+            return 'top', 'silk-screen'
+        elif ext == '.gbo':
+            return 'bottom', 'silk-screen'
         else:
             return None
 
@@ -531,9 +541,9 @@ class PCBProject(object):
             raise Exception("Input not supported: supply either a directory or zip file containing gerber files")
 
         for k, v in self.layers.items():
-            if k == 'drill':
+            if k == ('both', 'drill'):
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
-            elif k == 'outline':
+            elif k[1] == ('both', 'outline'):
                 g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'])
             else:
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'])
@@ -637,7 +647,7 @@ class PCBProject(object):
             self.auto_set_stock(side='top')
 
         machine().set_tool(iso_bit)
-        l = self.layers['top-copper']
+        l = self.layers[('top', 'copper')]
         for x in range(panelx):
             for y in range(panely):
                 pcb_isolation_mill(
@@ -676,7 +686,7 @@ class PCBProject(object):
                     pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
 
         # .... BOTTOM ....
-        l = self.layers['bottom-copper']
+        l = self.layers[('bottom', 'copper')]
 
         if not file_per_operation:
             machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))

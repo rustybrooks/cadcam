@@ -9,6 +9,34 @@ import { withRouter } from 'react-router'
 const style = theme => ({
 })
 
+
+
+class PCBRender extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      img: ''
+    };
+  };
+
+  componentDidMount() {
+    let fw = this.props.store.get('frameworks')
+    fw.PCBApi.render2({project_key: this.props.project_key, 'side': this.props.side}).then(
+      data => this.setState({img: 'data:image/jpeg;base64,' + data})
+    )
+  }
+
+  render() {
+    if (!this.state.img.length) {
+      return <div></div>
+    }
+
+    return <img src={this.state.img}/>
+
+  }
+}
+
+
 class Project extends React.Component {
   constructor(props) {
     super(props);
@@ -69,7 +97,25 @@ class Project extends React.Component {
     const { store, classes } = this.props
 
     return <material.Paper className={classes.paper}>
-      <material.Button onClick={this.handleOpen}>Upload Gerber File(s)</material.Button>
+      <table>
+        <tbody>
+          <tr>
+            <td colSpan="2">
+              <material.Button onClick={this.handleOpen}>Upload Gerber File(s)</material.Button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <PCBRender project_key={this.state.project_key} side='top'/>
+            </td>
+            <td>
+              <PCBRender project_key={this.state.project_key} side='bottom'/>
+
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
 
       <material.Dialog open={this.state.uploadModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
         <material.DialogTitle id="form-dialog-title">Upload File(s)</material.DialogTitle>
@@ -89,5 +135,7 @@ class Project extends React.Component {
     </material.Paper>
   }
 }
+
+PCBRender = withStore(PCBRender)
 
 export default withRouter(withStore(withStyles(style)(Project)))

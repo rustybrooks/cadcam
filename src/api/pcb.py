@@ -1,13 +1,17 @@
+import base64
 import boto3
 from flask import send_file
+from gerber import PCB
+from gerber import load_layer
+from gerber.render import RenderSettings, theme
+from gerber.render.cairo_backend import GerberCairoContext
 import logging
 import tempfile
 import zipfile
-
-from lib.api_framework import api_register, Api, FileResponse
+from lib.api_framework import api_register, Api, FileResponse, api_bool
 from lib.campy import *
 
-from . import login
+from . import login, queries, projects
 
 logger = logging.getLogger(__name__)
 
@@ -87,4 +91,103 @@ class PCBApi(Api):
 
             logger.warn("step 5")
             return FileResponse(content=send_file(tf.name, mimetype='application/zip'), content_type='application/zip')
+
+    def open_remote_file(self, ):
+        pass
+
+    @classmethod
+    def render(cls, project_key=None, side='top', encode=True, _user=None):
+        encode = api_bool(encode)
+        p = queries.project(project_key=project_key, user_id=_user.user_id)
+        if not p:
+            raise cls.NotFound()
+
+        ctx = GerberCairoContext()
+
+        files = queries.project_files(project_id=p.project_id)
+
+        fmap = {}
+        for frow in files:
+            file_type = PCBProject.identify_file(frow.file_name)
+            if not file_type:
+                continue
+
+            fmap[file_type] = frow
+
+        settings_map = {
+            (side, 'silk-screen'): RenderSettings(color=theme.COLORS['white'], alpha=0.85)
+        }
+
+        for mapkey in [
+            (side, 'copper'),
+            (side, 'solder-mask'),
+            (side, 'silk-screen'),
+            ('both', 'drill'),
+            ('both', 'outline'),
+        ]:
+            if mapkey not in fmap:
+                continue
+
+            frow = fmap[mapkey]
+            with tempfile.NamedTemporaryFile(delete=False) as tf:
+                tf.close()
+                projects.s3.download_file(projects.bucket, frow.s3_key, tf.name)
+            ctx.render_layer(gerber.load_layer(tf.name), settings=settings_map.get(mapkey))
+            os.unlink(tf.name)
+
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
+            ctx.dump(tf.name)
+
+            if encode:
+                data = base64.b64encode(open(tf.name).read())
+                return data
+            else:
+                return FileResponse(
+                    content=send_file(tf.name, mimetype='application/png'),
+                    # content_type='application/png'
+                )
+
+    @classmethod
+    def render2(cls, project_key=None, side='top', max_width=400, max_height=400, encode=True, _user=None):
+        encode = api_bool(encode)
+
+        p = queries.project(project_key=project_key, user_id=_user.user_id)
+        if not p:
+            raise cls.NotFound()
+
+        GERBER_FOLDER = tempfile.mkdtemp()
+
+        for frow in queries.project_files(project_id=p.project_id):
+            fname = os.path.join(GERBER_FOLDER, frow.file_name)
+            projects.s3.download_file(projects.bucket, frow.s3_key, fname)
+
+        # Create a new drawing context
+        ctx = GerberCairoContext()
+
+        # Create a new PCB instance
+        pcb = PCB.from_directory(GERBER_FOLDER)
+
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
+            if side == 'top':
+                # Render PCB top view
+                ctx.render_layers(
+                    pcb.top_layers, tf.name,
+                    theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
+                )
+            else:
+                # Render PCB bottom view
+                ctx.render_layers(
+                    pcb.bottom_layers, tf.name,
+                    theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
+                )
+
+            if encode:
+                data = base64.b64encode(open(tf.name).read())
+                return data
+            else:
+                return FileResponse(
+                    content=send_file(tf.name, mimetype='application/png'),
+                    # content_type='application/png'
+                )
+
 
