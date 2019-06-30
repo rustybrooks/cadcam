@@ -423,6 +423,12 @@ class FrameworkApi(Api):
 
         apps = apps.split(',') if apps else []
         data = {}
+
+        if callable(_user.is_authenticated):
+            ia = _user.is_authenticated()
+        else:
+            ia = _user.is_authenticated
+
         for urlroot in sorted(app_registry.keys()):
             app = app_registry[urlroot]
             if apps and app.class_name not in apps:
@@ -446,7 +452,7 @@ class FrameworkApi(Api):
                     #         continue
 
                     # ensure user is admin if required
-                    if _require_admin and (not _user.is_authenticated() or not _user.is_staff):
+                    if _require_admin and (not ia or not _user.is_staff):
                         continue
 
                     urls = urls_from_config(urlroot, fnname, fn, config, canonical=True)
@@ -463,7 +469,7 @@ class FrameworkApi(Api):
                     }
                     these_endpoints[fnname] = this
             data[app.class_name] = these_endpoints
-            data['user'] = {'id': _user.id, 'username': _user.username, 'authenticated': _user.is_authenticated()}
+            data['user'] = {'id': _user.id, 'username': _user.username, 'authenticated': ia}
 
         return data
 

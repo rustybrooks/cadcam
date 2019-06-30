@@ -632,7 +632,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
     def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
             [foo[:2] for foo in poly.exterior.simplify(0.001).coords],
-            # stroke='green', stroke_width=0.0005,
+            stroke='green', stroke_width=0.0005,
             fill=foreground,
             fill_opacity=1
         ))
@@ -640,8 +640,9 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
         for i in poly.interiors:
             dwg.add(dwg.polygon(
                 [foo[:2] for foo in i.coords],
-                #stroke='red', stroke_width=0.0005,
-                fill_opacity=0
+                stroke='red', stroke_width=0.0005,
+                fill=background,
+                fill_opacity=.25
             ))
 
     def _draw_geoms(_geoms):

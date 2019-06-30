@@ -152,8 +152,9 @@ class PCBApi(Api):
 
     @classmethod
     @Api.config(require_login=False)
-    def render2(cls, project_key=None, username=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
+    def render2(cls, project_key=None, username=None, side='top', max_width=600, max_height=600, encode=True, _user=None, union=True):
         encode = api_bool(encode)
+        union = api_bool(union)
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -181,7 +182,7 @@ class PCBApi(Api):
 
             pcb.load_layer(f.file_name, projects.s3cache.get_fobj(project_file=f))
 
-        pcb.process_layers(union=False)
+        pcb.process_layers(union=union)
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             pcb.layer_to_svg(('top', 'copper'), tf.name, width=max_width, height=max_height)
@@ -191,6 +192,31 @@ class PCBApi(Api):
                 content=open(tf.name),
                 content_type='image/svg+xml',
             )
+
+    @classmethod
+    def render3(cls, union=True):
+        union = api_bool(union)
+        import shapely.geometry
+        import shapely.ops
+        from lib.campy import geometry
+
+        p1 = shapely.geometry.Polygon([[0, 0], [1, 0], [1, .2], [0, .2]])
+        p2 = shapely.geometry.Polygon([[0, 1], [1, 1], [1, .8], [0, .8]])
+        p3 = shapely.geometry.Polygon([[0, 0], [.2, 0], [.2, 1], [0, 1]])
+        p4 = shapely.geometry.Polygon([[1, 1], [.8, 1], [.8, 0], [1, 0]])
+        p5 = shapely.geometry.Polygon([[.4, .4], [.4, .6], [.6, .6], [.6, .4]])
+        # polys = [p1, p2, p3, p4, p5]
+        polys = [p5, p1, p2, p3, p4]
+        if union:
+            geoms = [shapely.ops.unary_union(polys)]
+        else:
+            geoms = polys
+
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            geometry.shapely_to_svg(geoms=geoms, svg_file=tf.name)
+
+            return FileResponse(content=open(tf.name), content_type='image/svg+xml')
+
 
     # @classmethod
     # def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
