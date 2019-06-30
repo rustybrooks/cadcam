@@ -84,7 +84,6 @@ class User(object):
         salt = self.password[:29].encode('utf-8')
         genpass = self.generate_password_hash(password, salt)
         ourpass = bytes(self.password.encode('utf-8'))
-        logger.warning("%r salt=%r, ourpass=%r, genpass=%r", password, salt, ourpass, genpass)
         self.is_authenticated = ourpass and (genpass == ourpass)
         self.is_active = self.is_authenticated
         return self.is_authenticated
@@ -101,7 +100,6 @@ class User(object):
             'user_id': self.user_id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }
-        logger.warn("payload = %r, secret=%r", payload, JWT_SECRET)
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
     def is_authenticated(self):
@@ -193,8 +191,6 @@ def projects(user_id=None, username=None, viewing_user_id=None, project_key=None
         sort=SQL.orderby(sort),
         limit=SQL.limit(page=page, limit=limit)
     )
-
-    logger.warn("%r - %r", query, bindvars)
 
     return list(SQL.select_foreach(query, bindvars))
 

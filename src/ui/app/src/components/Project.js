@@ -171,7 +171,7 @@ class Project extends React.Component {
     }
 
     return <material.Paper className={classes.paper}>
-      <table border="1">
+      <table border="0" cellspacing="2">
         <tbody>
         <tr>
             <td colSpan="2">

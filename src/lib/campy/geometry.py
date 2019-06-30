@@ -11,6 +11,9 @@ from lib import svg
 # import textwrap
 import svgwrite
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def make_vector(p1, p2):
     return [x - y for x, y in zip(p2, p1)]
@@ -622,19 +625,22 @@ def graph_lines():
 # def float_to_color(f):
 #     pass
 
+def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
+    background = "blue"
+    foreground = "cyan"
 
-def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
     def _drawpoly(poly, stroke='black'):
         dwg.add(dwg.polygon(
-            [foo[:2] for foo in poly.exterior.coords],
-            stroke=stroke, stroke_width=0.0005,
-            fill_opacity=0
+            [foo[:2] for foo in poly.exterior.simplify(0.001).coords],
+            # stroke='green', stroke_width=0.0005,
+            fill=foreground,
+            fill_opacity=1
         ))
 
         for i in poly.interiors:
             dwg.add(dwg.polygon(
                 [foo[:2] for foo in i.coords],
-                stroke='red', stroke_width=0.0005,
+                #stroke='red', stroke_width=0.0005,
                 fill_opacity=0
             ))
 
@@ -647,11 +653,11 @@ def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
                     _drawpoly(g2)
             elif isinstance(g, shapely.geometry.Point):
                 x, y = g.coords[0][:2]
-                dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
+                dwg.add(dwg.ellipse((x, y), (.02, .02), fill='purple'))
             elif isinstance(g, shapely.geometry.MultiPoint):
                 for g2 in g:
                     x, y = g2.coords[0][:2]
-                    dwg.add(dwg.ellipse((x, y), (.02, .02), fill='#000'))
+                    dwg.add(dwg.ellipse((x, y), (.02, .02), fill='purple'))
             elif isinstance(g, shapely.geometry.GeometryCollection):
                 _draw_geoms(g)
             else:
@@ -660,6 +666,21 @@ def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
     if not isinstance(geoms, (tuple, list)):
         geoms = [geoms]
 
+    geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
+
+    bounds = shapely_svg_bounds(geoms)
+
+    dwg.add(dwg.rect(
+        (bounds['minx'], bounds['miny']),
+        (bounds['box_width'], bounds['box_height']),
+        # stroke='#888888', stroke_width=0.02,
+        fill="#bbbbbb"
+    ))
+
+    _draw_geoms(geoms)
+
+
+def shapely_svg_bounds(geoms):
     geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
 
     minx, miny, maxx, maxy = geoms[0].bounds
@@ -672,24 +693,48 @@ def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
 
     box_width = maxx - minx
     box_height = maxy - miny
-    marginx = box_width*marginpct/100.0
-    marginy = box_height*marginpct/100.0
 
-    dwg = svgwrite.Drawing(
+    return {
+        'minx': minx,
+        'miny': miny,
+        'box_width': box_width,
+        'box_height': box_height,
+    }
+
+
+def shapely_get_dwg(svg_file, bounds, marginpct, width=None, height=None):
+    marginx = bounds['box_width']*marginpct/100.0
+    marginy = bounds['box_height']*marginpct/100.0
+
+    return svgwrite.Drawing(
         svg_file,
         profile='tiny',
         size=(width, height),
-        viewBox="{} {} {} {}".format(minx-marginx, miny-marginy, box_width+2*marginx, box_height+2*marginy)
+        viewBox="{} {} {} {}".format(
+            bounds['minx'] - marginx,
+            bounds['miny'] - marginy,
+            bounds['box_width'] + 2*marginx,
+            bounds['box_height'] + 2*marginy
+        )
     )
 
-    dwg.add(dwg.rect(
-        (minx, miny),
-        (box_width, box_height),
-        stroke='#888888', stroke_width=0.05,
-        fill='#dddddd',
-    ))
 
-    _draw_geoms(geoms)
+def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
+    bounds = shapely_svg_bounds(geoms)
 
+    dwg = shapely_get_dwg(
+        svg_file=svg_file,
+        bounds=bounds,
+        marginpct=marginpct,
+        width=width, height=height
+    )
+
+    shapely_add_to_dwg(
+        dwg=dwg,
+        geoms=geoms,
+        width=width,
+        height=height,
+        marginpct=marginpct
+    )
     dwg.save()
 

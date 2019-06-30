@@ -1,6 +1,7 @@
 import gerber
 from gerber.render import render
 import gerber.primitives as primitives
+import logging
 import math
 import os
 import shapely.affinity
@@ -11,6 +12,8 @@ import zipfile
 from . import operation, machine, helical_drill, rect_stock, zprobe
 from lib.campy import geometry, constants, environment
 # from lib.campy import *
+
+logger = logging.getLogger(__name__)
 
 
 class OurRenderContext(render.GerberContext):
@@ -58,15 +61,22 @@ class GerberGeometryContext(OurRenderContext):
         self.polys = []
         self.remove_polys = []
 
-    def render_layer(self, layer):
+    def render_layer(self, layer, union=True):
+        logger.warn("render_layer")
         for prim in layer.primitives:
             self.render(prim)
 
-        return shapely.ops.unary_union(self.polys)
+        if union:
+            return shapely.ops.unary_union(self.polys)
+        else:
+            return self.polys
 
     def _render_line(self, line, color):
         start = line.start
         end = line.end
+
+        if line.level_polarity != 'dark':
+            logger.warn("line = %r", line.level_polarity)
 
         if isinstance(line.aperture, primitives.Circle):
             poly = shapely.geometry.LineString([start, end]).buffer(
@@ -74,15 +84,18 @@ class GerberGeometryContext(OurRenderContext):
                 resolution=16,
                 cap_style=shapely.geometry.CAP_STYLE.round,
                 join_style=shapely.geometry.JOIN_STYLE.round,
-
             )
-            self.polys.append(poly)
+            if not poly.exterior and not poly.interiors:
+                pass
+            else:
+                # logger.warn("Adding poly %r - %r", poly.exterior, poly.interiors)
+                self.polys.append(poly)
 
         elif hasattr(line, 'vertices') and line.vertices is not None:
-            print "OTHER"
-            print [x for x in line.vertices]
+            raise Exception("render_line don't know what to do")
 
     def _render_rectangle(self, primitive, color):
+        # logger.warn("render_rect")
         x1, y1 = primitive.lower_left
         x2 = x1 + primitive.width
         y2 = y1 + primitive.height
@@ -109,6 +122,7 @@ class GerberGeometryContext(OurRenderContext):
         self.polys.append(box)
 
     def _render_circle(self, primitive, color):
+        # logger.warn("render_circle")
         center = primitive.position
         if not self.invert and primitive.level_polarity == 'dark':
             circle = shapely.geometry.Point(*center).buffer(distance=primitive.radius)
@@ -134,6 +148,10 @@ class GerberGeometryContext(OurRenderContext):
         self.polys.append(circle)
 
     def _render_region(self, primitive, color):
+        logger.warn("render_region")
+
+        raise Exception("_render_region not implemented")
+        logger.warn("render_region is doing nothing")
         pass
         # p = shapely.geometry.MultiPolygon()
         # for prim in primitive.primitives:
@@ -375,14 +393,14 @@ def pcb_isolation_mill(
     return geom, geoms
 
 
-def pcb_trace_geometry(gerber_file=None, gerber_data=None):
+def pcb_trace_geometry(gerber_file=None, gerber_data=None, union=True):
     if gerber_data is not None:
         b = gerber.load_layer_data(gerber_data, gerber_file)
     else:
         b = gerber.load_layer(gerber_file)
 
     ctx = GerberGeometryContext()
-    return ctx.render_layer(b)
+    return ctx.render_layer(b, union=union)
 
 
 def pcb_drill_geometry(gerber_file=None, gerber_data=None):
@@ -395,14 +413,14 @@ def pcb_drill_geometry(gerber_file=None, gerber_data=None):
     return ctx.render_layer(b)
 
 
-def pcb_outline_geometry(gerber_file=None, gerber_data=None):
+def pcb_outline_geometry(gerber_file=None, gerber_data=None, union=True):
     if gerber_data is not None:
         b = gerber.load_layer_data(gerber_data, gerber_file)
     else:
         b = gerber.load_layer(gerber_file)
 
     ctx = GerberGeometryContext()
-    return ctx.render_layer(b)
+    return ctx.render_layer(b, union=union)
 
 
 @operation(required=['depth'], operation_feedrate='drill')
@@ -472,7 +490,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
 
 class PCBProject(object):
     def __init__(
-        self, gerber_input, border=None, auto_zero=True, thickness=1.7*constants.MM, posts=None, fixture_width=None,
+        self, gerber_input=None, border=None, auto_zero=True, thickness=1.7*constants.MM, posts=None, fixture_width=None,
     ):
         self.gerber_input = gerber_input
         if isinstance(border, (int, float)):
@@ -514,7 +532,9 @@ class PCBProject(object):
         self.layers = {
         }
 
-        union_geom = shapely.geometry.GeometryCollection()
+        if gerber_input is None:
+            return
+
         if os.path.isdir(gerber_input):
             for fname in os.listdir(gerber_input):
                 ftype = self.identify_file(fname)
@@ -540,18 +560,28 @@ class PCBProject(object):
         else:
             raise Exception("Input not supported: supply either a directory or zip file containing gerber files")
 
+        self.process_layers()
+
+    def process_layers(self, union=True):
+        union_geom = shapely.geometry.GeometryCollection()
+
         for k, v in self.layers.items():
             if k == ('both', 'drill'):
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
             elif k[1] == ('both', 'outline'):
-                g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'])
+                g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
             else:
-                g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'])
+                g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
 
-            v['geometry'] = g
-            union_geom = union_geom.union(g)
+            if union:
+                v['geometry'] = g
+                union_geom = union_geom.union(g)
+            else:
+                v['geometry'] = g
+                union_geom = union_geom.union(shapely.ops.unary_union(g))
 
         self.bounds = union_geom.bounds
+        logger.warn("bounds = %r", self.bounds)
         minx, miny, maxx, maxy = self.bounds
 
         if self.auto_zero:
@@ -564,8 +594,14 @@ class PCBProject(object):
             newminy = miny - self.border[1]
             xoff = yoff = 0
 
-        for k, v in self.layers.items():
-            v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
+        if union:
+            for k, v in self.layers.items():
+                v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
+        else:
+            for k, v in self.layers.items():
+                v['geometry'] = [
+                    shapely.affinity.translate(x, xoff=xoff + self.border[0], yoff=yoff + self.border[1]) for x in v['geometry']
+                ]
 
         self.bounds = [
             newminx,
@@ -573,6 +609,27 @@ class PCBProject(object):
             newminx + (maxx - minx) + self.border[0] + self.border[2],
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
+
+    def load_layer(self, file_name, fobj):
+        ftype = self.identify_file(file_name)
+        if ftype is None:
+            return None
+
+        this = {
+            'filename': file_name,
+            'data': fobj.read()
+        }
+        self.layers[ftype] = this
+
+        return this
+
+    def layer_to_svg(self, layer_key, svg_file, width=600, height=600):
+        geoms = self.layers[layer_key]['geometry']
+        geometry.shapely_to_svg(
+            svg_file,
+            geoms,
+            marginpct=0, width=width, height=height,
+        )
 
     def auto_set_stock(self, side='top'):
         minx, miny, maxx, maxy = self.bounds

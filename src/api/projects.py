@@ -49,6 +49,10 @@ class S3Cache(object):
 
         return file_name
 
+    def get_fobj(self, project_file_id=None, project_file=None):
+        file_name = self.get(project_file_id=project_file_id, project_file=project_file)
+        return open(file_name)
+
 s3cache = S3Cache()
 
 
