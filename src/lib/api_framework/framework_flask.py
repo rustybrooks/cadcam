@@ -28,7 +28,7 @@ class HttpResponse(Response):
             response=content,
             content_type=content_type,
             status=status,
-            headers = headers or {},
+            headers=headers or {},
         )
 
 
@@ -117,13 +117,17 @@ class XMLResponse(Response):
 
 
 def default_login_method(request=None, **kwargs):
-    token = request.headers.get('authorization')
-    if 'authorization' in request.headers:
-        from otxb_core_utils.api import auth0
-        payload = auth0.token_payload(token)
-        return FlaskUser(payload['username'], payload['user_id'])
-
-    return FlaskUser('Anonymous', 0)
+    if request.user is None:
+        return FlaskUser('Anonymous', 0)
+    else:
+        return request.user
+    # token = request.headers.get('authorization')
+    # if 'authorization' in request.headers:
+    #     from otxb_core_utils.api import auth0
+    #     payload = auth0.token_payload(token)
+    #     return FlaskUser(payload['username'], payload['user_id'])
+    #
+    # return
 
 
 def app_proxy(sa, fn, fnname, config, urlroot, cleanup_callback=None):

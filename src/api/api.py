@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, request
 # import flask_login
 import logging
 import os
@@ -22,15 +22,18 @@ CORS(app)
 app.secret_key = config.get_config_key('app_secret')
 
 
-# login_manager = flask_login.LoginManager()
-# login_manager.init_app(app)
-
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return queries.User(user_id=user_id, is_authenticated=True)
+@app.before_request
+def before_request():
+    request.user = login.is_logged_in(request, None, None)
 
 
-@api_register(None, require_login=login.is_logged_in, require_admin=True)
+@app.after_request
+def apply_is_logged_in(response):
+    response.headers["X-LOGGED-IN"] = str(int(bool(request.user and request.user.is_authenticated)))
+    return response
+
+
+@api_register(None, require_login=True, require_admin=True)
 class AdminApi(Api):
     @classmethod
     def _bootstrap_admin(cls):
@@ -66,7 +69,7 @@ class AdminApi(Api):
             cls._bootstrap_admin()
 
 
-@api_register(None, require_login=login.is_logged_in)
+@api_register(None, require_login=True)
 class UserApi(Api):
     # @classmethod
     # @Api.config(require_login=False)

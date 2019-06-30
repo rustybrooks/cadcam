@@ -11,14 +11,12 @@ import zipfile
 from lib.api_framework import api_register, Api, FileResponse, api_bool
 from lib.campy import *
 
-from . import login, queries, projects
+from . import queries, projects
 
 logger = logging.getLogger(__name__)
 
 
-
-
-@api_register(None, require_login=login.is_logged_in)
+@api_register(None, require_login=True)
 class PCBApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
@@ -38,11 +36,9 @@ class PCBApi(Api):
         posts='x'
     ):
         with tempfile.NamedTemporaryFile(mode="w+b", suffix=os.path.splitext(file.name)[-1]) as tf:
-            logger.warn("fil = %r", file)
             for chunk in file.chunks():
                 tf.write(chunk)
             tf.flush()
-            logger.warn("step 1a")
 
             pcb = PCBProject(
                 gerber_input=tf.name,
@@ -91,19 +87,23 @@ class PCBApi(Api):
                         arcname=os.path.split(filename)[-1]
                     )
 
-            logger.warn("step 5")
             return FileResponse(content=send_file(tf.name, mimetype='application/zip'), content_type='application/zip')
 
     def open_remote_file(self, ):
         pass
 
     @classmethod
-    def render(cls, project_key=None, side='top', encode=True, _user=None):
+    @Api.config(require_login=False)
+    def render(cls, username=None, project_key=None, side='top', encode=True, _user=None):
         rtheme = theme.THEMES['OSH Park']
 
-
         encode = api_bool(encode)
-        p = queries.project(project_key=project_key, user_id=_user.user_id)
+        p = queries.project(
+            project_key=project_key,
+            username=_user.username if username == 'me' else username,
+            viewing_user_id=_user.user_id,
+            allow_public=True,
+        )
         if not p:
             raise cls.NotFound()
 
@@ -150,47 +150,47 @@ class PCBApi(Api):
                     # content_type='application/png'
                 )
 
-    @classmethod
-    def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
-        encode = api_bool(encode)
-
-        p = queries.project(project_key=project_key, user_id=_user.user_id)
-        if not p:
-            raise cls.NotFound()
-
-        GERBER_FOLDER = tempfile.mkdtemp()
-
-        for frow in queries.project_files(project_id=p.project_id):
-            fname = os.path.join(GERBER_FOLDER, frow.file_name)
-            projects.s3.download_file(projects.bucket, frow.s3_key, fname)
-
-        # Create a new drawing context
-        ctx = GerberCairoContext()
-
-        # Create a new PCB instance
-        pcb = PCB.from_directory(GERBER_FOLDER)
-
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
-            if side == 'top':
-                # Render PCB top view
-                ctx.render_layers(
-                    pcb.top_layers, tf.name,
-                    theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
-                )
-            else:
-                # Render PCB bottom view
-                ctx.render_layers(
-                    pcb.bottom_layers, tf.name,
-                    theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
-                )
-
-            if encode:
-                data = base64.b64encode(open(tf.name).read())
-                return data
-            else:
-                return FileResponse(
-                    content=send_file(tf.name, mimetype='application/png'),
-                    # content_type='application/png'
-                )
+    # @classmethod
+    # def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
+    #     encode = api_bool(encode)
+    #
+    #     p = queries.project(project_key=project_key, user_id=_user.user_id, allow_public=True)
+    #     if not p:
+    #         raise cls.NotFound()
+    #
+    #     GERBER_FOLDER = tempfile.mkdtemp()
+    #
+    #     for frow in queries.project_files(project_id=p.project_id):
+    #         fname = os.path.join(GERBER_FOLDER, frow.file_name)
+    #         projects.s3.download_file(projects.bucket, frow.s3_key, fname)
+    #
+    #     # Create a new drawing context
+    #     ctx = GerberCairoContext()
+    #
+    #     # Create a new PCB instance
+    #     pcb = PCB.from_directory(GERBER_FOLDER)
+    #
+    #     with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
+    #         if side == 'top':
+    #             # Render PCB top view
+    #             ctx.render_layers(
+    #                 pcb.top_layers, tf.name,
+    #                 theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
+    #             )
+    #         else:
+    #             # Render PCB bottom view
+    #             ctx.render_layers(
+    #                 pcb.bottom_layers, tf.name,
+    #                 theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
+    #             )
+    #
+    #         if encode:
+    #             data = base64.b64encode(open(tf.name).read())
+    #             return data
+    #         else:
+    #             return FileResponse(
+    #                 content=send_file(tf.name, mimetype='application/png'),
+    #                 # content_type='application/png'
+    #             )
 
 

@@ -82,7 +82,7 @@ initial.add_statement("create unique index projects_unique on projects(user_id, 
 
 #############################
 
-new = Migration(2, "initial version")
+new = Migration(2, "adding project_files table")
 for table in [
     'project_files'
 ]:
@@ -100,3 +100,8 @@ new.add_statement("""
 """)
 new.add_statement("create index project_files_id on project_files(project_file_id)")
 new.add_statement("create index project_files_project_id on project_files(project_id)")
+
+###############################
+
+new = Migration(3, "Adding columns to project")
+new.add_statement("alter table projects add column is_public bool not null default true")

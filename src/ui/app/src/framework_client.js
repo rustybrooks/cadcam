@@ -1,5 +1,13 @@
 import "regenerator-runtime/runtime";
 
+export class Status {
+  constructor(status, details) {
+    this.status = status
+    this.details = details
+  }
+}
+
+
 class Framework {
   constructor(base_url, data, storage) {
     // console.log(data)
@@ -34,13 +42,24 @@ class Framework {
           body: body,
           headers: headers,
         }).then(response => {
-          if (response.status === 403) {
+          console.log("status...", response.status)
+          if (response.status === 500) {
+            return new Status(500, "A server error occurred")
+          } else if (response.status === 400) {
+            return new Status(400, "Bad Request")
+          } else if (response.status === 403) {
             console.log("NO AUTH", storage.get('login-callback'))
             storage.get('login-widget').toggleDrawer(true)
-            return null
+            return new Status(403, "Unauthorized")
+          } else if (response.status === 404) {
+            console.log("Returning response", response)
+            return new Status(404, "Not Found")
           }
+
           return response.json()
-        }).then((json) => { return json })
+        }).then((json) => {
+          return json
+        })
           .catch(error => {
             console.error("ERROR", error)
           });
@@ -65,7 +84,14 @@ class Frameworks {
 let fetchFrameworks = (site, prefix, storage) => {
   let url = site + prefix + '/framework/endpoints'
 
-  return fetch(url)
+  let headers = {}
+  const api_key = localStorage.getItem('api-key')
+  if (api_key) {
+    headers["X-API-KEY"] = api_key
+  }
+
+
+  return fetch(url, {'headers': headers})
     .then(response => response.json())
     .then(json => { return new Frameworks(site, json, storage) })
 }

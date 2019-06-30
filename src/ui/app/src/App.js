@@ -37,9 +37,9 @@ class App extends Component {
         <div>
           <Header/>
           <Route exact path="/" component={Home} />
-          <Route exact path="/projects" component={Projects} />
-          <Route exact path="/projects/create" component={Projects} />
-          <Route exact path="/projects/:project_key/" component={Project} />
+          <Route exact path="/projects/:username" component={Projects} />
+          <Route exact path="/projects/:username/create" component={Projects} />
+          <Route exact path="/projects/:username/:project_key/" component={Project} />
         </div>
       </BrowserRouter>
     )

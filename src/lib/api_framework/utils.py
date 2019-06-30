@@ -382,8 +382,8 @@ def process_api(fn, api_object, app_blob, blob):
 
     # return results
     if isinstance(retval, (HttpResponse, FileResponse, JSONResponse)):
-        logger.warn("Returning special response")
-        return retval.response
+        logger.warn("Returning special response %r", retval.response)
+        return retval
 
     if hasattr(retval, 'items') and 'results' in retval and 'count' in retval \
             and stored.get('page') is not None and stored.get('limit') is not None:

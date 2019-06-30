@@ -1,18 +1,18 @@
 import boto3
 import datetime
-import io
 import logging
 import os
+import pytz
 import zipfile
 
 from lib.api_framework import api_register, Api
 from lib import config
 
-from . import login, queries
+from . import queries
 
 logger = logging.getLogger(__name__)
 
-bucket = "rustybrooks-cadcam"
+bucket = "rustybrooks-cadcam-{}".format(config.get_config_key('ENVIRONMENT'))
 
 s3 = boto3.client(
     's3',
@@ -43,7 +43,8 @@ class S3Cache(object):
         else:
             file_date = 0
 
-        if (pf.date_uploaded - datetime.datetime(1970, 1, 1)).total_seconds() > file_date:
+        offset = (pytz.utc.localize(pf.date_uploaded) - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
+        if file_date - offset < 120:
             s3.download_file(bucket, pf.s3_key, file_name)
 
         return file_name
@@ -51,12 +52,13 @@ class S3Cache(object):
 s3cache = S3Cache()
 
 
-@api_register(None, require_login=login.is_logged_in)
+@api_register(None, require_login=True)
 class ProjectsApi(Api):
     @classmethod
-    def index(cls, page=1, limit=10, _user=None):
+    @Api.config(require_login=False)
+    def index(cls, username=None, page=1, limit=10, _user=None):
         out = {
-            'results': queries.projects(user_id=_user.user_id, page=page, limit=limit),
+            'results': queries.projects(_user.username if username == 'me' else username, page=page, limit=limit),
         }
 
         for r in out['results']:
@@ -66,6 +68,23 @@ class ProjectsApi(Api):
             })
 
         return out
+
+    @classmethod
+    @Api.config(require_login=False)
+    def project(cls, username=None, project_key=None, _user=None):
+        p = queries.project(
+            project_key=project_key,
+            username=_user.username if username == 'me' else username,
+            viewing_user_id=_user.user_id,
+            allow_public=True,
+        )
+        if not p:
+            raise cls.NotFound()
+
+        p['files'] = queries.project_files(project_id=p.project_id)
+        p['is_ours'] = p.username == _user.username
+
+        return p
 
     @classmethod
     def create(cls, project_key=None, project_type='pcb', name=None, _user=None):
@@ -80,7 +99,6 @@ class ProjectsApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
     def upload_file(cls, project_key=None, file=None, _user=None):
-        logger.warn("project_key=%r, file=%r, user=%r", project_key, file, _user)
         p = queries.project(project_key=project_key, user_id=_user.user_id)
         if not p:
             raise cls.NotFound()
@@ -101,7 +119,6 @@ class ProjectsApi(Api):
                     file_name = os.path.split(i.filename)[-1]
                     storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_name)
                     with z.open(i) as zf:
-                        logger.warn("uploading %r to %r", i.filename, storage_key)
                         s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
                         queries.add_or_update_project_file(
                             project_id=p.project_id,

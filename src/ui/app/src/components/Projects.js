@@ -14,6 +14,7 @@ import { withRouter } from 'react-router'
 import { withStore } from '../global-store'
 import CreateProject from './CreateProject'
 
+
 const style = theme => ({
   root: {
     marginTop: theme.spacing(1),
@@ -53,7 +54,7 @@ class ProjectRow extends React.Component {
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
     }>
-      <td><Link to={'/projects/' + x.project_key}>{x.project_key}</Link></td>
+      <td><Link to={'/projects/me/' + x.project_key}>{x.project_key}</Link></td>
       <td>{x.name}</td>
       <td>{moment.duration(x.created_ago, 'seconds').humanize()} ago</td>
       <td>{moment.duration(x.modified_ago, 'seconds').humanize()} ago</td>
@@ -81,7 +82,6 @@ class Projects extends React.Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.location.pathname !== prevProps.location.pathname) {
-      this.setTimer()
       this.onRouteChanged()
     }
 
@@ -156,7 +156,7 @@ class Projects extends React.Component {
 
     return (
       <Paper className={classes.paper}>
-        <Button component={Link} to="/projects/create">Create New Project</Button>
+        <Button component={Link} to="/projects/me/create">Create New Project</Button>
 
         <div className={classes.root}>
           <TablePagination

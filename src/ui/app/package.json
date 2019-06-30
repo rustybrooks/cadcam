@@ -15,6 +15,7 @@
     "react-hot-loader": "latest",
     "react-signup-login-component": "latest",
     "react-dropzone": "^7.0.1",
+    "react-loading": "latest",
     "regenerator-runtime": "latest",
     "history": "latest",
     "moment": "latest",

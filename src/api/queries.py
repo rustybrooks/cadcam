@@ -38,6 +38,7 @@ else:
     sql_url = 'postgresql://flannelcat:{}@flannelcat-postgres.cwrbtizazqua.us-west-2.rds.amazonaws.com:5432/cadcam'.format(
         config.get_config_key('DB_PASSWORD')
     )
+    logging.warn("sql_url = %r", sql_url)
 
 SQL = SQLFactory(sql_url, flask_storage=os.environ.get('FLASK_STORAGE', "0'") != "0")
 
@@ -58,7 +59,7 @@ class User(object):
         }
 
     def __init__(self, api_key=None, user_id=None, username=None, email=None, password=None, is_authenticated=False):
-        self.is_authenticated = is_authenticated
+        self._is_authenticated = is_authenticated
         self.is_active = False
         self.is_anonymous = False
         self.user_id = 0
@@ -103,6 +104,16 @@ class User(object):
         logger.warn("payload = %r, secret=%r", payload, JWT_SECRET)
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
+    def is_authenticated(self):
+        return self._is_authenticated
+
+    @property
+    def is_staff(self):
+        return self.is_admin
+
+    @property
+    def id(self):
+        return self.user_id
 
 def add_user(username=None, email=None, password=None, is_admin=False):
     salt = bcrypt.gensalt(12)
@@ -143,8 +154,8 @@ def users(username=None):
 #############################################
 # projects
 
-def project(user_id=None, project_key=None):
-    r = projects(user_id=user_id, project_key=project_key, limit=2)
+def project(user_id=None, username=None, viewing_user_id=None, project_key=None, allow_public=None):
+    r = projects(user_id=user_id, username=username, viewing_user_id=viewing_user_id, project_key=project_key, allow_public=allow_public, limit=2)
 
     if len(r) > 1:
         raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
@@ -152,11 +163,29 @@ def project(user_id=None, project_key=None):
     return r[0] if r else None
 
 
-def projects(user_id=None, project_key=None, page=None, limit=None, sort=None):
-    where, bindvars = SQL.auto_where(user_id=user_id, project_key=project_key)
+def projects(user_id=None, username=None, viewing_user_id=None, project_key=None, allow_public=None, page=None, limit=None, sort=None):
+    where, bindvars = SQL.auto_where(project_key=project_key)
+
+    if allow_public and viewing_user_id is not None:
+        if user_id is not None:
+            where += ["(user_id=:user_id and ({} or user_id=:viewing_user_id)) ".format('is_public' if allow_public else 'not is_public')]
+            bindvars['user_id'] = user_id
+            bindvars['viewing_user_id'] = viewing_user_id
+
+        if username is not None:
+            where += ["(username=:username and ({} or user_id=:viewing_user_id))".format('is_public' if allow_public else 'not is_public')]
+            bindvars['username'] = username
+            bindvars['viewing_user_id'] = viewing_user_id
+
+    else:
+        w, b = SQL.auto_where(user_id=user_id, username=username)
+        where += w
+        bindvars.update(b)
+
     query = """
-        select project_id, project_key, name, date_created, date_modified
+        select user_id, username, project_id, project_key, name, date_created, date_modified
         from projects
+        join users u using (user_id)
         {where}
         {sort} {limit}
     """.format(
@@ -199,9 +228,10 @@ def project_files(project_id=None, project_key=None, project_file_id=None, user_
         project_file_id=project_file_id,
     )
     query = """
-        select project_id, project_file_id, user_id, file_name, s3_key, source_project_file_id, date_uploaded
+        select project_id, project_key, project_file_id, user_id, username, file_name, s3_key, source_project_file_id, date_uploaded
         from projects p 
         join project_files pf using (project_id)
+        join users u using (user_id)
         {where} {sort} {limit}
     """.format(
         where=SQL.where_clause(where),
