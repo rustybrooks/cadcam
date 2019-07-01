@@ -626,8 +626,8 @@ def graph_lines():
 #     pass
 
 def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
-    background = "blue"
-    foreground = "cyan"
+    background = "white"
+    foreground = "red"
 
     def _drawpoly(poly, stroke='black'):
         poly = poly.simplify(0.001)
@@ -636,7 +636,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
         dwg.add(dwg.polygon(
             coords,
             # stroke='green', stroke_width=0.0005,
-            fill=foreground, fill_opacity=1
+            fill=foreground, fill_opacity=.5
         ))
 
         for i in poly.interiors:
@@ -645,7 +645,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
             dwg.add(dwg.polygon(
                 coords,
                 # stroke='red', stroke_width=0.0005,
-                fill=background, fill_opacity=1
+                fill=background, fill_opacity=.5
            ))
 
     def _draw_geoms(_geoms):
@@ -678,7 +678,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
         (bounds['minx'], bounds['miny']),
         (bounds['box_width'], bounds['box_height']),
         # stroke='#888888', stroke_width=0.02,
-        fill="#bbbbbb"
+        fill='white'
     ))
 
     _draw_geoms(geoms)
