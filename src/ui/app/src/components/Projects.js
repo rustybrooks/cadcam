@@ -108,7 +108,9 @@ class Projects extends React.Component {
     if (fw === null || fw === undefined) return
 
     store.set('projects', null)
-    fw.ProjectsApi.index({page: 1, limit: 100}).then(data => store.set('projects', data))
+    let username = this.props.match.params.username
+
+    fw.ProjectsApi.index({username: username, page: 1, limit: 100}).then(data => store.set('projects', data))
   }
 
   handleRequestSort = (event, property) => {

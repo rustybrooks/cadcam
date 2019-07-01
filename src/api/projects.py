@@ -62,7 +62,7 @@ class ProjectsApi(Api):
     @Api.config(require_login=False)
     def index(cls, username=None, page=1, limit=10, _user=None):
         out = {
-            'results': queries.projects(_user.username if username == 'me' else username, page=page, limit=limit),
+            'results': queries.projects(username=_user.username if username == 'me' else username, page=page, limit=limit),
         }
 
         for r in out['results']:
