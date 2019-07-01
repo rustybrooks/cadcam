@@ -1,5 +1,7 @@
 import React from 'react'
 import ReactLoading from 'react-loading';
+import usePromise from 'react-promise';
+
 
 import * as material from '@material-ui/core'
 
@@ -20,62 +22,37 @@ const renderStyle = theme => ({
     'align-items': 'center',
     'justify-content': 'center',
   },
-
-  'loading': {
-  }
 })
 
 
 const style = theme => ({
 })
 
-
-
 class PCBRender extends React.Component {
+  loading_color = '#555888'
+
   constructor(props) {
     super(props);
     this.state = {
       img: '',
-      width: 600,
-      height: 600,
-      loading_color: '#555888'
     };
   };
 
-  componentDidMount() {
-    this.updateImage()
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevProps === this.props) return
-
-    console.log('update', this.props)
-    this.updateImage()
-  }
-
-  updateImage() {
-    if (this.props.project_key === null) {
-      return
-    }
-
-    let fw = this.props.store.get('frameworks')
-    fw.PCBApi.render({
+  async componentDidMount() {
+    const fw = this.props.store.get('frameworks')
+    const data = await fw.PCBApi.render({
       project_key: this.props.project_key,
       username: this.props.username,
       side: this.props.side,
-
-    }).then(
-      data => this.setState({img: 'data:image/jpeg;base64,' + data})
-    )
-
+    })
+    this.setState({img: 'data:image/jpeg;base64,' + data})
   }
 
   render() {
     let { classes } = this.props
-    let loading =  (this.props.project_key === null || !this.state.img.length)
 
-    return (loading)
-      ? <div className={classes.loadingDiv}><ReactLoading className={classes.loading} type={'spinningBubbles'} color={this.state.loading_color} height={50} width={50} /></div>
+    return (!this.state.img.length)
+      ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
       : <img src={this.state.img}/>
   }
 }
@@ -109,7 +86,6 @@ class Project extends React.Component {
   }
 
   handleChange(files){
-    console.log(files)
     this.setState({...this.state, files: files});
   }
 
@@ -136,14 +112,12 @@ class Project extends React.Component {
   }
 
   onRouteChanged() {
-    console.log('route', this.props.match.params)
     let username = this.props.match.params.username
     let project_key = this.props.match.params.project_key
 
     let { store } = this.props
     let fw = store.get('frameworks')
     fw.ProjectsApi.project({project_key: project_key, username: username}).then(data => {
-      console.log("data", project_key, username, data)
       this.setState({
         ...this.state,
         project_key: project_key,
@@ -156,13 +130,10 @@ class Project extends React.Component {
   render() {
     const { classes } = this.props
     const { project } = this.state
-    console.log('render', this.state, this.props)
 
     if (project === null) {
       return <div>Loading</div>
     }
-
-    console.log('status', project.status)
 
     if (project.status === 404) {
       return <div>{project.details}</div>
@@ -171,7 +142,7 @@ class Project extends React.Component {
     }
 
     return <material.Paper className={classes.paper}>
-      <table border="0" cellspacing="2">
+      <table border="0" cellSpacing="2">
         <tbody>
         <tr>
             <td colSpan="2">
@@ -183,10 +154,10 @@ class Project extends React.Component {
           </tr>
           <tr>
             <td>
-              <PCBRender project_key={this.state.project_key} username={this.state.username} side='top'/>
+              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
             </td>
             <td>
-              <PCBRender project_key={this.state.project_key} username={this.state.username} side='bottom'/>
+              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
             </td>
           </tr>
         </tbody>

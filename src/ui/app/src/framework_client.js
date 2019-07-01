@@ -31,7 +31,6 @@ class Framework {
           body = context
           console.log("We've got some form data here", body.getAll('file'), body.getAll('project_key'))
         } else {
-          console.log("json upload")
           body = JSON.stringify(context)
           headers["Content-Type"] = "application/json; charset=utf-8"
         }
@@ -42,7 +41,6 @@ class Framework {
           body: body,
           headers: headers,
         }).then(response => {
-          console.log("status...", response.status)
           if (response.status === 500) {
             return new Status(500, "A server error occurred")
           } else if (response.status === 400) {
