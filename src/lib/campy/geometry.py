@@ -630,20 +630,23 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
     foreground = "cyan"
 
     def _drawpoly(poly, stroke='black'):
+        poly = poly.simplify(0.001)
+        coords = [foo[:2] for foo in poly.exterior.coords]
+        # logger.warn("coords = %r", coords)
         dwg.add(dwg.polygon(
-            [foo[:2] for foo in poly.exterior.simplify(0.001).coords],
-            stroke='green', stroke_width=0.0005,
-            fill=foreground,
-            fill_opacity=1
+            coords,
+            # stroke='green', stroke_width=0.0005,
+            fill=foreground, fill_opacity=1
         ))
 
         for i in poly.interiors:
+            coords = [foo[:2] for foo in i.coords]
+            # logger.warn("interiors = %r", coords)
             dwg.add(dwg.polygon(
-                [foo[:2] for foo in i.coords],
-                stroke='red', stroke_width=0.0005,
-                fill=background,
-                fill_opacity=.25
-            ))
+                coords,
+                # stroke='red', stroke_width=0.0005,
+                fill=background, fill_opacity=1
+           ))
 
     def _draw_geoms(_geoms):
         for g in _geoms:

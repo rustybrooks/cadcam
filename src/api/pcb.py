@@ -121,9 +121,9 @@ class PCBApi(Api):
 
         for mapkey in [
             (side, 'copper'),
-#            (side, 'solder-mask'),
-#            (side, 'silk-screen'),
-#            ('both', 'drill'),
+            (side, 'solder-mask'),
+            (side, 'silk-screen'),
+            ('both', 'drill'),
             ('both', 'outline'),
         ]:
             if mapkey not in fmap:
