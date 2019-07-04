@@ -469,7 +469,7 @@ class FrameworkApi(Api):
                     }
                     these_endpoints[fnname] = this
             data[app.class_name] = these_endpoints
-            data['user'] = {'id': _user.id, 'username': _user.username, 'authenticated': ia}
+            data['user'] = {'id': _user.id, 'username': getattr(_user, 'username', None), 'authenticated': ia}
 
         return data
 

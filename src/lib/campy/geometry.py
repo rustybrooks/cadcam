@@ -636,7 +636,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
         dwg.add(dwg.polygon(
             coords,
             # stroke='green', stroke_width=0.0005,
-            fill=foreground, fill_opacity=.5
+            fill=foreground, fill_opacity=1
         ))
 
         for i in poly.interiors:
@@ -645,7 +645,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
             dwg.add(dwg.polygon(
                 coords,
                 # stroke='red', stroke_width=0.0005,
-                fill=background, fill_opacity=.5
+                fill=background, fill_opacity=1
            ))
 
     def _draw_geoms(_geoms):

@@ -13,8 +13,8 @@ ENTRYPOINT /srv/src/ui/entrypoint.sh
 WORKDIR /srv/src/ui/app
 
 ## stuff that changes after here
-RUN npm install
 COPY . /srv/src/
+RUN npm install
 RUN npm run build
 
 

@@ -28,7 +28,7 @@ def crossproduct(a, b):
     c = [
         a[1]*b[2] - a[2]*b[1],
         a[2]*b[0] - a[0]*b[2],
-        a[0]*b[1] - a[1]*b[0]
+        a[0]*b[1] - a[1]*b[0],
     ]
 
     return c
@@ -490,12 +490,12 @@ class PolySurface(object):
         sp = fig.add_subplot(211)
 
         sp.add_collection(PatchCollection(
-            [PolygonPatch(x, alpha=0.5, fc=_get_color(x), zorder=2) for x in self.polys], match_original=True)
+            [PolygonPatch(x, alpha=1, fc=_get_color(x), zorder=2) for x in self.polys], match_original=True)
         )
 
         if extra_poly:
             sp.add_collection(PatchCollection(
-                [PolygonPatch(x, alpha=0.5, fc='#0000ff', zorder=2) for x in extra_poly], match_original=True)
+                [PolygonPatch(x, alpha=1, fc='#0000ff', zorder=2) for x in extra_poly], match_original=True)
             )
 
         sp.set_xlim(*self.range[0])

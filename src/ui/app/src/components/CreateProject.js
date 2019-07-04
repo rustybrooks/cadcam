@@ -32,7 +32,7 @@ class CreateProject extends React.Component {
     console.log("closing")
     const { store } = this.props
     const fw = store.get('frameworks')
-    fw.ProjectsApi.create({project_key: this.state.project_key, name: this.state.name}).then(data => this.props.history.push('/projects/' + this.state.project_key))
+    fw.ProjectsApi.create({project_key: this.state.project_key, name: this.state.name}).then(data => this.props.history.push('/projects/me/' + this.state.project_key))
   }
 
   handleNameChange = event => {
