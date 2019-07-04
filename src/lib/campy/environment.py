@@ -38,6 +38,8 @@ class Environment(object):
         self.max_feedrates = max_feedrates
         self.peak_feedrate = max(max_feedrates)
 
+        self.geometry = []
+
     def __del__(self):
         for k, v in self.files.items():
             self.close_file(k)

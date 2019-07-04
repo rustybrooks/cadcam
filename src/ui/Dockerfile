@@ -9,11 +9,12 @@ RUN apt-get -y update \
 
 RUN mkdir -p /srv/src
 
-WORKDIR /srv
-
-COPY . /srv/src/
+ENTRYPOINT /srv/src/ui/entrypoint.sh
 WORKDIR /srv/src/ui/app
+
+## stuff that changes after here
 RUN npm install
+COPY . /srv/src/
 RUN npm run build
 
-ENTRYPOINT /srv/src/ui/entrypoint.sh
+

@@ -1,11 +1,13 @@
 FROM rustybrooks/cadcam-base
-# FROM cadcam-base
 
 RUN apt-get -y update \
  && mkdir /srv/logs && mkdir /var/log/gunicorn
 
-COPY . /srv/src
-RUN pip install -r /srv/src/api/requirements_api.txt
-
 ENTRYPOINT ["/srv/src/api/entrypoint.sh"]
+
+RUN pip install -r /srv/src/api/requirements_api.txt
+COPY . /srv/src
+
+
+
 

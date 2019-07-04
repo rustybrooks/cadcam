@@ -49,7 +49,7 @@ class ProjectRow extends React.Component {
 
   render() {
     let x = this.props.row
-    const {classes} = this.props;
+    const {classes} = this.props
     return <tr key={1} className={this.props.selected ?
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
