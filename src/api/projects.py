@@ -86,7 +86,14 @@ class ProjectsApi(Api):
             raise cls.NotFound()
 
         p['files'] = queries.project_files(project_id=p.project_id)
+        for f in p['files']:
+            f['uploaded_ago'] = (datetime.datetime.utcnow() - f.date_uploaded).total_seconds()
         p['is_ours'] = p.username == _user.username
+
+        p.update({
+            'created_ago': (datetime.datetime.utcnow() - p.date_created).total_seconds(),
+            'modified_ago': (datetime.datetime.utcnow() - p.date_modified).total_seconds(),
+        })
 
         return p
 

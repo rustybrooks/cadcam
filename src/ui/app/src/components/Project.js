@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactLoading from 'react-loading';
-import usePromise from 'react-promise';
-
-
 import * as material from '@material-ui/core'
+
+import * as moment from 'moment'
+
 
 import { withStyles } from '@material-ui/core/styles'
 import { withRouter } from 'react-router'
@@ -26,6 +26,8 @@ const renderStyle = theme => ({
 
 
 const style = theme => ({
+  tab: {
+  },
 })
 
 class PCBRender extends React.Component {
@@ -68,6 +70,7 @@ class Project extends React.Component {
       project_key: null,
       project: null,
       username: null,
+      tabValue: 0,
     }
 
     // This binding is necessary to make `this` work in the callback
@@ -78,15 +81,15 @@ class Project extends React.Component {
   }
 
   handleClose() {
-    this.setState({...this.state, uploadModal: false})
+    this.setState({uploadModal: false})
   }
 
   handleOpen() {
-    this.setState({...this.state, uploadModal: true})
+    this.setState({uploadModal: true})
   }
 
   handleChange(files){
-    this.setState({...this.state, files: files});
+    this.setState({files: files});
   }
 
   handleUpload() {
@@ -127,6 +130,10 @@ class Project extends React.Component {
     })
   }
 
+  handleTabChange = (event, tabValue) => {
+    this.setState({ tabValue })
+  }
+
   render() {
     const { classes } = this.props
     const { project } = this.state
@@ -142,26 +149,77 @@ class Project extends React.Component {
     }
 
     return <material.Paper className={classes.paper}>
-      <table border="0" cellSpacing="2">
-        <tbody>
-        <tr>
-            <td colSpan="2">
-            {
-              project.is_ours ? <material.Button onClick={this.handleOpen}>Upload Gerber File(s)</material.Button> : <div></div>
-            }
+      <material.Tabs value={this.state.tabValue} onChange={this.handleTabChange}>
+        <material.Tab label="Summary" className={classes.tab}/>
+        <material.Tab label="PCB Renders"  className={classes.tab}/>
+        <material.Tab label="CAM" className={classes.tab} />
+      </material.Tabs>
 
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
-            </td>
-            <td>
-              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <material.Box component="div" display={this.state.tabValue === 0 ? "block" : "none"}>
+          <table border={1} cellSpacing={0} cellPadding={5}>
+            <tbody>
+            <tr>
+              <th align="left">Project Key</th><td colSpan={3}>{project.project_key}</td>
+            </tr>
+
+            <tr>
+              <th align="left">Project Name</th><td colSpan={3}>{project.name}</td>
+            </tr>
+
+            <tr>
+              <th align="left">Owner</th><td colSpan={3}>{project.username}</td>
+            </tr>
+
+            <tr>
+              <th align="left">Created</th><td>{moment.duration(project.created_ago, 'seconds').humanize()}</td>
+              <th align="left">Updated</th><td>{moment.duration(project.modified_ago, 'seconds').humanize()}</td>
+            </tr>
+
+            <tr>
+              <th colSpan={4} align="left">
+              Files
+              </th>
+            </tr>
+            {
+              project.files.map(f => {
+                return <tr key={f.project_file_id}>
+                  <td colSpan={3}>{f.file_name}</td>
+                  <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
+                </tr>
+              })
+            }
+            </tbody>
+          </table>
+        </material.Box>
+
+        <material.Box component="div" display={this.state.tabValue === 1 ? "block" : "none"}>
+          <table border="0" cellSpacing="2">
+            <tbody>
+            <tr>
+              <td colSpan="2">
+                {
+                  project.is_ours ? <material.Button onClick={this.handleOpen}>Upload Gerber File(s)</material.Button> : <div></div>
+                }
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
+              </td>
+              <td>
+                <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </material.Box>
+
+        <material.Box component="div" display={this.state.tabValue === 2 ? "block" : "none"}>
+          {
+            project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
+          }
+g
+        </material.Box>
 
 
       <material.Dialog open={this.state.uploadModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
