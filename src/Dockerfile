@@ -20,11 +20,11 @@ RUN git clone https://github.com/aewallin/opencamlib.git && mkdir opencamlib/bui
 RUN git clone https://github.com/aewallin/openvoronoi.git && mkdir openvoronoi/build && cd openvoronoi/build && cmake ../src && make install && rm -rf /tmp/openvoronoi
 RUN git clone https://github.com/aewallin/truetype-tracer.git && mkdir truetype-tracer/build && cd truetype-tracer/build && cmake ../src && make install && rm -rf /tmp/truetype-tracer
 
+WORKDIR /srv
+ENTRYPOINT ["bash"]
+
 COPY requirements.txt /srv/src
 RUN pip install setuptools==9.1 \
   && pip install -r /srv/src/requirements.txt
 
-WORKDIR /srv
-
-ENTRYPOINT ["bash"]
 

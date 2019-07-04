@@ -113,6 +113,7 @@ class User(object):
     def id(self):
         return self.user_id
 
+
 def add_user(username=None, email=None, password=None, is_admin=False):
     salt = bcrypt.gensalt(12)
     return SQL.insert('users', {
@@ -191,6 +192,8 @@ def projects(user_id=None, username=None, viewing_user_id=None, project_key=None
         sort=SQL.orderby(sort),
         limit=SQL.limit(page=page, limit=limit)
     )
+
+    logger.warn("%r - %r", query, bindvars)
 
     return list(SQL.select_foreach(query, bindvars))
 

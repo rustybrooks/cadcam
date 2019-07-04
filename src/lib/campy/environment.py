@@ -1,12 +1,20 @@
+from shapely import geometry
+
 from .cammath import frange
 from .tools import *
 from . import constants
+
+
 
 import copy
 import math
 import os
 
 
+colors = {
+    'goto': 'green',
+    'cut': 'red',
+}
 
 class Material(object):
     def __init__(self, name, sfm_hss, sfm_carbide, fpt_hss, fpt_carbide):
@@ -37,6 +45,9 @@ class Environment(object):
         self.max_rpm = max_rpm
         self.max_feedrates = max_feedrates
         self.peak_feedrate = max(max_feedrates)
+
+        self.position = None
+        # self.geometry = []
 
     def __del__(self):
         for k, v in self.files.items():
@@ -134,9 +145,26 @@ class Environment(object):
         c = c.replace('(', '[').replace(')', ']')
         self.write("(%s)" % (c,))
 
+    def _new_position(self, x, y, z):
+        new_position = self.position.copy()
+        for i, v in enumerate([x, y, z]):
+            if v:
+                new_position[i] = v
+
+        return new_position
+
     def goto(self, x=None, y=None, z=None, a=None, point=None, rate=None):
         if point is not None:
             x, y, z = point
+
+        # new_position = self._new_position(x, y, z)
+        # if self.position:
+        #     self.geometry.append((
+        #         geometry.Line(coords=[self.position, new_position]),
+        #         'goto'
+        #     ))
+        # 
+        # self.position = new_position
 
         # self.record_linear_move((x, y, z), speed=self.rapid_speed)
         self.write("G0 %s" % (" ".join(self.format_movement(x, y, z, a, rate))))
@@ -152,6 +180,15 @@ class Environment(object):
             feed = rate
         else:
             feed = None
+
+        # new_position = self._new_position(x, y, z)
+        # if self.position:
+        #     self.geometry.append((
+        #         geometry.Line(coords=[self.position, new_position]),
+        #         'cut'
+        #     ))
+
+        # self.position = new_position
 
         # self.record_linear_move((x, y, z))
         self.write("G1 %s" % (" ".join(self.format_movement(x, y, z, a, feed))))
@@ -187,7 +224,15 @@ class Environment(object):
             pass
             # print "Arc radius = {}, skipping".format(radius)
         else:
-            self.cut_arc(bx2, by2, x - bx, y - by, rate=rate, z=z, clockwise=clockwise)
+            # degree_range = frange(start_angle, end_angle, min(1, end_angle-start_angle)/1000)
+            # x = [x + radius * math.cos(math.radians(degree)) for degree in degree_range]
+            # x = [y + radius * math.sin(math.radians(degree)) for degree in degree_range]
+            # arc = geometry.LineString(zip(x, y))
+            # 
+            # self.geometry.append((arc, 'cut'))
+
+            self._cut_arc(bx2, by2, x - bx, y - by, rate=rate, z=z, clockwise=clockwise)
+
 
         if return_to:
             if cut_to:
@@ -195,7 +240,8 @@ class Environment(object):
             elif move_to:
                 self.goto(x=bx, y=by, rate=rate)
 
-    def cut_arc(self, x=None, y=None, I=None, J=None, rate=None, z=None, clockwise=True):
+    # I would prefer not to use this
+    def _cut_arc(self, x=None, y=None, I=None, J=None, rate=None, z=None, clockwise=True):
         if self.speed is not None and rate is None:
             feed = "F%0.3f " % self.speed
             self.speed = None
@@ -217,6 +263,8 @@ class Environment(object):
             feed = "F%0.3f " % rate
         else:
             feed = ""
+
+        # self.geometry.append()  ??
 
         if toward:
             gcode = 'G38.2' if halt_on_error else 'G38.3'

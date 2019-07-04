@@ -49,7 +49,7 @@ class ProjectRow extends React.Component {
 
   render() {
     let x = this.props.row
-    const {classes} = this.props;
+    const {classes} = this.props
     return <tr key={1} className={this.props.selected ?
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
@@ -67,6 +67,7 @@ class Projects extends React.Component {
     super(props);
 
     this.state = {
+      projects: null,
       order: 'desc',
       orderBy: 'created_at',
       page: 0,
@@ -97,12 +98,12 @@ class Projects extends React.Component {
 
   onRouteChanged() {
     console.log('route', this.props.location.pathname)
-    if (this.props.location.pathname === '/projects/create') {
+    if (this.props.location.pathname === '/projects/me/create') {
       this.setState({...this.state, createModal: true})
     }
   }
 
-  updateProjects() {
+  async updateProjects() {
     const { store } = this.props
     let fw = store.get('frameworks')
     if (fw === null || fw === undefined) return
@@ -110,7 +111,14 @@ class Projects extends React.Component {
     store.set('projects', null)
     let username = this.props.match.params.username
 
-    fw.ProjectsApi.index({username: username, page: 1, limit: 100}).then(data => store.set('projects', data))
+    let data = {}
+    if (username === "me") {
+      data = await fw.ProjectsApi.my_index({page: 1, limit: 100})
+    } else {
+      data = await fw.ProjectsApi.index({username: username, page: 1, limit: 100})
+    }
+
+    this.setState({'projects': data})
   }
 
   handleRequestSort = (event, property) => {
@@ -142,11 +150,9 @@ class Projects extends React.Component {
 
   render() {
     const { store, classes } = this.props
+    const { projects } = this.state
 
-    let projects = store.get('projects')
-    if (projects === undefined) {
-      return <div>...</div>
-    } else if (projects === null) {
+    if (projects === null) {
       return <div>Loading...</div>
     }
 

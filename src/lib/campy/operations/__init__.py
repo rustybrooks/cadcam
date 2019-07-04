@@ -5,10 +5,12 @@ import math
 from .. import machine
 from ..cammath import frange
 
-# center is always x, y, z separate?
+# center is always (x, y), z separate?
 # if an operation goes straight down, then use depth rather then a stop center
 # stepover is X% for a percentage of bit diameter, X for absolute
 # stepdown is X% for a percentage of bit diameter, X for absolute
+
+
 
 
 def operation(required=None, operation_feedrate=None, comment=None):

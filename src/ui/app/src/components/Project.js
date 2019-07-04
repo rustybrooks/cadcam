@@ -59,6 +59,35 @@ class PCBRender extends React.Component {
   }
 }
 
+class PCBRender2 extends React.Component {
+  loading_color = '#555888'
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      img: '',
+    };
+  };
+
+  async componentDidMount() {
+    const fw = this.props.store.get('frameworks')
+    const data = await fw.PCBApi.render_svg({
+      project_key: this.props.project_key,
+      username: this.props.username,
+      side: this.props.side,
+    })
+    this.setState({img: 'data:image/svg+xml;base64,' + data})
+  }
+
+  render() {
+    let { classes } = this.props
+
+    return (!this.state.img.length)
+      ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
+      : <img src={this.state.img}/>
+  }
+}
+
 
 class Project extends React.Component {
   constructor(props) {
@@ -195,21 +224,23 @@ class Project extends React.Component {
         <material.Box component="div" display={this.state.tabValue === 1 ? "block" : "none"}>
           <table border="0" cellSpacing="2">
             <tbody>
-            <tr>
-              <td colSpan="2">
-                {
-                  project.is_ours ? <material.Button onClick={this.handleOpen}>Upload Gerber File(s)</material.Button> : <div></div>
-                }
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
-              </td>
-              <td>
-                <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
-              </td>
-            </tr>
+          <tr>
+            <td>
+              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
+            </td>
+            <td>
+              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <PCBRender2 store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
+            </td>
+            <td>
+              <PCBRender2 store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
+            </td>
+          </tr>
             </tbody>
           </table>
         </material.Box>
@@ -218,8 +249,14 @@ class Project extends React.Component {
           {
             project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
           }
-g
+
         </material.Box>
+
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
 
 
       <material.Dialog open={this.state.uploadModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
@@ -242,5 +279,6 @@ g
 }
 
 PCBRender = withStore(withStyles(renderStyle)(PCBRender))
+PCBRender2 = withStore(withStyles(renderStyle)(PCBRender2))
 
 export default withRouter(withStore(withStyles(style)(Project)))

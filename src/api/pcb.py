@@ -8,7 +8,7 @@ from gerber.render.cairo_backend import GerberCairoContext
 import logging
 import tempfile
 import zipfile
-from lib.api_framework import api_register, Api, FileResponse, api_bool
+from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list
 from lib.campy import *
 
 from . import queries, projects
@@ -152,9 +152,11 @@ class PCBApi(Api):
 
     @classmethod
     @Api.config(require_login=False)
-    def render2(cls, project_key=None, username=None, side='top', max_width=600, max_height=600, encode=True, _user=None, union=True):
-        encode = api_bool(encode)
+    def render_svg(
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=800, max_height=800, _user=None, union=True,
+    ):
         union = api_bool(union)
+        layers = api_list(layers)
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -187,11 +189,15 @@ class PCBApi(Api):
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             pcb.layer_to_svg(('top', 'copper'), tf.name, width=max_width, height=max_height)
 
-            return FileResponse(
-                # content=send_file(tf.name, mimetype='image/svg+xml'),
-                content=open(tf.name),
-                content_type='image/svg+xml',
-            )
+            if encode:
+                data = base64.b64encode(open(tf.name).read())
+                return data
+            else:
+                return FileResponse(
+                    # content=send_file(tf.name, mimetype='image/svg+xml'),
+                    content=open(tf.name),
+                    content_type='image/svg+xml',
+                )
 
     @classmethod
     def render3(cls, union=True):

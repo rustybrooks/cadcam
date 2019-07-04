@@ -74,6 +74,11 @@ class ProjectsApi(Api):
         return out
 
     @classmethod
+    @Api.config(require_login=True)
+    def my_index(cls, page=1, limit=10, _user=None):
+        return cls.index(username='me', page=page, limit=limit, _user=_user)
+
+    @classmethod
     @Api.config(require_login=False)
     def project(cls, username=None, project_key=None, _user=None):
         p = queries.project(
