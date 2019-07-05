@@ -1,12 +1,13 @@
 import React from 'react'
-import ReactLoading from 'react-loading';
+import ReactLoading from 'react-loading'
 import * as material from '@material-ui/core'
-
 import * as moment from 'moment'
-
 
 import { withStyles } from '@material-ui/core/styles'
 import { withRouter } from 'react-router'
+
+import { Switch, Route, Link, BrowserRouter, Redirect } from "react-router-dom";
+
 
 import { withStore } from '../global-store'
 import DropzoneArea from './dropzone/DropZoneArea'
@@ -14,7 +15,7 @@ import DropzoneArea from './dropzone/DropZoneArea'
 import { Status } from '../framework_client'
 
 
-const renderStyle = theme => ({
+const pcbrenderStyle = theme => ({
   'loadingDiv': {
     height: '600px',
     width: '600px',
@@ -30,15 +31,50 @@ const style = theme => ({
   },
 })
 
+const detailsStyle = theme => ({
+
+})
+
+
+const renderStyle = theme => ({
+  forms: {
+    display: 'flex',
+  },
+  formControl: {
+    margin: theme.spacing(3),
+  },
+
+})
+
+const camStyle = theme => ({
+
+})
+
+
+
 class PCBRender extends React.Component {
   loading_color = '#555888'
 
   constructor(props) {
-    super(props);
+    super(props)
     this.state = {
       img: '',
-    };
-  };
+      layers: {
+        copper: true,
+        solderMask: false,
+        silkScreen: false,
+        drill: false,
+        outline: false
+      }
+    }
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleCheckChange = this.handleCheckChange.bind(this)
+  }
+
+  handleCheckChange = name => event => {
+    this.setState({[name]: event.target.checked })
+  }
 
   async componentDidMount() {
     const fw = this.props.store.get('frameworks')
@@ -51,23 +87,53 @@ class PCBRender extends React.Component {
   }
 
   render() {
-    let { classes } = this.props
+    const { classes } = this.props
+    const { copper, solderMask, silkScreen, drill, outline } = this.state.layers
 
-    return (!this.state.img.length)
-      ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
-      : <img src={this.state.img}/>
+    return (
+      <div className={classes.forms}>
+        <material.FormGroup row>
+          <material.FormControlLabel
+            control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
+            label="Copper"
+          />
+          <material.FormControlLabel
+            control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solderMask')} value="solderMask" />}
+            label="Solder Mask"
+          />
+          <material.FormControlLabel
+            control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silkScreen')} value="silkScreen" />}
+            label="Silk Screen"
+          />
+          <material.FormControlLabel
+            control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
+            label="Drill"
+          />
+          <material.FormControlLabel
+            control={<material.Checkbox checked={outline} onChange={this.handleCheckChange('outline')} value="outline" />}
+            label="Outline"
+          />
+        </material.FormGroup>
+        {
+          (!this.state.img.length)
+            ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
+            : <img src={this.state.img}/>
+        }
+      </div>
+    )
   }
+
 }
 
 class PCBRender2 extends React.Component {
   loading_color = '#555888'
 
   constructor(props) {
-    super(props);
+    super(props)
     this.state = {
       img: '',
-    };
-  };
+    }
+  }
 
   async componentDidMount() {
     const fw = this.props.store.get('frameworks')
@@ -88,10 +154,100 @@ class PCBRender2 extends React.Component {
   }
 }
 
+class ProjectRender extends React.Component {
+
+  render() {
+    const { project, classes } = this.props
+
+    return <div>
+      <table border="0" cellSpacing="2">
+        <tbody>
+          <tr>
+            <td>
+              <PCBRender store={this.props.store} project_key={project.project_key} username={project.username} side='top'/>
+            </td>
+            <td>
+              <PCBRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
+class ProjectCAM extends React.Component {
+  render() {
+    const {project, classes} = this.props
+    return <div>
+      {
+        project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
+      }
+      <table border="0" cellSpacing="2">
+        <tbody>
+        <tr>
+          <td>
+            <PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}
+                        side='top'/>
+          </td>
+          <td>
+            <PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}
+                        side='bottom'/>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
+class ProjectDetails extends React.Component {
+  render () {
+    const { project, classes } = this.props
+
+    return <div>
+      <table border={1} cellSpacing={0} cellPadding={5}>
+        <tbody>
+        <tr>
+          <th align="left">Project Key</th><td colSpan={3}>{project.project_key}</td>
+        </tr>
+
+        <tr>
+          <th align="left">Project Name</th><td colSpan={3}>{project.name}</td>
+        </tr>
+
+        <tr>
+          <th align="left">Owner</th><td colSpan={3}>{project.username}</td>
+        </tr>
+
+        <tr>
+          <th align="left">Created</th><td>{moment.duration(project.created_ago, 'seconds').humanize()}</td>
+          <th align="left">Updated</th><td>{moment.duration(project.modified_ago, 'seconds').humanize()}</td>
+        </tr>
+
+        <tr>
+          <th colSpan={4} align="left">
+            Files
+          </th>
+        </tr>
+        {
+          project.files.map(f => {
+            return <tr key={f.project_file_id}>
+              <td colSpan={3}>{f.file_name}</td>
+              <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
+            </tr>
+          })
+        }
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
 
 class Project extends React.Component {
   constructor(props) {
-    super(props);
+    super(props)
 
     this.state = {
       uploadModal: false,
@@ -118,7 +274,7 @@ class Project extends React.Component {
   }
 
   handleChange(files){
-    this.setState({files: files});
+    this.setState({files: files})
   }
 
   handleUpload() {
@@ -126,8 +282,8 @@ class Project extends React.Component {
     let fw = store.get('frameworks')
 
     this.state.files.map(file => {
-      var formData = new FormData();
-      formData.append('file', file);
+      var formData = new FormData()
+      formData.append('file', file)
       formData.append('project_key', this.state.project_key)
       fw.ProjectsApi.upload_file(formData).then(data => console.log(file, data))
     })
@@ -144,16 +300,16 @@ class Project extends React.Component {
   }
 
   onRouteChanged() {
-    let username = this.props.match.params.username
-    let project_key = this.props.match.params.project_key
+    const params = this.props.match.params
+    const { username, project_key, tab } = params
 
     let { store } = this.props
     let fw = store.get('frameworks')
     fw.ProjectsApi.project({project_key: project_key, username: username}).then(data => {
       this.setState({
-        ...this.state,
         project_key: project_key,
         username: username,
+        tab: tab ? tab : 'details',
         project: data,
       })
     })
@@ -163,9 +319,11 @@ class Project extends React.Component {
     this.setState({ tabValue })
   }
 
+
   render() {
     const { classes } = this.props
-    const { project } = this.state
+    const { project, tab, username } = this.state
+
 
     if (project === null) {
       return <div>Loading</div>
@@ -177,87 +335,32 @@ class Project extends React.Component {
       return <div>Error: project.details</div>
     }
 
+    const urlbase = '/projects/' + username + '/' + project.project_key
+
     return <material.Paper className={classes.paper}>
-      <material.Tabs value={this.state.tabValue} onChange={this.handleTabChange}>
-        <material.Tab label="Summary" className={classes.tab}/>
-        <material.Tab label="PCB Renders"  className={classes.tab}/>
-        <material.Tab label="CAM" className={classes.tab} />
-      </material.Tabs>
+          <material.Tabs value={location.pathname} >
+            <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
 
-        <material.Box component="div" display={this.state.tabValue === 0 ? "block" : "none"}>
-          <table border={1} cellSpacing={0} cellPadding={5}>
-            <tbody>
-            <tr>
-              <th align="left">Project Key</th><td colSpan={3}>{project.project_key}</td>
-            </tr>
+            </material.Tab>
 
-            <tr>
-              <th align="left">Project Name</th><td colSpan={3}>{project.name}</td>
-            </tr>
+            <material.Tab label="PCB Renders" value={urlbase + '/render'} component={Link} to={urlbase + '/render'}>
+            </material.Tab>
 
-            <tr>
-              <th align="left">Owner</th><td colSpan={3}>{project.username}</td>
-            </tr>
+            <material.Tab label="CAM" value={urlbase + '/cam'} component={Link} to={urlbase + '/cam'}>
+            </material.Tab>
+          </material.Tabs>
 
-            <tr>
-              <th align="left">Created</th><td>{moment.duration(project.created_ago, 'seconds').humanize()}</td>
-              <th align="left">Updated</th><td>{moment.duration(project.modified_ago, 'seconds').humanize()}</td>
-            </tr>
+          <material.Box component="div" display={tab === 'details' ? "block" : "none"}>
+            <ProjectDetails project={project}/>
+          </material.Box>
 
-            <tr>
-              <th colSpan={4} align="left">
-              Files
-              </th>
-            </tr>
-            {
-              project.files.map(f => {
-                return <tr key={f.project_file_id}>
-                  <td colSpan={3}>{f.file_name}</td>
-                  <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
-                </tr>
-              })
-            }
-            </tbody>
-          </table>
-        </material.Box>
+          <material.Box component="div" display={tab === 'render' ? "block" : "none"}>
+            <ProjectRender project={project} />
+          </material.Box>
 
-        <material.Box component="div" display={this.state.tabValue === 1 ? "block" : "none"}>
-          <table border="0" cellSpacing="2">
-            <tbody>
-          <tr>
-            <td>
-              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
-            </td>
-            <td>
-              <PCBRender store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
-            </td>
-          </tr>
-
-          <tr>
-            <td>
-              <PCBRender2 store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='top'/>
-            </td>
-            <td>
-              <PCBRender2 store={this.props.store} project_key={this.state.project_key} username={this.state.username} side='bottom'/>
-            </td>
-          </tr>
-            </tbody>
-          </table>
-        </material.Box>
-
-        <material.Box component="div" display={this.state.tabValue === 2 ? "block" : "none"}>
-          {
-            project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
-          }
-
-        </material.Box>
-
-            </td>
-          </tr>
-
-        </tbody>
-      </table>
-
+          <material.Box component="div" display={tab === 'cam' ? "block" : "none"}>
+            <ProjectCAM project={project} />
+          </material.Box>
 
       <material.Dialog open={this.state.uploadModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
         <material.DialogTitle id="form-dialog-title">Upload File(s)</material.DialogTitle>
@@ -278,7 +381,10 @@ class Project extends React.Component {
   }
 }
 
-PCBRender = withStore(withStyles(renderStyle)(PCBRender))
+PCBRender = withStore(withStyles(pcbrenderStyle)(PCBRender))
 PCBRender2 = withStore(withStyles(renderStyle)(PCBRender2))
+ProjectDetails = withStore(withStyles(detailsStyle)(ProjectDetails))
+ProjectRender = withStore(withStyles(renderStyle)(ProjectRender))
+ProjectCAM = withStore(withStyles(camStyle)(ProjectCAM))
 
-export default withRouter(withStore(withStyles(style)(Project)))
+export default withStore(withStyles(style)(Project))
