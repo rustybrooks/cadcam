@@ -168,10 +168,9 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_svg(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None, union=False,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None,
     ):
         encode = api_bool(encode)
-        union = api_bool(union)
         layers = set(api_list(layers) or [])
         p = queries.project(
             project_key=project_key,
@@ -226,7 +225,7 @@ class PCBApi(Api):
             pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
             render_layers.append(mapkey)
 
-        pcb.process_layers(union=union)
+        pcb.process_layers(union=False)
 
         try:
             outline = pcb.layers[('both', 'outline')]['geometry']
@@ -258,7 +257,7 @@ class PCBApi(Api):
         }
 
         if outline:
-            geoms = [outline] if union else list(outline)
+            geoms = list(outline)
         else:
             geoms = []
         for l in render_layers:
@@ -269,7 +268,7 @@ class PCBApi(Api):
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
 
         if not outline:
-            logger("not outline")
+            logger.warn("not outline")
             outline = shapely.geometry.LineString([
                 [bounds['minx'], bounds['miny']],
                 [bounds['minx'], bounds['maxy']],
@@ -300,20 +299,14 @@ class PCBApi(Api):
                     geom = [geom]
 
                 if side == 'bottom':
-                    if union:
-                        geom = [cls._flip(g, fbounds) for g in geom]
-                    else:
-                        geom = [cls._flip(g, fbounds) for g in geom]
+                    geom = [cls._flip(g, fbounds) for g in geom]
 
                 if l[1] == 'solder-mask':
                     gout = shapely.ops.unary_union(outline)
                     if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
                         gout = gout[0]
                     gout = shapely.geometry.Polygon(gout)
-                    if union:
-                        geom = gout.difference(shapely.ops.unary_union(geom))
-                    else:
-                        geom = gout.difference(shapely.ops.unary_union(geom))
+                    geom = gout.difference(shapely.ops.unary_union(geom))
 
                 geometry.shapely_add_to_dwg(
                     dwg, geoms=geom,
