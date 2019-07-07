@@ -201,9 +201,9 @@ class PCBApi(Api):
 
         try:
             pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
-            outline = pcb.layers[('both', 'outline')]['geometry']
         except KeyError:
-            outline = None
+            logger.warn("No outline?")
+            pass
 
         render_layers = []
         for mapkey in [
@@ -227,6 +227,12 @@ class PCBApi(Api):
             render_layers.append(mapkey)
 
         pcb.process_layers(union=union)
+
+        try:
+            outline = pcb.layers[('both', 'outline')]['geometry']
+        except KeyError:
+            logger.warn("NO OUTLINE")
+            outline = None
 
         bgmap = {
             'solder-mask': '#cfb797',
@@ -263,6 +269,7 @@ class PCBApi(Api):
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
 
         if not outline:
+            logger("not outline")
             outline = shapely.geometry.LineString([
                 [bounds['minx'], bounds['miny']],
                 [bounds['minx'], bounds['maxy']],
