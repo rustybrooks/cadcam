@@ -625,7 +625,7 @@ def graph_lines():
 # def float_to_color(f):
 #     pass
 
-def shapely_add_to_dwg(dwg, geoms, background='white', foreground='red', foreground_alpha=1, background_alpha=1):
+def shapely_add_to_dwg(dwg, geoms, bounds=None, background='white', foreground='red', foreground_alpha=1, background_alpha=1, fill_box=False):
     def _drawpoly(poly, stroke='black'):
         poly = poly.simplify(0.001)
         coords = [foo[:2] for foo in poly.exterior.coords]
@@ -640,7 +640,6 @@ def shapely_add_to_dwg(dwg, geoms, background='white', foreground='red', foregro
             # logger.warn("interiors = %r", coords)
             dwg.add(dwg.polygon(
                 coords,
-                # stroke='red', stroke_width=0.0005,
                 fill=background, fill_opacity=background_alpha
            ))
 
@@ -670,12 +669,13 @@ def shapely_add_to_dwg(dwg, geoms, background='white', foreground='red', foregro
 
     # bounds = shapely_svg_bounds(geoms)
 
-    # dwg.add(dwg.rect(
-    #     (bounds['minx'], bounds['miny']),
-    #     (bounds['box_width'], bounds['box_height']),
-    #     stroke='#888888', stroke_width=0.05,
-    #     fill='white'
-    # ))
+    if fill_box:
+        dwg.add(dwg.rect(
+            (bounds['minx'], bounds['miny']),
+            (bounds['box_width'], bounds['box_height']),
+            # stroke='#888888', stroke_width=0.05,
+            fill=background,
+        ))
 
     _draw_geoms(geoms)
 

@@ -580,9 +580,7 @@ class PCBProject(object):
                 v['geometry'] = g
                 union_geom = union_geom.union(shapely.ops.unary_union(g))
 
-        # logger.warn("process layers geom %r", union_geom)
         self.bounds = union_geom.bounds
-        logger.warn("bounds = %r", self.bounds)
         minx, miny, maxx, maxy = self.bounds
 
         if self.auto_zero:

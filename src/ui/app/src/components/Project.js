@@ -23,6 +23,14 @@ const pcbrenderStyle = theme => ({
     'align-items': 'center',
     'justify-content': 'center',
   },
+  'forms': {
+    'align-items': 'top'
+  },
+  'root': {
+    'align-items': 'top',
+    // background: 'green',
+    display: 'flex',
+  }
 })
 
 
@@ -38,7 +46,6 @@ const detailsStyle = theme => ({
 
 const renderStyle = theme => ({
   forms: {
-    display: 'flex',
   },
   formControl: {
     margin: theme.spacing(3),
@@ -61,9 +68,9 @@ class PCBRender extends React.Component {
       img: '',
       layers: {
         copper: true,
-        'solder-mask': false,
-        'silk-screen': false,
-        drill: false,
+        'solder-mask': true,
+        'silk-screen': true,
+        drill: true,
       }
     }
 
@@ -72,19 +79,16 @@ class PCBRender extends React.Component {
   }
 
   handleCheckChange = name => event => {
-    console.log("handleCheckChange")
     this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
-    // this.updateImage()
   }
 
   componentDidMount() {
-    console.log("Mount")
     this.updateImage()
   }
 
   componentDidUpdate(prevProps, prevState) {
     console.log(this.props, prevProps)
-    if (this.state.layers == prevState.layers) return
+    if (this.state.layers === prevState.layers) return
     this.updateImage()
   }
 
@@ -105,67 +109,40 @@ class PCBRender extends React.Component {
   render() {
     const { classes } = this.props
     const { copper, drill } = this.state.layers
-    const solderMask = this.state['solder-mask']
-    const silkScreen = this.state['silk-screen']
+    const solderMask = this.state.layers['solder-mask']
+    const silkScreen = this.state.layers['silk-screen']
 
+    console.log('render', this.state)
 
     return (
-      <div className={classes.forms}>
-        <material.FormGroup row>
-          <material.FormControlLabel
-            control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
-            label="Copper"
-          />
-          <material.FormControlLabel
-            control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solder-mask')} value="solderMask" />}
-            label="Solder Mask"
-          />
-          <material.FormControlLabel
-            control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silk-screen')} value="silkScreen" />}
-            label="Silk Screen"
-          />
-          <material.FormControlLabel
-            control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
-            label="Drill"
-          />
-        </material.FormGroup>
-        {
-          (!this.state.img.length)
-            ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
-            : <img src={this.state.img}/>
-        }
+      <div className={classes.root}>
+        <div className={classes.forms}>
+          <material.FormGroup row>
+            <material.FormControlLabel
+              control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
+              label="Copper"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solder-mask')} value="solder-mask" />}
+              label="Solder Mask"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silk-screen')} value="silk-screen" />}
+              label="Silk Screen"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
+              label="Drill"
+            />
+          </material.FormGroup>
+          {
+            (!this.state.img.length)
+              ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
+              : <img src={this.state.img}/>
+          }
+        </div>
       </div>
     )
-  }
-
-}
-
-class PCBRender2 extends React.Component {
-  loading_color = '#555888'
-
-  constructor(props) {
-    super(props)
-    this.state = {
-      img: '',
-    }
-  }
-
-  async componentDidMount() {
-    const fw = this.props.store.get('frameworks')
-    const data = await fw.PCBApi.render_svg({
-      project_key: this.props.project_key,
-      username: this.props.username,
-      side: this.props.side,
-    })
-    this.setState({img: 'data:image/svg+xml;base64,' + data})
-  }
-
-  render() {
-    let { classes } = this.props
-
-    return (!this.state.img.length)
-      ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={50} width={50} /></div>
-      : <img src={this.state.img}/>
   }
 }
 
@@ -178,10 +155,10 @@ class ProjectRender extends React.Component {
       <table border="0" cellSpacing="2">
         <tbody>
           <tr>
-            <td>
+            <td valign="top">
               <PCBRender store={this.props.store} project_key={project.project_key} username={project.username} side='top'/>
             </td>
-            <td>
+            <td valign="top">
               <PCBRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>
             </td>
           </tr>
@@ -353,29 +330,29 @@ class Project extends React.Component {
     const urlbase = '/projects/' + username + '/' + project.project_key
 
     return <material.Paper className={classes.paper}>
-          <material.Tabs value={location.pathname} >
-            <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
+      <material.Tabs value={location.pathname} >
+        <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
 
-            </material.Tab>
+        </material.Tab>
 
-            <material.Tab label="PCB Renders" value={urlbase + '/render'} component={Link} to={urlbase + '/render'}>
-            </material.Tab>
+        <material.Tab label="PCB Renders" value={urlbase + '/render'} component={Link} to={urlbase + '/render'}>
+        </material.Tab>
 
-            <material.Tab label="CAM" value={urlbase + '/cam'} component={Link} to={urlbase + '/cam'}>
-            </material.Tab>
-          </material.Tabs>
+        <material.Tab label="CAM" value={urlbase + '/cam'} component={Link} to={urlbase + '/cam'}>
+        </material.Tab>
+      </material.Tabs>
 
-          <material.Box component="div" display={tab === 'details' ? "block" : "none"}>
-            <ProjectDetails project={project}/>
-          </material.Box>
+      <material.Box component="div" display={tab === 'details' ? "block" : "none"}>
+        <ProjectDetails project={project}/>
+      </material.Box>
 
-          <material.Box component="div" display={tab === 'render' ? "block" : "none"}>
-            <ProjectRender project={project} />
-          </material.Box>
+      <material.Box component="div" display={tab === 'render' ? "block" : "none"}>
+        <ProjectRender project={project} />
+      </material.Box>
 
-          <material.Box component="div" display={tab === 'cam' ? "block" : "none"}>
-            <ProjectCAM project={project} />
-          </material.Box>
+      <material.Box component="div" display={tab === 'cam' ? "block" : "none"}>
+        <ProjectCAM project={project} />
+      </material.Box>
 
       <material.Dialog open={this.state.uploadModal} onClose={this.handleClose} aria-labelledby="form-dialog-title">
         <material.DialogTitle id="form-dialog-title">Upload File(s)</material.DialogTitle>
@@ -397,7 +374,6 @@ class Project extends React.Component {
 }
 
 PCBRender = withStore(withStyles(pcbrenderStyle)(PCBRender))
-// PCBRender2 = withStore(withStyles(renderStyle)(PCBRender2))
 ProjectDetails = withStore(withStyles(detailsStyle)(ProjectDetails))
 ProjectRender = withStore(withStyles(renderStyle)(ProjectRender))
 ProjectCAM = withStore(withStyles(camStyle)(ProjectCAM))

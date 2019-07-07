@@ -99,7 +99,6 @@ class PCBApi(Api):
         layers = api_list(layers) if layers else [
             'copper', 'solder-mask', 'drill', 'outline'
         ]
-        logger.warn("layers = %r", layers)
 
         encode = api_bool(encode)
         p = queries.project(
@@ -135,12 +134,8 @@ class PCBApi(Api):
                 logger.warn("Not found: %r", mapkey)
                 continue
 
-            logger.warn("exists... %r", mapkey)
-
             if mapkey[1] not in layers:
                 continue
-
-            logger.warn("rendering... %r", mapkey)
 
             frow = fmap[mapkey]
             file_name = projects.s3cache.get(project_file=frow)
@@ -166,7 +161,6 @@ class PCBApi(Api):
     @classmethod
     def _flip(cls, g, bounds):
         minx, miny, maxx, maxy = bounds
-        logger.warn("minx=%r, maxx=%r, miny=%r, maxy=%r", minx, maxx, miny, maxy)
         g = shapely.affinity.scale(g, xfact=-1, origin=(0, 0))
         g = shapely.affinity.translate(g, xoff=maxx+minx)
         return g
@@ -174,7 +168,7 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_svg(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=500, max_height=800, _user=None, union=False,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None, union=False,
     ):
         encode = api_bool(encode)
         union = api_bool(union)
@@ -205,7 +199,11 @@ class PCBApi(Api):
 
             fmap[file_type] = frow
 
-        pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
+        try:
+            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
+            outline = pcb.layers[('both', 'outline')]['geometry']
+        except KeyError:
+            outline = None
 
         render_layers = []
         for mapkey in [
@@ -219,15 +217,11 @@ class PCBApi(Api):
                 logger.warn("Not found: %r", mapkey)
                 continue
 
-            logger.warn("exists... %r", mapkey)
-
             if mapkey[1] not in layers:
                 continue
 
             if mapkey[0] not in [side, 'both']:
                 continue
-
-            logger.warn("rendering... %r", mapkey)
 
             pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
             render_layers.append(mapkey)
@@ -235,40 +229,46 @@ class PCBApi(Api):
         pcb.process_layers(union=union)
 
         bgmap = {
-            'solder-mask': 'green',
+            'solder-mask': '#cfb797',
             'drill': '#cccccc',
         }
 
         fgmap = {
             'copper': '#cfb797',
             'outline': 'black',
-            'solder-mask': 'black',
+            'solder-mask': '#4e2a87',
             'silk-screen': 'white',
-            'drill': '#777777',
+            'drill': '#444444',
         }
 
         bgalphamap = {
             'silk-screen': 1,
-        }
-
-        fgalphamap = {
-            'silk-screen': 1,
             'solder-mask': 1,
         }
 
-        outline = pcb.layers[('both', 'outline')]['geometry']
-        # if side == 'bottom':
-        #     outline = cls._flip(g)shapely.affinity.scale(outline, xfact=-1, origin=(0, 0))
+        fgalphamap = {
+            'solder-mask': .75,
+            'silk-screen': 1,
+        }
 
-        geoms = [outline] if union else outline
+        if outline:
+            geoms = [outline] if union else list(outline)
+        else:
+            geoms = []
         for l in render_layers:
             g = pcb.layers[l]['geometry']
             geoms.extend(g)
 
-        logger.warn("geoms... %r", geoms)
-
         bounds = geometry.shapely_svg_bounds(geoms)
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
+
+        if not outline:
+            outline = shapely.geometry.LineString([
+                [bounds['minx'], bounds['miny']],
+                [bounds['minx'], bounds['maxy']],
+                [bounds['maxx'], bounds['maxy']],
+                [bounds['maxx'], bounds['miny']],
+            ]).buffer(2)
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             dwg = geometry.shapely_get_dwg(
@@ -280,6 +280,7 @@ class PCBApi(Api):
 
             geometry.shapely_add_to_dwg(
                 dwg, geoms=outline,
+                bounds=bounds, fill_box=True,
                 background=bgmap.get('outline', '#4e2a87'),
                 foreground=fgmap.get('outline', 'green'),
                 foreground_alpha=fgalphamap.get('outline', 1),
@@ -296,6 +297,16 @@ class PCBApi(Api):
                         geom = [cls._flip(g, fbounds) for g in geom]
                     else:
                         geom = [cls._flip(g, fbounds) for g in geom]
+
+                if l[1] == 'solder-mask':
+                    gout = shapely.ops.unary_union(outline)
+                    if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
+                        gout = gout[0]
+                    gout = shapely.geometry.Polygon(gout)
+                    if union:
+                        geom = gout.difference(shapely.ops.unary_union(geom))
+                    else:
+                        geom = gout.difference(shapely.ops.unary_union(geom))
 
                 geometry.shapely_add_to_dwg(
                     dwg, geoms=geom,
