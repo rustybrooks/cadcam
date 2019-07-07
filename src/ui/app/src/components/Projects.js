@@ -152,7 +152,7 @@ class Projects extends React.Component {
     const { store, classes } = this.props
     const { projects } = this.state
 
-    if (projects === null) {
+    if (projects === null || projects.results === undefined) {
       return <div>Loading...</div>
     }
 
@@ -170,7 +170,7 @@ class Projects extends React.Component {
           <TablePagination
             style={{maxWidth: 600}}
             component="div"
-            count={projects.results.length}
+            count={projects.results ? projects.results.length : 0}
             rowsPerPage={rowsPerPage}
             rowsPerPageOptions={[10, 25, 50, 100]}
             page={page}
