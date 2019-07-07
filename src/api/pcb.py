@@ -176,8 +176,9 @@ class PCBApi(Api):
     def render_svg(
         cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=500, max_height=800, _user=None, union=True,
     ):
+        encode = api_bool(encode)
         union = api_bool(union)
-        layers = set(api_list(layers))
+        layers = set(api_list(layers) or [])
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -276,7 +277,7 @@ class PCBApi(Api):
             )
 
             geometry.shapely_add_to_dwg(
-                dwg, geoms=[outline],
+                dwg, geoms=outline,
                 background=bgmap.get('outline', '#4e2a87'),
                 foreground=fgmap.get('outline', 'green'),
                 foreground_alpha=fgalphamap.get('outline', 1),
