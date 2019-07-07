@@ -174,7 +174,7 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_svg(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=500, max_height=800, _user=None, union=True,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=500, max_height=800, _user=None, union=False,
     ):
         encode = api_bool(encode)
         union = api_bool(union)
@@ -260,10 +260,12 @@ class PCBApi(Api):
         # if side == 'bottom':
         #     outline = cls._flip(g)shapely.affinity.scale(outline, xfact=-1, origin=(0, 0))
 
-        geoms = [outline]
+        geoms = [outline] if union else outline
         for l in render_layers:
             g = pcb.layers[l]['geometry']
             geoms.extend(g)
+
+        logger.warn("geoms... %r", geoms)
 
         bounds = geometry.shapely_svg_bounds(geoms)
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
@@ -290,7 +292,10 @@ class PCBApi(Api):
                     geom = [geom]
 
                 if side == 'bottom':
-                    geom = [cls._flip(g, fbounds) for g in geom]
+                    if union:
+                        geom = [cls._flip(g, fbounds) for g in geom]
+                    else:
+                        geom = [cls._flip(g, fbounds) for g in geom]
 
                 geometry.shapely_add_to_dwg(
                     dwg, geoms=geom,
@@ -311,31 +316,6 @@ class PCBApi(Api):
                     content=open(tf.name),
                     content_type='image/svg+xml',
                 )
-
-    @classmethod
-    def render3(cls, union=True):
-        union = api_bool(union)
-        import shapely.geometry
-        import shapely.ops
-        from lib.campy import geometry
-
-        p1 = shapely.geometry.Polygon([[0, 0], [1, 0], [1, .2], [0, .2]])
-        p2 = shapely.geometry.Polygon([[0, 1], [1, 1], [1, .8], [0, .8]])
-        p3 = shapely.geometry.Polygon([[0, 0], [.2, 0], [.2, 1], [0, 1]])
-        p4 = shapely.geometry.Polygon([[1, 1], [.8, 1], [.8, 0], [1, 0]])
-        p5 = shapely.geometry.Polygon([[.4, .4], [.4, .6], [.6, .6], [.6, .4]])
-        # polys = [p1, p2, p3, p4, p5]
-        polys = [p5, p1, p2, p3, p4]
-        if union:
-            geoms = [shapely.ops.unary_union(polys)]
-        else:
-            geoms = polys
-
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            geometry.shapely_to_svg(geoms=geoms, svg_file=tf.name)
-
-            return FileResponse(content=open(tf.name), content_type='image/svg+xml')
-
 
     # @classmethod
     # def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):

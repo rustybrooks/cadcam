@@ -569,7 +569,7 @@ class PCBProject(object):
             if k == ('both', 'drill'):
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
             elif k[1] == ('both', 'outline'):
-                g = [pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)]
+                g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
             else:
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
 
