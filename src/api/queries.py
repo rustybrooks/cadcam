@@ -193,8 +193,6 @@ def projects(user_id=None, username=None, viewing_user_id=None, project_key=None
         limit=SQL.limit(page=page, limit=limit)
     )
 
-    logger.warn("%r - %r", query, bindvars)
-
     return list(SQL.select_foreach(query, bindvars))
 
 

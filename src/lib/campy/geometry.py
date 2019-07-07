@@ -625,18 +625,14 @@ def graph_lines():
 # def float_to_color(f):
 #     pass
 
-def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
-    background = "white"
-    foreground = "red"
-
+def shapely_add_to_dwg(dwg, geoms, background='white', foreground='red', foreground_alpha=1, background_alpha=1):
     def _drawpoly(poly, stroke='black'):
         poly = poly.simplify(0.001)
         coords = [foo[:2] for foo in poly.exterior.coords]
         # logger.warn("coords = %r", coords)
         dwg.add(dwg.polygon(
             coords,
-            # stroke='green', stroke_width=0.0005,
-            fill=foreground, fill_opacity=1
+            fill=foreground, fill_opacity=foreground_alpha
         ))
 
         for i in poly.interiors:
@@ -645,7 +641,7 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
             dwg.add(dwg.polygon(
                 coords,
                 # stroke='red', stroke_width=0.0005,
-                fill=background, fill_opacity=1
+                fill=background, fill_opacity=background_alpha
            ))
 
     def _draw_geoms(_geoms):
@@ -656,12 +652,12 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
                 for g2 in g:
                     _drawpoly(g2)
             elif isinstance(g, shapely.geometry.Point):
-                x, y = g.coords[0][:2]
-                dwg.add(dwg.ellipse((x, y), (.02, .02), fill='purple'))
+                x, y, z = g.coords[0]
+                dwg.add(dwg.ellipse((x, y), (z, z), fill=foreground, fill_opacity=foreground_alpha))
             elif isinstance(g, shapely.geometry.MultiPoint):
                 for g2 in g:
                     x, y = g2.coords[0][:2]
-                    dwg.add(dwg.ellipse((x, y), (.02, .02), fill='purple'))
+                    dwg.add(dwg.ellipse((x, y), (.02, .02), fill=foreground, fill_opacity=foreground_alpha))
             elif isinstance(g, shapely.geometry.GeometryCollection):
                 _draw_geoms(g)
             else:
@@ -672,14 +668,14 @@ def shapely_add_to_dwg(dwg, geoms, width=1000, height=1000, marginpct=10):
 
     geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
 
-    bounds = shapely_svg_bounds(geoms)
+    # bounds = shapely_svg_bounds(geoms)
 
-    dwg.add(dwg.rect(
-        (bounds['minx'], bounds['miny']),
-        (bounds['box_width'], bounds['box_height']),
-        # stroke='#888888', stroke_width=0.02,
-        fill='white'
-    ))
+    # dwg.add(dwg.rect(
+    #     (bounds['minx'], bounds['miny']),
+    #     (bounds['box_width'], bounds['box_height']),
+    #     stroke='#888888', stroke_width=0.05,
+    #     fill='white'
+    # ))
 
     _draw_geoms(geoms)
 
@@ -701,6 +697,8 @@ def shapely_svg_bounds(geoms):
     return {
         'minx': minx,
         'miny': miny,
+        'maxx': maxx,
+        'maxy': maxy,
         'box_width': box_width,
         'box_height': box_height,
     }
@@ -733,12 +731,6 @@ def shapely_to_svg(svg_file, geoms, width=1000, height=1000, marginpct=10):
         width=width, height=height
     )
 
-    shapely_add_to_dwg(
-        dwg=dwg,
-        geoms=geoms,
-        width=width,
-        height=height,
-        marginpct=marginpct
-    )
+    shapely_add_to_dwg(dwg=dwg, geoms=geoms)
     dwg.save()
 

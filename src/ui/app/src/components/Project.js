@@ -61,10 +61,9 @@ class PCBRender extends React.Component {
       img: '',
       layers: {
         copper: true,
-        solderMask: false,
-        silkScreen: false,
+        'solder-mask': false,
+        'silk-screen': false,
         drill: false,
-        outline: false
       }
     }
 
@@ -73,22 +72,42 @@ class PCBRender extends React.Component {
   }
 
   handleCheckChange = name => event => {
-    this.setState({[name]: event.target.checked })
+    console.log("handleCheckChange")
+    this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
+    // this.updateImage()
   }
 
-  async componentDidMount() {
+  componentDidMount() {
+    console.log("Mount")
+    this.updateImage()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    console.log(this.props, prevProps)
+    if (this.state.layers == prevState.layers) return
+    this.updateImage()
+  }
+
+  async updateImage() {
     const fw = this.props.store.get('frameworks')
-    const data = await fw.PCBApi.render({
+    const layers = Object.keys(this.state.layers).filter(key => this.state.layers[key])
+    this.setState({img: ''})
+    const data = await fw.PCBApi.render_svg({
       project_key: this.props.project_key,
       username: this.props.username,
       side: this.props.side,
+      layers: layers.join(),
     })
-    this.setState({img: 'data:image/jpeg;base64,' + data})
+    this.setState({img: 'data:image/svg+xml;base64,' + data})
+
   }
 
   render() {
     const { classes } = this.props
-    const { copper, solderMask, silkScreen, drill, outline } = this.state.layers
+    const { copper, drill } = this.state.layers
+    const solderMask = this.state['solder-mask']
+    const silkScreen = this.state['silk-screen']
+
 
     return (
       <div className={classes.forms}>
@@ -98,20 +117,16 @@ class PCBRender extends React.Component {
             label="Copper"
           />
           <material.FormControlLabel
-            control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solderMask')} value="solderMask" />}
+            control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solder-mask')} value="solderMask" />}
             label="Solder Mask"
           />
           <material.FormControlLabel
-            control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silkScreen')} value="silkScreen" />}
+            control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silk-screen')} value="silkScreen" />}
             label="Silk Screen"
           />
           <material.FormControlLabel
             control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
             label="Drill"
-          />
-          <material.FormControlLabel
-            control={<material.Checkbox checked={outline} onChange={this.handleCheckChange('outline')} value="outline" />}
-            label="Outline"
           />
         </material.FormGroup>
         {
@@ -183,20 +198,20 @@ class ProjectCAM extends React.Component {
       {
         project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
       }
-      <table border="0" cellSpacing="2">
-        <tbody>
-        <tr>
-          <td>
-            <PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}
-                        side='top'/>
-          </td>
-          <td>
-            <PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}
-                        side='bottom'/>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+      {/*<table border="0" cellSpacing="2">*/}
+        {/*<tbody>*/}
+        {/*<tr>*/}
+          {/*<td>*/}
+            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
+                        {/*side='top'/>*/}
+          {/*</td>*/}
+          {/*<td>*/}
+            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
+                        {/*side='bottom'/>*/}
+          {/*</td>*/}
+        {/*</tr>*/}
+        {/*</tbody>*/}
+      {/*</table>*/}
     </div>
   }
 }
@@ -382,7 +397,7 @@ class Project extends React.Component {
 }
 
 PCBRender = withStore(withStyles(pcbrenderStyle)(PCBRender))
-PCBRender2 = withStore(withStyles(renderStyle)(PCBRender2))
+// PCBRender2 = withStore(withStyles(renderStyle)(PCBRender2))
 ProjectDetails = withStore(withStyles(detailsStyle)(ProjectDetails))
 ProjectRender = withStore(withStyles(renderStyle)(ProjectRender))
 ProjectCAM = withStore(withStyles(camStyle)(ProjectCAM))

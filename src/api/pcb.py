@@ -94,8 +94,12 @@ class PCBApi(Api):
 
     @classmethod
     @Api.config(require_login=False)
-    def render(cls, username=None, project_key=None, side='top', encode=True, _user=None):
+    def render(cls, username=None, project_key=None, layers=None, side='top', encode=True, _user=None):
         rtheme = theme.THEMES['OSH Park']
+        layers = api_list(layers) if layers else [
+            'copper', 'solder-mask', 'drill', 'outline'
+        ]
+        logger.warn("layers = %r", layers)
 
         encode = api_bool(encode)
         p = queries.project(
@@ -119,6 +123,7 @@ class PCBApi(Api):
 
             fmap[file_type] = frow
 
+        rendered = False
         for mapkey in [
             (side, 'copper'),
             (side, 'solder-mask'),
@@ -130,9 +135,17 @@ class PCBApi(Api):
                 logger.warn("Not found: %r", mapkey)
                 continue
 
+            logger.warn("exists... %r", mapkey)
+
+            if mapkey[1] not in layers:
+                continue
+
+            logger.warn("rendering... %r", mapkey)
+
             frow = fmap[mapkey]
             file_name = projects.s3cache.get(project_file=frow)
             layer = gerber.load_layer(file_name)
+            rendered = True
             ctx.render_layer(
                 layer,
                 settings=rtheme.get(layer.layer_class, RenderSettings()), bgsettings=rtheme['background']
@@ -142,7 +155,7 @@ class PCBApi(Api):
             ctx.dump(tf.name)
 
             if encode:
-                data = base64.b64encode(open(tf.name).read())
+                data = base64.b64encode(open(tf.name).read()) if rendered else None
                 return data
             else:
                 return FileResponse(
@@ -151,12 +164,20 @@ class PCBApi(Api):
                 )
 
     @classmethod
+    def _flip(cls, g, bounds):
+        minx, miny, maxx, maxy = bounds
+        logger.warn("minx=%r, maxx=%r, miny=%r, maxy=%r", minx, maxx, miny, maxy)
+        g = shapely.affinity.scale(g, xfact=-1, origin=(0, 0))
+        g = shapely.affinity.translate(g, xoff=maxx+minx)
+        return g
+
+    @classmethod
     @Api.config(require_login=False)
     def render_svg(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=800, max_height=800, _user=None, union=True,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=500, max_height=800, _user=None, union=True,
     ):
         union = api_bool(union)
-        layers = api_list(layers)
+        layers = set(api_list(layers))
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -174,20 +195,111 @@ class PCBApi(Api):
         )
 
         files = queries.project_files(project_id=p.project_id)
-        for f in files:
-            file_type = PCBProject.identify_file(f.file_name)
+
+        fmap = {}
+        for frow in files:
+            file_type = PCBProject.identify_file(frow.file_name)
             if not file_type:
                 continue
 
-            if file_type != ('top', 'copper'):
+            fmap[file_type] = frow
+
+        pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
+
+        render_layers = []
+        for mapkey in [
+            ('both', 'outline'),
+            (side, 'copper'),
+            (side, 'solder-mask'),
+            (side, 'silk-screen'),
+            ('both', 'drill'),
+        ]:
+            if mapkey not in fmap:
+                logger.warn("Not found: %r", mapkey)
                 continue
 
-            pcb.load_layer(f.file_name, projects.s3cache.get_fobj(project_file=f))
+            logger.warn("exists... %r", mapkey)
+
+            if mapkey[1] not in layers:
+                continue
+
+            if mapkey[0] not in [side, 'both']:
+                continue
+
+            logger.warn("rendering... %r", mapkey)
+
+            pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
+            render_layers.append(mapkey)
 
         pcb.process_layers(union=union)
 
+        bgmap = {
+            'solder-mask': 'green',
+            'drill': '#cccccc',
+        }
+
+        fgmap = {
+            'copper': '#cfb797',
+            'outline': 'black',
+            'solder-mask': 'black',
+            'silk-screen': 'white',
+            'drill': '#777777',
+        }
+
+        bgalphamap = {
+            'silk-screen': 1,
+        }
+
+        fgalphamap = {
+            'silk-screen': 1,
+            'solder-mask': 1,
+        }
+
+        outline = pcb.layers[('both', 'outline')]['geometry']
+        # if side == 'bottom':
+        #     outline = cls._flip(g)shapely.affinity.scale(outline, xfact=-1, origin=(0, 0))
+
+        geoms = [outline]
+        for l in render_layers:
+            g = pcb.layers[l]['geometry']
+            geoms.extend(g)
+
+        bounds = geometry.shapely_svg_bounds(geoms)
+        fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
+
         with tempfile.NamedTemporaryFile(delete=False) as tf:
-            pcb.layer_to_svg(('top', 'copper'), tf.name, width=max_width, height=max_height)
+            dwg = geometry.shapely_get_dwg(
+                svg_file=tf.name,
+                bounds=bounds,
+                marginpct=0,
+                width=max_width, height=max_height
+            )
+
+            geometry.shapely_add_to_dwg(
+                dwg, geoms=[outline],
+                background=bgmap.get('outline', '#4e2a87'),
+                foreground=fgmap.get('outline', 'green'),
+                foreground_alpha=fgalphamap.get('outline', 1),
+                background_alpha=bgalphamap.get('outline', 1),
+            )
+
+            for l in render_layers:
+                geom = pcb.layers[l]['geometry']
+                if not isinstance(geom, (list, tuple)):
+                    geom = [geom]
+
+                if side == 'bottom':
+                    geom = [cls._flip(g, fbounds) for g in geom]
+
+                geometry.shapely_add_to_dwg(
+                    dwg, geoms=geom,
+                    background=bgmap.get(l[1], '#4e2a87'),
+                    foreground=fgmap.get(l[1], 'green'),
+                    foreground_alpha=fgalphamap.get(l[1], 1),
+                    background_alpha=bgalphamap.get(l[1], 1),
+                )
+
+            dwg.save()
 
             if encode:
                 data = base64.b64encode(open(tf.name).read())

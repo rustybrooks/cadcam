@@ -13,7 +13,7 @@ def is_logged_in(request, api_data, url_data):
 
         try:
             payload = jwt.decode(api_key, secret=queries.JWT_SECRET, verify=False)
-            logger.warn("payload = %r", payload)
+            # logger.warn("payload = %r", payload)
             if 'user_id' in payload:
                 return queries.User(user_id=payload['user_id'], is_authenticated=True)
         except (jwt.exceptions.InvalidSignatureError, jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError) as e:

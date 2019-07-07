@@ -569,7 +569,7 @@ class PCBProject(object):
             if k == ('both', 'drill'):
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
             elif k[1] == ('both', 'outline'):
-                g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
+                g = [pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)]
             else:
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
 
@@ -580,6 +580,7 @@ class PCBProject(object):
                 v['geometry'] = g
                 union_geom = union_geom.union(shapely.ops.unary_union(g))
 
+        logger.warn("process layers geom %r", union_geom)
         self.bounds = union_geom.bounds
         logger.warn("bounds = %r", self.bounds)
         minx, miny, maxx, maxy = self.bounds
