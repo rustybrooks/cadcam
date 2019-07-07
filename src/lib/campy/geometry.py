@@ -680,8 +680,9 @@ def shapely_add_to_dwg(dwg, geoms, bounds=None, background='white', foreground='
     _draw_geoms(geoms)
 
 
-def shapely_svg_bounds(geoms):
-    geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
+def shapely_svg_bounds(geoms, flip=True):
+    if flip:
+        geoms = [shapely.affinity.scale(g, yfact=-1, origin=(0, 0)) for g in geoms]
 
     minx, miny, maxx, maxy = geoms[0].bounds
     for g in geoms[1:]:

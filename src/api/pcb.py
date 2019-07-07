@@ -201,7 +201,6 @@ class PCBApi(Api):
         try:
             pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
         except KeyError:
-            logger.warn("No outline?")
             pass
 
         render_layers = []
@@ -265,16 +264,31 @@ class PCBApi(Api):
             geoms.extend(g)
 
         bounds = geometry.shapely_svg_bounds(geoms)
+        logger.warn("bounds = %r", bounds)
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
 
         if not outline:
-            logger.warn("not outline")
-            outline = shapely.geometry.LineString([
-                [bounds['minx'], bounds['miny']],
-                [bounds['minx'], bounds['maxy']],
-                [bounds['maxx'], bounds['maxy']],
-                [bounds['maxx'], bounds['miny']],
-            ]).buffer(2)
+            bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
+            outline = shapely.geometry.Polygon([
+                [bounds2['minx'], bounds2['miny']],
+                [bounds2['minx'], bounds2['maxy']],
+                [bounds2['maxx'], bounds2['maxy']],
+                [bounds2['maxx'], bounds2['miny']],
+            ])
+        else:
+            bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
+            gout = shapely.ops.unary_union(outline)
+            outline = shapely.geometry.Polygon(gout.exterior).simplify(0.005)
+
+
+            # logger.warn("before %r %r", list(gout.exterior.coords), gout.interiors)
+            # outline = shapely.geometry.Polygon([
+            #    [bounds2['minx'], bounds2['miny']],
+            #    [bounds2['minx'], bounds2['maxy']],
+            #    [bounds2['maxx'], bounds2['maxy']],
+            #    [bounds2['maxx'], bounds2['miny']],
+            # ])
+            # logger.warn("after %r %r", list(outline.exterior.coords), outline.interiors)
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             dwg = geometry.shapely_get_dwg(
@@ -286,7 +300,7 @@ class PCBApi(Api):
 
             geometry.shapely_add_to_dwg(
                 dwg, geoms=outline,
-                bounds=bounds, fill_box=True,
+                # bounds=bounds, fill_box=True,
                 background=bgmap.get('outline', '#4e2a87'),
                 foreground=fgmap.get('outline', 'green'),
                 foreground_alpha=fgalphamap.get('outline', 1),
