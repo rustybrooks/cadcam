@@ -332,7 +332,6 @@ class Project extends React.Component {
     return <material.Paper className={classes.paper}>
       <material.Tabs value={location.pathname} >
         <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
-
         </material.Tab>
 
         <material.Tab label="PCB Renders" value={urlbase + '/render'} component={Link} to={urlbase + '/render'}>

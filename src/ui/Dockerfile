@@ -14,7 +14,6 @@ WORKDIR /srv/src/ui/app
 
 ## stuff that changes after here
 COPY . /srv/src/
-RUN npm install
-RUN npm run build
+RUN npm install && npm run build && rm -rf /srv/src/ui/app/node_modules
 
 
