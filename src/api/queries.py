@@ -219,11 +219,18 @@ def project_file(project_id=None, project_key=None, project_file_id=None, user_i
     return r[0] if r else None
 
 
-def project_files(project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None, page=None, limit=None, sort=None):
+def project_files(
+        project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None, is_deleted=None,
+        page=None, limit=None, sort=None
+):
     where, bindvars = SQL.auto_where(
         project_id=project_id, project_key=project_key, user_id=user_id, file_name=file_name,
         project_file_id=project_file_id,
     )
+
+    if is_deleted is not None:
+        where += ['is_deleted' if is_deleted else 'not is_deleted']
+
     query = """
         select project_id, project_key, project_file_id, user_id, username, file_name, s3_key, source_project_file_id, date_uploaded
         from projects p 
@@ -248,6 +255,8 @@ def add_project_file(project_id=None, file_name=None, s3_key=None, source_projec
             's3_key': s3_key,
             'source_project_file_id': source_project_file_id,
             'date_uploaded': datetime.datetime.utcnow(),
+            'is_deleted': False,
+            'date_deleted': None,
         }
     )
     return r.project_file_id
@@ -262,6 +271,8 @@ def update_project_file(project_file_id, s3_key=None, source_project_file_id=Non
             's3_key': s3_key,
             'source_project_file_id': source_project_file_id,
             'date_uploaded': datetime.datetime.utcnow(),
+            'is_deleted': False,
+            'date_deleted': None,
         }
     )
     return project_file_id
@@ -272,3 +283,10 @@ def add_or_update_project_file(project_id=None, file_name=None, s3_key=None, sou
         return update_project_file(project_file_id=p.project_file_id, s3_key=s3_key, source_project_file_id=source_project_file_id)
     else:
         return add_project_file(project_id=project_id, file_name=file_name, s3_key=s3_key, source_project_file_id=source_project_file_id)
+
+
+def delete_project_file(project_file_id=None):
+    where, bindvars = SQL.auto_where(project_file_id=project_file_id)
+    SQL.update('project_files', where=SQL.where_clause(where, prefix=None), where_data=bindvars, data={
+        'is_deleted': True, 'date_deleted': datetime.datetime.utcnow(),
+    })

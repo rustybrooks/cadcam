@@ -150,7 +150,7 @@ class GerberGeometryContext(OurRenderContext):
     def _render_region(self, primitive, color):
         logger.warn("render_region")
 
-        raise Exception("_render_region not implemented")
+        # raise Exception("_render_region not implemented")
         logger.warn("render_region is doing nothing")
         pass
         # p = shapely.geometry.MultiPolygon()

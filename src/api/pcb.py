@@ -112,7 +112,7 @@ class PCBApi(Api):
 
         ctx = GerberCairoContext()
 
-        files = queries.project_files(project_id=p.project_id)
+        files = queries.project_files(project_id=p.project_id, is_deleted=False)
 
         fmap = {}
         for frow in files:
@@ -188,7 +188,7 @@ class PCBApi(Api):
             posts=False,
         )
 
-        files = queries.project_files(project_id=p.project_id)
+        files = queries.project_files(project_id=p.project_id, is_deleted=False)
 
         fmap = {}
         for frow in files:

@@ -29,7 +29,7 @@ class App extends Component {
   render() {
     let { store } = this.props
     if (store.get('frameworks') === null) {
-     return <div>Loading</div>
+     return <div>Loading App</div>
     }
 
     return (

@@ -13,7 +13,7 @@ filterwarnings('ignore', message='Duplicate entry')
 
 initial = Migration(1, "initial version")
 for table in [
-    'machines', 'tools', 'projects', 'users',
+    'machines', 'tools', 'project_files', 'projects', 'users',
 ]:
     initial.add_statement("drop table if exists {}".format(table))
 
@@ -95,7 +95,9 @@ new.add_statement("""
         file_name varchar(200) not null,
         s3_key varchar(200) not null,
         source_project_file_id bigint references project_files(project_file_id),
-        date_uploaded timestamp not null
+        date_uploaded timestamp not null,
+        is_deleted bool default false,
+        date_deleted timestamp
     )
 """)
 new.add_statement("create index project_files_id on project_files(project_file_id)")

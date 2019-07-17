@@ -28,7 +28,6 @@ class CreateProject extends React.Component {
   }
 
   handleCreate() {
-    // this.setState({...this.state, 'createModal': false})
     console.log("closing")
     const { store } = this.props
     const fw = store.get('frameworks')
@@ -39,8 +38,13 @@ class CreateProject extends React.Component {
     let newname = event.target.value.toLowerCase().split('')
     let achar = 'a'.charCodeAt()
     let zchar = 'z'.charCodeAt()
+    let zerochar = '0'.charCodeAt()
+    let ninechar = '9'.charCodeAt()
     newname = newname.map(c => {
-      return (c.charCodeAt() < achar || c.charCodeAt() > zchar) ? '-' : c
+      return (
+        (c.charCodeAt() > achar && c.charCodeAt() < zchar) ||
+        (c.charCodeAt() > zerochar && c.charCodeAt() < ninechar)
+      ) ? c : '-'
     })
     newname = newname.join('').replace(/\-+/g, '-').replace(/^\-+|\-+$/g, '');
     this.setState({...this.state, project_key: newname, name: event.target.value})

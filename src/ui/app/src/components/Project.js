@@ -194,6 +194,24 @@ class ProjectCAM extends React.Component {
 }
 
 class ProjectDetails extends React.Component {
+  constructor(props) {
+    super(props)
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleDelete = this.handleDelete.bind(this)
+  }
+
+
+  handleDelete(project_file_id) {
+    return () => {
+      let { store } = this.props
+      let fw = store.get('frameworks')
+
+      fw.ProjectsApi.delete_file({project_key: this.props.project.project_key, project_file_id: project_file_id}).then(data => console.log(data))
+      this.props.update()
+    }
+  }
+
   render () {
     const { project, classes } = this.props
 
@@ -225,8 +243,14 @@ class ProjectDetails extends React.Component {
         {
           project.files.map(f => {
             return <tr key={f.project_file_id}>
-              <td colSpan={3}>{f.file_name}</td>
+              <td colSpan={2}>{f.file_name}</td>
               <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
+              <td>
+                {
+                  project.is_ours ? <material.Button onClick={this.handleDelete(f.project_file_id)}>Delete</material.Button> : <div></div>
+                }
+
+              </td>
             </tr>
           })
         }
@@ -295,27 +319,29 @@ class Project extends React.Component {
     const params = this.props.match.params
     const { username, project_key, tab } = params
 
+    this.setState({
+      project_key: project_key,
+      username: username,
+      tab: tab ? tab : 'details',
+    })
+
+    this.updateProjectData()
+  }
+
+  updateProjectData() {
     let { store } = this.props
     let fw = store.get('frameworks')
-    fw.ProjectsApi.project({project_key: project_key, username: username}).then(data => {
+    console.log(this.state)
+    fw.ProjectsApi.project({project_key: this.state.project_key, username: this.state.username}).then(data => {
       this.setState({
-        project_key: project_key,
-        username: username,
-        tab: tab ? tab : 'details',
         project: data,
       })
     })
   }
 
-  handleTabChange = (event, tabValue) => {
-    this.setState({ tabValue })
-  }
-
-
   render() {
     const { classes } = this.props
     const { project, tab, username } = this.state
-
 
     if (project === null) {
       return <div>Loading</div>
@@ -330,6 +356,10 @@ class Project extends React.Component {
     const urlbase = '/projects/' + username + '/' + project.project_key
 
     return <material.Paper className={classes.paper}>
+      {
+        project.is_ours ? <material.Button onClick={this.handleOpen}>Upload files</material.Button> : <div></div>
+      }
+
       <material.Tabs value={location.pathname} >
         <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
         </material.Tab>
@@ -342,7 +372,7 @@ class Project extends React.Component {
       </material.Tabs>
 
       <material.Box component="div" display={tab === 'details' ? "block" : "none"}>
-        <ProjectDetails project={project}/>
+        <ProjectDetails project={project} update={this.updateProjectData}/>
       </material.Box>
 
       <material.Box component="div" display={tab === 'render' ? "block" : "none"}>

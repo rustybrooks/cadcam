@@ -90,7 +90,7 @@ class ProjectsApi(Api):
         if not p:
             raise cls.NotFound()
 
-        p['files'] = queries.project_files(project_id=p.project_id)
+        p['files'] = queries.project_files(project_id=p.project_id, is_deleted=False)
         for f in p['files']:
             f['uploaded_ago'] = (datetime.datetime.utcnow() - f.date_uploaded).total_seconds()
         p['is_ours'] = p.username == _user.username
@@ -143,6 +143,18 @@ class ProjectsApi(Api):
                             source_project_file_id=project_file_id,
                         )
 
-        return {
-            'status': 'ok'
-        }
+        return {'status': 'ok'}
+
+    @classmethod
+    def delete_file(cls, project_key, project_file_id=None, _user=None):
+        p = queries.project(project_key=project_key, username=_user.username)
+        if not p:
+            raise cls.NotFound()
+
+        pf = queries.project_file(project_id=p.project_id, project_file_id=project_file_id)
+        if not pf:
+            raise cls.NotFound()
+
+        queries.delete_project_file(project_file_id=project_file_id)
+
+        return {'status': 'ok'}
