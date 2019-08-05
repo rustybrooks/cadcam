@@ -168,28 +168,95 @@ class ProjectRender extends React.Component {
   }
 }
 
-class ProjectCAM extends React.Component {
-  render() {
-    const {project, classes} = this.props
-    return <div>
-      {
-        project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
+class CAMRender extends React.Component {
+  loading_color = '#555888'
+
+  constructor(props) {
+    super(props)
+    this.state = {
+      img: '',
+      options: {
       }
-      {/*<table border="0" cellSpacing="2">*/}
-        {/*<tbody>*/}
-        {/*<tr>*/}
-          {/*<td>*/}
-            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
-                        {/*side='top'/>*/}
-          {/*</td>*/}
-          {/*<td>*/}
-            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
-                        {/*side='bottom'/>*/}
-          {/*</td>*/}
-        {/*</tr>*/}
-        {/*</tbody>*/}
-      {/*</table>*/}
-    </div>
+    }
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleCheckChange = this.handleCheckChange.bind(this)
+  }
+
+  handleCheckChange = name => event => {
+    this.setState({options: {...this.state.options, [name]: event.target.checked }})
+  }
+
+  componentDidMount() {
+    this.updateImage()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    console.log(this.props, prevProps)
+    if (this.state.options === prevState.options) return
+    this.updateImage()
+  }
+
+  async updateImage() {
+    // const fw = this.props.store.get('frameworks')
+    // const layers = Object.keys(this.state.layers).filter(key => this.state.layers[key])
+    // this.setState({img: ''})
+    // const data = await fw.PCBApi.render_svg({
+    //   project_key: this.props.project_key,
+    //   username: this.props.username,
+    //   side: this.props.side,
+    //   layers: layers.join(),
+    // })
+    // this.setState({img: 'data:image/svg+xml;base64,' + data})
+
+  }
+
+  render() {
+    const { classes } = this.props
+    const {  } = this.state.options
+
+    console.log('render', this.state)
+
+    return (
+      <div className={classes.root}>
+        <div className={classes.forms}>
+          <material.FormGroup row>
+            <material.FormControlLabel
+              control={<material.Checkbox checked={} onChange={this.handleCheckChange('copper')} value="copper" />}
+              label="Copper"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={} onChange={this.handleCheckChange('solder-mask')} value="solder-mask" />}
+              label="Solder Mask"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={} onChange={this.handleCheckChange('silk-screen')} value="silk-screen" />}
+              label="Silk Screen"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={} onChange={this.handleCheckChange('drill')} value="drill" />}
+              label="Drill"
+            />
+          </material.FormGroup>
+          {
+            (!this.state.img.length)
+              ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
+              : <img src={this.state.img}/>
+          }
+        </div>
+      </div>
+    )
+  }
+}
+
+
+class ProjectCAM extends React.Component {
+  constructor(props) {
+    super(props)
+  }
+
+  render() {
+    return <div></div>
   }
 }
 
