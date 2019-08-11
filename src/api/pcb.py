@@ -95,6 +95,77 @@ class PCBApi(Api):
                 # content_type='application/zip'
             )
 
+    @classmethod
+    @Api.config(file_keys=['file'], require_login=False)
+    def generate(
+        cls, username=None, project_key=None,
+        depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
+        posts='x',
+        _user=None,
+    ):
+        p = queries.project(
+            project_key=project_key,
+            username=_user.username if username == 'me' else username,
+            viewing_user_id=_user.user_id,
+            allow_public=True,
+        )
+        if not p:
+            raise cls.NotFound()
+
+        files = queries.project_files(project_id=p.project_id)
+
+        pcb = PCBProject(
+            gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
+            border=border,
+            auto_zero=True,
+            thickness=thickness,
+            posts=posts,
+        )
+
+        machine = set_machine('k2cnc')
+        machine.set_material('fr4-1oz')
+        machine.max_rpm = machine.min_rpm = 15000
+
+        if zprobe_type is None:
+            zprobe_radius = None
+        elif zprobe_type == 'auto':
+            zprobe_radius = 'auto'
+        else:
+            zprobe_radius = float(zprobe)
+
+        outdir = tempfile.mkdtemp()
+
+        pcb.pcb_job(
+            drill='top',
+            cutout='bottom',
+            iso_bit='engrave-0.01in-15',
+            drill_bit='tiny-0.9mm',
+            cutout_bit='1/16in spiral upcut',
+            post_bit='1/8in spiral upcut',
+            # file_per_operation=not one_file,
+            outline_depth=depth,
+            outline_separation=separation,
+            panelx=panelx,
+            panely=panely,
+            flip='x',
+            zprobe_radius=zprobe_radius,
+            output_directory=outdir,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tf:
+            with zipfile.ZipFile(tf.name, 'w') as zip:
+                for filename in os.listdir(outdir):
+                    zip.write(
+                        os.path.join(outdir, filename),
+                        arcname=os.path.split(filename)[-1]
+                    )
+
+            logger.warn("returning zip")
+            return FileResponse(
+                response_object=send_file(tf.name, mimetype='application/zip'),
+                # content_type='application/zip'
+            )
+
     def open_remote_file(self, ):
         pass
 

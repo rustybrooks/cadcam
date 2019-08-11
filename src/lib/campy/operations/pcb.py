@@ -536,7 +536,18 @@ class PCBProject(object):
             logger.warn("gerber_input is None, bailing")
             return
 
-        if os.path.isdir(gerber_input):
+        if isinstance(gerber_input, (list, tuple)):
+            for f in gerber_input:
+                ftype = self.identify_file(f[0])
+                logger.warn("Loading %r type=%r", f[0], ftype)
+                if ftype is None:
+                    continue
+
+                self.layers[ftype] = {
+                    'filename': f[0],
+                    'data': f[1].read(),
+                }
+        elif os.path.isdir(gerber_input):
             logger.warn("gerber_input is directory")
             for fname in os.listdir(gerber_input):
                 ftype = self.identify_file(fname)
