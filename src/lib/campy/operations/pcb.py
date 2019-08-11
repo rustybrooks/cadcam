@@ -62,7 +62,7 @@ class GerberGeometryContext(OurRenderContext):
         self.remove_polys = []
 
     def render_layer(self, layer, union=True):
-        logger.warn("render_layer")
+        # logger.warn("render_layer")
         for prim in layer.primitives:
             self.render(prim)
 
@@ -148,10 +148,10 @@ class GerberGeometryContext(OurRenderContext):
         self.polys.append(circle)
 
     def _render_region(self, primitive, color):
-        logger.warn("render_region")
+        # logger.warn("render_region")
 
-        raise Exception("_render_region not implemented")
-        logger.warn("render_region is doing nothing")
+        # raise Exception("_render_region not implemented")
+        # logger.warn("render_region is doing nothing %r", primitive.primitives)
         pass
         # p = shapely.geometry.MultiPolygon()
         # for prim in primitive.primitives:
@@ -533,9 +533,11 @@ class PCBProject(object):
         }
 
         if gerber_input is None:
+            logger.warn("gerber_input is None, bailing")
             return
 
         if os.path.isdir(gerber_input):
+            logger.warn("gerber_input is directory")
             for fname in os.listdir(gerber_input):
                 ftype = self.identify_file(fname)
                 if ftype is None:
@@ -547,9 +549,11 @@ class PCBProject(object):
                 }
 
         elif os.path.splitext(gerber_input)[-1].lower() == '.zip':
+            logger.warn("gerber_input is zip")
             z = zipfile.ZipFile(gerber_input)
             for i in z.infolist():
                 ftype = self.identify_file(i.filename)
+                logger.warn("Loading %r type=%r", i.filename, ftype)
                 if ftype is None:
                     continue
 
@@ -611,6 +615,7 @@ class PCBProject(object):
 
     def load_layer(self, file_name, fobj):
         ftype = self.identify_file(file_name)
+        logger.warn("load layer, file=%r, fobj=%r, ftype=%r", file_name, fobj, ftype)
         if ftype is None:
             return None
 
@@ -721,7 +726,7 @@ class PCBProject(object):
 
             machine().set_tool(drill_bit)
 
-            l = self.layers['drill']
+            l = self.layers[('both', 'drill')]
             for x in range(panelx):
                 for y in range(panely):
                     pcb_drill(
@@ -773,7 +778,7 @@ class PCBProject(object):
 
             machine().set_tool(drill_bit)
 
-            l = self.layers['drill']
+            l = self.layers[('both', 'drill')]
             for x in range(panelx):
                 for y in range(panely):
                     pcb_drill(

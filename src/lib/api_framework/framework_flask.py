@@ -33,10 +33,17 @@ class HttpResponse(Response):
 
 
 class FileResponse(Response):
-    def __init__(self, content=None, content_type=None):
-        super(FileResponse, self).__init__(
-            response=content, content_type=content_type
-        )
+    def __init__(self, response_object=None, content=None, content_type=None):
+        if response_object:
+            super(FileResponse, self).__init__(
+                response=response_object.response,
+                content_type=response_object.content_type,
+                status=response_object.status,
+            )
+        else:
+            super(FileResponse, self).__init__(
+                response=content, content_type=content_type
+            )
 
 
 class RequestFile(object):

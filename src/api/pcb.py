@@ -29,8 +29,8 @@ class PCBApi(Api):
         s3.upload_file(file, bucket, storage_key)
 
     @classmethod
-    @Api.config(file_keys=['file'])
-    def generate(
+    @Api.config(file_keys=['file'], require_login=False)
+    def generate_from_zip(
         cls, file=None,
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x'
@@ -39,6 +39,8 @@ class PCBApi(Api):
             for chunk in file.chunks():
                 tf.write(chunk)
             tf.flush()
+
+            logger.warn("file = %r, size = %r", tf.name, file.size)
 
             pcb = PCBProject(
                 gerber_input=tf.name,
@@ -87,7 +89,11 @@ class PCBApi(Api):
                         arcname=os.path.split(filename)[-1]
                     )
 
-            return FileResponse(content=send_file(tf.name, mimetype='application/zip'), content_type='application/zip')
+            logger.warn("returning zip")
+            return FileResponse(
+                response_object=send_file(tf.name, mimetype='application/zip'),
+                # content_type='application/zip'
+            )
 
     def open_remote_file(self, ):
         pass
@@ -375,28 +381,29 @@ class PCBApi(Api):
 
             fmap[file_type] = frow
 
-        try:
-            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
-        except KeyError:
-            pass
+        # I don't remember why I do this - probably to force the right image size/boundaries?
+        # try:
+        #     pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
+        # except KeyError:
+        #     pass
 
         render_layers = []
         for mapkey in [
             ('both', 'outline'),
             (side, 'copper'),
-            (side, 'solder-mask'),
-            (side, 'silk-screen'),
+            # (side, 'solder-mask'),
+            # (side, 'silk-screen'),
             ('both', 'drill'),
         ]:
             if mapkey not in fmap:
                 logger.warn("Not found: %r", mapkey)
                 continue
 
-            if mapkey[1] not in layers:
-                continue
+            # if mapkey[1] not in layers:
+            #     continue
 
-            if mapkey[0] not in [side, 'both']:
-                continue
+            # if mapkey[0] not in [side, 'both']:
+            #     continue
 
             pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
             render_layers.append(mapkey)
@@ -408,29 +415,6 @@ class PCBApi(Api):
         except KeyError:
             logger.warn("NO OUTLINE")
             outline = None
-
-        bgmap = {
-            'solder-mask': '#cfb797',
-            'drill': '#cccccc',
-        }
-
-        fgmap = {
-            'copper': '#cfb797',
-            'outline': 'black',
-            'solder-mask': '#4e2a87',
-            'silk-screen': 'white',
-            'drill': '#444444',
-        }
-
-        bgalphamap = {
-            'silk-screen': 1,
-            'solder-mask': 1,
-        }
-
-        fgalphamap = {
-            'solder-mask': .75,
-            'silk-screen': 1,
-        }
 
         if outline:
             geoms = list(outline)
@@ -444,28 +428,33 @@ class PCBApi(Api):
         logger.warn("bounds = %r", bounds)
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
 
-        if not outline:
-            bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
-            outline = shapely.geometry.Polygon([
-                [bounds2['minx'], bounds2['miny']],
-                [bounds2['minx'], bounds2['maxy']],
-                [bounds2['maxx'], bounds2['maxy']],
-                [bounds2['maxx'], bounds2['miny']],
-            ])
-        else:
-            bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
-            gout = shapely.ops.unary_union(outline)
-            outline = shapely.geometry.Polygon(gout.exterior).simplify(0.005)
+        separation = 0.20
+        depth = 0.005
+        panelx = 1
+        panely = 1
+        zprobe_radius = 'auto'
+        outdir = tempfile.mkdtemp()
 
+        machine = set_machine('k2cnc')
+        machine.set_material('fr4-1oz')
+        machine.max_rpm = machine.min_rpm = 15000
 
-            # logger.warn("before %r %r", list(gout.exterior.coords), gout.interiors)
-            # outline = shapely.geometry.Polygon([
-            #    [bounds2['minx'], bounds2['miny']],
-            #    [bounds2['minx'], bounds2['maxy']],
-            #    [bounds2['maxx'], bounds2['maxy']],
-            #    [bounds2['maxx'], bounds2['miny']],
-            # ])
-            # logger.warn("after %r %r", list(outline.exterior.coords), outline.interiors)
+        pcb.pcb_job(
+            drill='top',
+            cutout='bottom',
+            iso_bit='engrave-0.01in-15',
+            drill_bit='tiny-0.9mm',
+            cutout_bit='1/16in spiral upcut',
+            post_bit='1/8in spiral upcut',
+            # file_per_operation=not one_file,
+            outline_depth=depth,
+            outline_separation=separation,
+            panelx=panelx,
+            panely=panely,
+            flip='x',
+            zprobe_radius=zprobe_radius,
+            output_directory=outdir,
+        )
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             dwg = geometry.shapely_get_dwg(
@@ -475,37 +464,37 @@ class PCBApi(Api):
                 width=max_width, height=max_height
             )
 
-            geometry.shapely_add_to_dwg(
-                dwg, geoms=outline,
-                # bounds=bounds, fill_box=True,
-                background=bgmap.get('outline', '#4e2a87'),
-                foreground=fgmap.get('outline', 'green'),
-                foreground_alpha=fgalphamap.get('outline', 1),
-                background_alpha=bgalphamap.get('outline', 1),
-            )
-
-            for l in render_layers:
-                geom = pcb.layers[l]['geometry']
-                if not isinstance(geom, (list, tuple)):
-                    geom = [geom]
-
-                if side == 'bottom':
-                    geom = [cls._flip(g, fbounds) for g in geom]
-
-                if l[1] == 'solder-mask':
-                    gout = shapely.ops.unary_union(outline)
-                    if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
-                        gout = gout[0]
-                    gout = shapely.geometry.Polygon(gout)
-                    geom = gout.difference(shapely.ops.unary_union(geom))
-
-                geometry.shapely_add_to_dwg(
-                    dwg, geoms=geom,
-                    background=bgmap.get(l[1], '#4e2a87'),
-                    foreground=fgmap.get(l[1], 'green'),
-                    foreground_alpha=fgalphamap.get(l[1], 1),
-                    background_alpha=bgalphamap.get(l[1], 1),
-                )
+            # geometry.shapely_add_to_dwg(
+            #     dwg, geoms=outline,
+            #     # bounds=bounds, fill_box=True,
+            #     background=bgmap.get('outline', '#4e2a87'),
+            #     foreground=fgmap.get('outline', 'green'),
+            #     foreground_alpha=fgalphamap.get('outline', 1),
+            #     background_alpha=bgalphamap.get('outline', 1),
+            # )
+            #
+            # for l in render_layers:
+            #     geom = pcb.layers[l]['geometry']
+            #     if not isinstance(geom, (list, tuple)):
+            #         geom = [geom]
+            #
+            #     if side == 'bottom':
+            #         geom = [cls._flip(g, fbounds) for g in geom]
+            #
+            #     if l[1] == 'solder-mask':
+            #         gout = shapely.ops.unary_union(outline)
+            #         if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
+            #             gout = gout[0]
+            #         gout = shapely.geometry.Polygon(gout)
+            #         geom = gout.difference(shapely.ops.unary_union(geom))
+            #
+            #     geometry.shapely_add_to_dwg(
+            #         dwg, geoms=geom,
+            #         background=bgmap.get(l[1], '#4e2a87'),
+            #         foreground=fgmap.get(l[1], 'green'),
+            #         foreground_alpha=fgalphamap.get(l[1], 1),
+            #         background_alpha=bgalphamap.get(l[1], 1),
+            #     )
 
             dwg.save()
 
