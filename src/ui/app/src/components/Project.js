@@ -33,6 +33,25 @@ const pcbrenderStyle = theme => ({
   }
 })
 
+const camrenderStyle = theme => ({
+  'loadingDiv': {
+    height: '600px',
+    width: '600px',
+    display: 'flex',
+    'align-items': 'center',
+    'justify-content': 'center',
+  },
+  'forms': {
+    'align-items': 'top'
+  },
+  'root': {
+    'align-items': 'top',
+    // background: 'green',
+    display: 'flex',
+  }
+})
+
+
 
 const style = theme => ({
   tab: {
@@ -168,27 +187,98 @@ class ProjectRender extends React.Component {
   }
 }
 
-class ProjectCAM extends React.Component {
-  render() {
-    const {project, classes} = this.props
-    return <div>
-      {
-        project.is_ours ? <material.Button onClick={this.handleDownloadCAM}>Generate CAM</material.Button> : <div></div>
+class CAMRender extends React.Component {
+  loading_color = '#555888'
+
+  constructor(props) {
+    super(props)
+    this.state = {
+      img: '',
+      layers: {
       }
-      {/*<table border="0" cellSpacing="2">*/}
-        {/*<tbody>*/}
-        {/*<tr>*/}
-          {/*<td>*/}
-            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
-                        {/*side='top'/>*/}
-          {/*</td>*/}
-          {/*<td>*/}
-            {/*<PCBRender2 store={this.props.store} project_key={project.project_key} username={project.username}*/}
-                        {/*side='bottom'/>*/}
-          {/*</td>*/}
-        {/*</tr>*/}
-        {/*</tbody>*/}
-      {/*</table>*/}
+    }
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleCheckChange = this.handleCheckChange.bind(this)
+  }
+
+  handleCheckChange = name => event => {
+    this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
+  }
+
+  componentDidMount() {
+    this.updateImage()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    console.log(this.props, prevProps)
+    if (this.state.layers === prevState.layers) return
+    this.updateImage()
+  }
+
+  async updateImage() {
+    const fw = this.props.store.get('frameworks')
+    const layers = Object.keys(this.state.layers).filter(key => this.state.layers[key])
+    this.setState({img: ''})
+    const data = await fw.PCBApi.render_cam({
+      project_key: this.props.project_key,
+      username: this.props.username,
+      side: this.props.side,
+      layers: layers.join(),
+    })
+    this.setState({img: 'data:image/svg+xml;base64,' + data})
+
+  }
+
+  render() {
+    const { classes } = this.props
+    const { copper, drill } = this.state.layers
+
+    console.log('render', this.state)
+
+    return (
+      <div className={classes.root}>
+        <div className={classes.forms}>
+          <material.FormGroup row>
+            <material.FormControlLabel
+              control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
+              label="Copper"
+            />
+            <material.FormControlLabel
+              control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
+              label="Drill"
+            />
+          </material.FormGroup>
+          {
+            (!this.state.img.length)
+              ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
+              : <img src={this.state.img}/>
+          }
+        </div>
+      </div>
+    )
+  }
+}
+
+
+class ProjectCAM extends React.Component {
+
+  render() {
+    const { project, classes } = this.props
+
+    return <div>
+      <table border="0" cellSpacing="2">
+        <tbody>
+          <tr>
+            <td valign="top">
+              <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='top'/>
+            </td>
+            <td valign="top">
+              <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   }
 }
@@ -373,6 +463,7 @@ class Project extends React.Component {
 }
 
 PCBRender = withStore(withStyles(pcbrenderStyle)(PCBRender))
+CAMRender = withStore(withStyles(camrenderStyle)(CAMRender))
 ProjectDetails = withStore(withStyles(detailsStyle)(ProjectDetails))
 ProjectRender = withStore(withStyles(renderStyle)(ProjectRender))
 ProjectCAM = withStore(withStyles(camStyle)(ProjectCAM))
