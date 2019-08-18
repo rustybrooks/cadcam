@@ -278,7 +278,7 @@ def pcb_isolation_mill(
                 length = abs(geometry.distance(c, lastc)) if lastc else 0
                 xl = c[0] - lastc[0]
                 yl = c[1] - lastc[1]
-                if length > zrad/1.5:
+                if zrad and length > zrad/1.5:
                     # print length, ">", zrad / 1.5, length > zrad / 1.5
                     segments = int(1.5*math.ceil(length/zrad))
                     for i in range(segments-1):
@@ -303,12 +303,19 @@ def pcb_isolation_mill(
             coords = c.coords
 
         machine().goto(*coords[0])
-        zvar = _zadjust(*coords[0])
-        machine().cut(z="[{}-{}]".format(zvar, depth))
+
+        if zrad:
+            zvar = _zadjust(*coords[0])
+            machine().cut(z="[{}-{}]".format(zvar, depth))
+        else:
+            machine().cut(z=depth)
 
         for c in _zadjust_geom(coords, zrad):
-            zvar = _zadjust(*coords[0])
-            machine().cut(c[0], c[1], "[{}-{}]".format(zvar, depth))
+            if zrad:
+                zvar = _zadjust(*coords[0])
+                machine().cut(c[0], c[1], "[{}-{}]".format(zvar, depth))
+            else:
+                machine().cut(c[0], c[1], depth)
 
     clearz = clearz or 0.125
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
@@ -674,8 +681,10 @@ class PCBProject(object):
         output_directory=None, file_per_operation=True, outline_separation=0.020, outline_depth=0.010,
         cutout=None, drill=None,
         iso_bit=None, drill_bit=None, cutout_bit=None, post_bit=None,
-        panelx=1, panely=1, flip='y', zprobe_radius=None,
+        panelx=1, panely=1, flip='y', zprobe_radius=None, side='both',
     ):
+        logger.warn("side=%r", side)
+
         def _xoff(xi, side='top'):
             minx, miny, maxx, maxy = self.bounds
             pxoff = 0
@@ -695,128 +704,121 @@ class PCBProject(object):
             os.makedirs(output_directory)
 
         # .... TOP ....
-        if not file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
-            self.auto_set_stock(side='top')
-
-        if self.posts != 'none':
-            if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
+        if side in ['top', 'both']:
+            if not file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
                 self.auto_set_stock(side='top')
 
-            machine().set_tool(post_bit)
-            if self.posts == 'x':
-                minx, miny, maxx, maxy = self.bounds
-                helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
-                helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
-            elif self.posts == 'y':
-                raise Exception("not implemented")
+            if self.posts != 'none':
+                if file_per_operation:
+                    machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
+                    self.auto_set_stock(side='top')
 
-            machine().pause_program()
+                machine().set_tool(post_bit)
+                if self.posts == 'x':
+                    minx, miny, maxx, maxy = self.bounds
+                    helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
+                    helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
+                elif self.posts == 'y':
+                    raise Exception("not implemented")
 
-        if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
-            self.auto_set_stock(side='top')
+                machine().pause_program()
 
-        machine().set_tool(iso_bit)
-        l = self.layers[('top', 'copper')]
-        for x in range(panelx):
-            for y in range(panely):
-                pcb_isolation_mill(
-                    gerber_geometry=l['geometry'],
-                    xoff=_xoff(x), yoff=_yoff(y),
-                    outline_separation=outline_separation,
-                    depth=outline_depth,
-                    zprobe_radius=zprobe_radius,
-                )
-
-        if drill == 'top':
             if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
+                machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
                 self.auto_set_stock(side='top')
 
-            machine().set_tool(drill_bit)
-
-            l = self.layers[('both', 'drill')]
+            machine().set_tool(iso_bit)
+            l = self.layers[('top', 'copper')]
             for x in range(panelx):
                 for y in range(panely):
-                    pcb_drill(
+                    pcb_isolation_mill(
                         gerber_geometry=l['geometry'],
                         xoff=_xoff(x), yoff=_yoff(y),
-                        depth=self.thickness,
-                        flipy=False
+                        outline_separation=outline_separation,
+                        depth=outline_depth,
+                        zprobe_radius=zprobe_radius,
                     )
 
-        if cutout == 'top':
-            if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_top_3_cutout.ngc'))
-                self.auto_set_stock(side='top')
+            if drill == 'top':
+                if file_per_operation:
+                    machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
+                    self.auto_set_stock(side='top')
 
-            machine().set_tool(cutout_bit)
-            for x in range(panelx):
-                for y in range(panely):
-                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
+                machine().set_tool(drill_bit)
 
-        # .... BOTTOM ....
-        l = self.layers[('bottom', 'copper')]
+                l = self.layers[('both', 'drill')]
+                for x in range(panelx):
+                    for y in range(panely):
+                        pcb_drill(
+                            gerber_geometry=l['geometry'],
+                            xoff=_xoff(x), yoff=_yoff(y),
+                            depth=self.thickness,
+                            flipy=False
+                        )
 
-        if not file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))
-            self.auto_set_stock(side='bottom')
+            if cutout == 'top':
+                if file_per_operation:
+                    machine().set_file(os.path.join(output_directory, 'pcb_top_3_cutout.ngc'))
+                    self.auto_set_stock(side='top')
 
-        if file_per_operation:
-            machine().set_file(os.path.join(output_directory, 'pcb_bottom_1_iso.ngc'))
-            self.auto_set_stock(side='bottom')
+                machine().set_tool(cutout_bit)
+                for x in range(panelx):
+                    for y in range(panely):
+                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
 
-        machine().set_tool(iso_bit)
 
-        for x in range(panelx):
-            for y in range(panely):
-                pcb_isolation_mill(
-                    gerber_geometry=l['geometry'],
-                    xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
-                    outline_separation=outline_separation,
-                    depth=outline_depth,
-                    flipx=self.bounds if flip == 'x' else False,
-                    flipy=self.bounds if flip == 'y' else False,
-                    zprobe_radius=zprobe_radius,
-                )
+        if side in ['bottom', 'both']:
+            # .... BOTTOM ....
+            l = self.layers[('bottom', 'copper')]
 
-        if drill == 'bottom':
-            if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
+            if not file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))
                 self.auto_set_stock(side='bottom')
 
-            machine().set_tool(drill_bit)
+            if file_per_operation:
+                machine().set_file(os.path.join(output_directory, 'pcb_bottom_1_iso.ngc'))
+                self.auto_set_stock(side='bottom')
 
-            l = self.layers[('both', 'drill')]
+            machine().set_tool(iso_bit)
+
             for x in range(panelx):
                 for y in range(panely):
-                    pcb_drill(
+                    pcb_isolation_mill(
                         gerber_geometry=l['geometry'],
                         xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
-                        depth=self.thickness,
+                        outline_separation=outline_separation,
+                        depth=outline_depth,
                         flipx=self.bounds if flip == 'x' else False,
                         flipy=self.bounds if flip == 'y' else False,
+                        zprobe_radius=zprobe_radius,
                     )
 
-        if cutout == 'bottom':
-            if file_per_operation:
-                machine().set_file(os.path.join(output_directory, 'pcb_bottom_3_cutout.ngc'))
-                self.auto_set_stock(side='bottom')
+            if drill == 'bottom':
+                if file_per_operation:
+                    machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
+                    self.auto_set_stock(side='bottom')
 
-            machine().set_tool(cutout_bit)
-            for x in range(panelx):
-                for y in range(panely):
-                    pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y))
+                machine().set_tool(drill_bit)
 
-    #
-    #
-    #     geoms = [x for x in [
-    #         bottom_trace_geom,
-    #         #        # top_trace_geom,
-    #         drill_geom
-    #     ] if x]
-    #     geometry.shapely_to_svg('drill.svg', geoms, marginpct=0)
-    #     geometry.shapely_to_svg('drill2.svg', list(reversed(bottom_iso_geoms)) + [drill_geom], marginpct=0)
-    # #    geometry.shapely_to_svg('drill.svg', union_geom, marginpct=0)
+                l = self.layers[('both', 'drill')]
+                for x in range(panelx):
+                    for y in range(panely):
+                        pcb_drill(
+                            gerber_geometry=l['geometry'],
+                            xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
+                            depth=self.thickness,
+                            flipx=self.bounds if flip == 'x' else False,
+                            flipy=self.bounds if flip == 'y' else False,
+                        )
+
+            if cutout == 'bottom':
+                if file_per_operation:
+                    machine().set_file(os.path.join(output_directory, 'pcb_bottom_3_cutout.ngc'))
+                    self.auto_set_stock(side='bottom')
+
+                machine().set_tool(cutout_bit)
+                for x in range(panelx):
+                    for y in range(panely):
+                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y))
+

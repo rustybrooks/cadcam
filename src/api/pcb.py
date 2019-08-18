@@ -103,6 +103,9 @@ class PCBApi(Api):
         posts='x',
         _user=None,
     ):
+        if project_key is None:
+            raise cls.BadRequest("project_key is a required field")
+
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -172,6 +175,9 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render(cls, username=None, project_key=None, layers=None, side='top', encode=True, _user=None):
+        if project_key is None:
+            raise cls.BadRequest("project_key is a required field")
+
         rtheme = theme.THEMES['OSH Park']
         layers = api_list(layers) if layers else [
             'copper', 'solder-mask', 'drill', 'outline'
@@ -247,6 +253,9 @@ class PCBApi(Api):
     def render_svg(
         cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None,
     ):
+        if project_key is None:
+            raise cls.BadRequest("project_key is a required field")
+
         encode = api_bool(encode)
         layers = set(api_list(layers) or [])
         p = queries.project(
@@ -422,10 +431,16 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_cam(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None,
+        depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
+        posts='x',
+        max_width=600, max_height=600, _user=None,
     ):
         encode = api_bool(encode)
-        layers = set(api_list(layers) or [])
+
+        if project_key is None:
+            raise cls.BadRequest("project_key is a required field")
+
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -435,81 +450,31 @@ class PCBApi(Api):
         if not p:
             raise cls.NotFound()
 
-        pcb = PCBProject(
-            border=0,
-            auto_zero=True,
-            thickness=1.7*constants.MM,
-            posts=False,
-        )
-
         files = queries.project_files(project_id=p.project_id)
 
-        fmap = {}
-        for frow in files:
-            file_type = PCBProject.identify_file(frow.file_name)
-            if not file_type:
-                continue
-
-            fmap[file_type] = frow
-
-        # I don't remember why I do this - probably to force the right image size/boundaries?
-        # try:
-        #     pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
-        # except KeyError:
-        #     pass
-
-        render_layers = []
-        for mapkey in [
-            ('both', 'outline'),
-            (side, 'copper'),
-            # (side, 'solder-mask'),
-            # (side, 'silk-screen'),
-            ('both', 'drill'),
-        ]:
-            if mapkey not in fmap:
-                logger.warn("Not found: %r", mapkey)
-                continue
-
-            # if mapkey[1] not in layers:
-            #     continue
-
-            # if mapkey[0] not in [side, 'both']:
-            #     continue
-
-            pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
-            render_layers.append(mapkey)
-
-        pcb.process_layers(union=False)
-
-        try:
-            outline = pcb.layers[('both', 'outline')]['geometry']
-        except KeyError:
-            logger.warn("NO OUTLINE")
-            outline = None
-
-        if outline:
-            geoms = list(outline)
-        else:
-            geoms = []
-        for l in render_layers:
-            g = pcb.layers[l]['geometry']
-            geoms.extend(g)
-
-        bounds = geometry.shapely_svg_bounds(geoms)
-        logger.warn("bounds = %r", bounds)
-        fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
-
-        separation = 0.20
-        depth = 0.005
-        panelx = 1
-        panely = 1
-        zprobe_radius = 'auto'
-        outdir = tempfile.mkdtemp()
+        pcb = PCBProject(
+            gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
+            border=border,
+            auto_zero=False,
+            thickness=thickness,
+            posts=posts,
+        )
 
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 15000
+        machine.set_save_geoms(True)
 
+        # if zprobe_type is None:
+        #     zprobe_radius = None
+        # elif zprobe_type == 'auto':
+        #     zprobe_radius = 'auto'
+        # else:
+        #     zprobe_radius = float(zprobe)
+
+        outdir = tempfile.mkdtemp()
+
+        logger.warn("before geom=%r", len(machine.geometry))
         pcb.pcb_job(
             drill='top',
             cutout='bottom',
@@ -517,17 +482,22 @@ class PCBApi(Api):
             drill_bit='tiny-0.9mm',
             cutout_bit='1/16in spiral upcut',
             post_bit='1/8in spiral upcut',
-            # file_per_operation=not one_file,
+            file_per_operation=False,
             outline_depth=depth,
             outline_separation=separation,
             panelx=panelx,
             panely=panely,
             flip='x',
-            zprobe_radius=zprobe_radius,
-            output_directory=outdir,
+            # zprobe_radius=zprobe_radius,
+            output_directory=outdir,  # we're gonna ignore this probably though
+            side=side,
         )
+        logger.warn("after geom=%r", len(machine.geometry))
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
+            # logger.warn("geom = %r", machine.geometry)
+            bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
+
             dwg = geometry.shapely_get_dwg(
                 svg_file=tf.name,
                 bounds=bounds,
@@ -535,37 +505,17 @@ class PCBApi(Api):
                 width=max_width, height=max_height
             )
 
-            # geometry.shapely_add_to_dwg(
-            #     dwg, geoms=outline,
-            #     # bounds=bounds, fill_box=True,
-            #     background=bgmap.get('outline', '#4e2a87'),
-            #     foreground=fgmap.get('outline', 'green'),
-            #     foreground_alpha=fgalphamap.get('outline', 1),
-            #     background_alpha=bgalphamap.get('outline', 1),
-            # )
-            #
-            # for l in render_layers:
-            #     geom = pcb.layers[l]['geometry']
-            #     if not isinstance(geom, (list, tuple)):
-            #         geom = [geom]
-            #
-            #     if side == 'bottom':
-            #         geom = [cls._flip(g, fbounds) for g in geom]
-            #
-            #     if l[1] == 'solder-mask':
-            #         gout = shapely.ops.unary_union(outline)
-            #         if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
-            #             gout = gout[0]
-            #         gout = shapely.geometry.Polygon(gout)
-            #         geom = gout.difference(shapely.ops.unary_union(geom))
-            #
-            #     geometry.shapely_add_to_dwg(
-            #         dwg, geoms=geom,
-            #         background=bgmap.get(l[1], '#4e2a87'),
-            #         foreground=fgmap.get(l[1], 'green'),
-            #         foreground_alpha=fgalphamap.get(l[1], 1),
-            #         background_alpha=bgalphamap.get(l[1], 1),
-            #     )
+            # goto
+            geometry.shapely_add_to_dwg(
+                dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
+                foreground='green'
+            )
+
+            # cut
+            geometry.shapely_add_to_dwg(
+                dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
+                foreground='blue'
+            )
 
             dwg.save()
 
@@ -578,48 +528,4 @@ class PCBApi(Api):
                     content=open(tf.name),
                     content_type='image/svg+xml',
                 )
-
-    # @classmethod
-    # def render2(cls, project_key=None, side='top', max_width=600, max_height=600, encode=True, _user=None):
-    #     encode = api_bool(encode)
-    #
-    #     p = queries.project(project_key=project_key, user_id=_user.user_id, allow_public=True)
-    #     if not p:
-    #         raise cls.NotFound()
-    #
-    #     GERBER_FOLDER = tempfile.mkdtemp()
-    #
-    #     for frow in queries.project_files(project_id=p.project_id):
-    #         fname = os.path.join(GERBER_FOLDER, frow.file_name)
-    #         projects.s3.download_file(projects.bucket, frow.s3_key, fname)
-    #
-    #     # Create a new drawing context
-    #     ctx = GerberCairoContext()
-    #
-    #     # Create a new PCB instance
-    #     pcb = PCB.from_directory(GERBER_FOLDER)
-    #
-    #     with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tf:
-    #         if side == 'top':
-    #             # Render PCB top view
-    #             ctx.render_layers(
-    #                 pcb.top_layers, tf.name,
-    #                 theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
-    #             )
-    #         else:
-    #             # Render PCB bottom view
-    #             ctx.render_layers(
-    #                 pcb.bottom_layers, tf.name,
-    #                 theme.THEMES['OSH Park'], max_width=max_width, max_height=max_height
-    #             )
-    #
-    #         if encode:
-    #             data = base64.b64encode(open(tf.name).read())
-    #             return data
-    #         else:
-    #             return FileResponse(
-    #                 content=send_file(tf.name, mimetype='application/png'),
-    #                 # content_type='application/png'
-    #             )
-
 

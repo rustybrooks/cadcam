@@ -11,8 +11,6 @@ from ..cammath import frange
 # stepdown is X% for a percentage of bit diameter, X for absolute
 
 
-
-
 def operation(required=None, operation_feedrate=None, comment=None):
     required = required or []
 

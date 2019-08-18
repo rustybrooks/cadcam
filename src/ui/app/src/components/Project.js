@@ -227,7 +227,6 @@ class CAMRender extends React.Component {
       layers: layers.join(),
     })
     this.setState({img: 'data:image/svg+xml;base64,' + data})
-
   }
 
   render() {
