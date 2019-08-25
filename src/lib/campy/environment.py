@@ -444,8 +444,8 @@ materials = {
 
 
 machines = {
-    'k2cnc': Environment(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
-    'lms': Environment(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
+    'k2cnc': dict(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
+    'lms': dict(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
 }
 
 holes = HoleSize()

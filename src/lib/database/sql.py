@@ -42,9 +42,6 @@ def chunked(iterator, chunksize):
         yield chunk
 
 
-
-
-
 def thread_id():
     t = threading.current_thread()
     return '{}/{}'.format(t.name, t.ident % 100000)

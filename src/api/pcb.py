@@ -431,7 +431,7 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_cam(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None,
+        cls, project_key=None, username=None, side='top', encode=True,
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x',
         max_width=600, max_height=600, _user=None,
