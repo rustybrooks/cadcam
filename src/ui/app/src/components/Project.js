@@ -106,7 +106,6 @@ class PCBRender extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    console.log(this.props, prevProps)
     if (this.state.layers === prevState.layers) return
     this.updateImage()
   }
@@ -130,8 +129,6 @@ class PCBRender extends React.Component {
     const { copper, drill } = this.state.layers
     const solderMask = this.state.layers['solder-mask']
     const silkScreen = this.state.layers['silk-screen']
-
-    console.log('render', this.state)
 
     return (
       <div className={classes.root}>
@@ -166,7 +163,6 @@ class PCBRender extends React.Component {
 }
 
 class ProjectRender extends React.Component {
-
   render() {
     const { project, classes } = this.props
 
@@ -187,16 +183,9 @@ class ProjectRender extends React.Component {
   }
 }
 
-class CAMRender extends React.Component {
-  loading_color = '#555888'
-
+class ProjectCAM extends React.Component {
   constructor(props) {
     super(props)
-    this.state = {
-      img: '',
-      layers: {
-      }
-    }
 
     // This binding is necessary to make `this` work in the callback
     this.handleCheckChange = this.handleCheckChange.bind(this)
@@ -206,67 +195,31 @@ class CAMRender extends React.Component {
     this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
   }
 
-  componentDidMount() {
-    this.updateImage()
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    console.log(this.props, prevProps)
-    if (this.state.layers === prevState.layers) return
-    this.updateImage()
-  }
-
-  async updateImage() {
-    const fw = this.props.store.get('frameworks')
-    const layers = Object.keys(this.state.layers).filter(key => this.state.layers[key])
-    this.setState({img: ''})
-    const data = await fw.PCBApi.render_cam({
-      project_key: this.props.project_key,
-      username: this.props.username,
-      side: this.props.side,
-      layers: layers.join(),
-    })
-    this.setState({img: 'data:image/svg+xml;base64,' + data})
-  }
-
   render() {
-    const { classes } = this.props
-    const { copper, drill } = this.state.layers
+    const { classes, project } = this.props
 
-    console.log('render', this.state)
-
-    return (
-      <div className={classes.root}>
-        <div className={classes.forms}>
-          <material.FormGroup row>
-            <material.FormControlLabel
-              control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
-              label="Copper"
-            />
-            <material.FormControlLabel
-              control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
-              label="Drill"
-            />
-          </material.FormGroup>
-          {
-            (!this.state.img.length)
-              ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
-              : <img src={this.state.img}/>
-          }
-        </div>
+    return <div className={classes.root}>
+      <div className={classes.forms}>
+        <material.FormGroup row>
+          <material.FormControl className={classes.formControl}>
+            <materialInputLabel htmlFor="age-simple">Age</materialInputLabel>
+            <material.Select
+              value={10}
+              // onChange={handleChange}
+              inputProps={{
+                name: 'age',
+                id: 'age-simple',
+              }}
+            >
+              <material.MenuItem value={10}>Ten</material.MenuItem>
+              <material.MenuItem value={20}>Twenty</material.MenuItem>
+              <material.MenuItem value={30}>Thirty</material.MenuItem>
+            </material.Select>
+          </material.FormControl>
+        </material.FormGroup>
       </div>
-    )
-  }
-}
 
-
-class ProjectCAM extends React.Component {
-
-  render() {
-    const { project, classes } = this.props
-
-    return <div>
-      <table border="0" cellSpacing="2">
+      <table border={0} cellSpacing={2}>
         <tbody>
           <tr>
             <td valign="top">
@@ -281,6 +234,56 @@ class ProjectCAM extends React.Component {
     </div>
   }
 }
+
+class CAMRender extends React.Component {
+  loading_color = '#555888'
+
+  constructor(props) {
+    super(props)
+    this.state = {
+      img: '',
+    }
+  }
+
+  componentDidMount() {
+    this.updateImage()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.layers === prevState.layers) return
+    this.updateImage()
+  }
+
+  async updateImage() {
+    const fw = this.props.store.get('frameworks')
+    this.setState({img: ''})
+    const data = await fw.PCBApi.render_cam({
+      project_key: this.props.project_key,
+      username: this.props.username,
+      side: this.props.side,
+      // layers: layers.join(),
+    })
+    this.setState({img: 'data:image/svg+xml;base64,' + data})
+  }
+
+  render() {
+    const { classes } = this.props
+
+    console.log("rendercam props", this.props)
+
+    return (
+      <div className={classes.root}>
+        {
+          (!this.state.img.length)
+            ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
+            : <img src={this.state.img}/>
+        }
+      </div>
+    )
+  }
+}
+
+
 
 class ProjectDetails extends React.Component {
   render () {
