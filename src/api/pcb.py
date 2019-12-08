@@ -275,6 +275,8 @@ class PCBApi(Api):
         )
 
         files = queries.project_files(project_id=p.project_id)
+        if not files:
+            return cls._empty_svg(encode=encode)
 
         fmap = {}
         for frow in files:
@@ -428,6 +430,35 @@ class PCBApi(Api):
                     content_type='image/svg+xml',
                 )
 
+    def _empty_svg(cls, encode=False):
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            dwg = geometry.shapely_get_dwg(
+                svg_file=tf.name,
+                bounds={'box_width': 1, 'box_height': 1, 'minx': 0, 'miny': 0, 'maxx': 0, 'maxy': 0},
+                marginpct=0, width=1, height=1,
+            )
+
+            # goto
+            geometry.shapely_add_to_dwg(
+                 dwg, geoms=[
+                    shapely.geometry.Polygon([
+                        [0, 0], [0, 1], [1, 1], [1, 0],
+                    ])
+                ],
+                foreground='green', background='black',
+            )
+
+            dwg.save()
+
+            if encode:
+                data = base64.b64encode(open(tf.name).read())
+                return data
+            else:
+                return FileResponse(
+                    content=open(tf.name),
+                    content_type='image/svg+xml',
+                )
+
     @classmethod
     @Api.config(require_login=False)
     def render_cam(
@@ -451,6 +482,8 @@ class PCBApi(Api):
             raise cls.NotFound()
 
         files = queries.project_files(project_id=p.project_id)
+        if not files:
+            return cls._empty_svg(encode=encode)
 
         pcb = PCBProject(
             gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
@@ -524,7 +557,6 @@ class PCBApi(Api):
                 return data
             else:
                 return FileResponse(
-                    # content=send_file(tf.name, mimetype='image/svg+xml'),
                     content=open(tf.name),
                     content_type='image/svg+xml',
                 )
