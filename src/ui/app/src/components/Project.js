@@ -202,18 +202,15 @@ class ProjectCAM extends React.Component {
       <div className={classes.forms}>
         <material.FormGroup row>
           <material.FormControl className={classes.formControl}>
-            <materialInputLabel htmlFor="age-simple">Age</materialInputLabel>
+            <material.InputLabel htmlFor="age-simple">Age</material.InputLabel>
             <material.Select
-              value={10}
+              value="x"
               // onChange={handleChange}
-              inputProps={{
-                name: 'age',
-                id: 'age-simple',
-              }}
+              inputProps={{name: 'posts', id: 'posts'}}
             >
-              <material.MenuItem value={10}>Ten</material.MenuItem>
-              <material.MenuItem value={20}>Twenty</material.MenuItem>
-              <material.MenuItem value={30}>Thirty</material.MenuItem>
+              <material.MenuItem value="x">X</material.MenuItem>
+              <material.MenuItem value="y">YTwenty</material.MenuItem>
+              <material.MenuItem value={null}>NoneThirty</material.MenuItem>
             </material.Select>
           </material.FormControl>
         </material.FormGroup>
