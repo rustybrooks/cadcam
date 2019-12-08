@@ -317,7 +317,7 @@ def pcb_isolation_mill(
             else:
                 machine().cut(c[0], c[1], depth)
 
-    clearz = clearz or 0.125
+    clearz = clearz or 1*constants.MM
     logger.warn("tool radius - depth=%r, base dia=%r, diameter at=%r", depth, machine().tool.diameter_at_depth(0), machine().tool.diameter_at_depth(depth))
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
     geom, geoms = pcb_isolation_geometry(
@@ -436,7 +436,7 @@ def pcb_drill(
         gerber_file=None, gerber_data=None, gerber_geometry=None, depth=None, flipx=False, flipy=False, clearz=None, auto_clear=True,
         xoff=0, yoff=0,
 ):
-    clearz = clearz or 0.125
+    clearz = clearz or 1*constants.MM
 
     geoms = []
     if gerber_geometry:
@@ -472,7 +472,7 @@ def pcb_drill(
 # FIXME - tabs not supported, add if I ever need
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
 def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
-    clearz = clearz or 0.125
+    clearz = clearz or 1*constants.MM
 
     # if gerber_geometry:
     #     geom = gerber_geometry
@@ -775,7 +775,6 @@ class PCBProject(object):
                 for x in range(panelx):
                     for y in range(panely):
                         pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="25%")
-
 
         if side in ['bottom', 'both']:
             # .... BOTTOM ....
