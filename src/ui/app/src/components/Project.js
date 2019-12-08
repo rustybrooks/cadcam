@@ -187,12 +187,20 @@ class ProjectCAM extends React.Component {
   constructor(props) {
     super(props)
 
+    this.state = {
+      'age': 10,
+    }
+
     // This binding is necessary to make `this` work in the callback
     this.handleCheckChange = this.handleCheckChange.bind(this)
   }
 
-  handleCheckChange = name => event => {
+  handleCheckChange = name => {
+    console.log('handleCheckChange')
     this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
+  }
+
+  downloadGcode = () => {
   }
 
   render() {
@@ -200,20 +208,25 @@ class ProjectCAM extends React.Component {
 
     return <div className={classes.root}>
       <div className={classes.forms}>
-        <material.FormGroup row>
-          <material.FormControl className={classes.formControl}>
-            <material.InputLabel htmlFor="age-simple">Age</material.InputLabel>
-            <material.Select
-              value="x"
-              // onChange={handleChange}
-              inputProps={{name: 'posts', id: 'posts'}}
-            >
-              <material.MenuItem value="x">X</material.MenuItem>
-              <material.MenuItem value="y">YTwenty</material.MenuItem>
-              <material.MenuItem value={null}>NoneThirty</material.MenuItem>
-            </material.Select>
-          </material.FormControl>
-        </material.FormGroup>
+        <material.Button onClick={this.download_gcode} variant='outlined' color="primary">
+          Generate GCODE
+        </material.Button>
+
+        {/*<material.FormGroup row>*/}
+        {/*<material.FormControl className={classes.formControl}>*/}
+        {/*  <material.InputLabel id="demo-simple-select-label">Age</material.InputLabel>*/}
+        {/*  <material.Select*/}
+        {/*    labelId="demo-simple-select-label"*/}
+        {/*    id="demo-simple-select"*/}
+        {/*    value={this.state.age}*/}
+        {/*    onChange={this.handleCheckChange}*/}
+        {/*  >*/}
+        {/*    <material.MenuItem value={10}>Ten</material.MenuItem>*/}
+        {/*    <material.MenuItem value={20}>Twenty</material.MenuItem>*/}
+        {/*    <material.MenuItem value={30}>Thirty</material.MenuItem>*/}
+        {/*  </material.Select>*/}
+        {/*</material.FormControl>*/}
+        {/*</material.FormGroup>*/}
       </div>
 
       <table border={0} cellSpacing={2}>
@@ -223,7 +236,7 @@ class ProjectCAM extends React.Component {
               <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='top'/>
             </td>
             <td valign="top">
-              <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>
+              {/*<CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>*/}
             </td>
           </tr>
         </tbody>
@@ -258,7 +271,16 @@ class CAMRender extends React.Component {
       project_key: this.props.project_key,
       username: this.props.username,
       side: this.props.side,
-      // layers: layers.join(),
+      depth: 0.005,
+      separation: 0.020,
+      border: 0,
+      thickness: 1.7,
+      panelx: 1,
+      panely: 1,
+      zprobe_type: 'none',
+      posts: null,
+      max_width: 600,
+      max_height: 600,
     })
     this.setState({img: 'data:image/svg+xml;base64,' + data})
   }
@@ -311,6 +333,13 @@ class ProjectDetails extends React.Component {
             Files
           </th>
         </tr>
+        <tr>
+          <td colSpan={4}>
+          <material.Button variant='outlined' onClick={this.props.handleOpen} color="primary">
+            Add Files
+          </material.Button>
+          </td>
+        </tr>
         {
           project.files.map(f => {
             return <tr key={f.project_file_id}>
@@ -336,7 +365,7 @@ class Project extends React.Component {
       project_key: null,
       project: null,
       username: null,
-      tabValue: 0,
+      // tabValue: 0,
     }
 
     // This binding is necessary to make `this` work in the callback
@@ -396,11 +425,6 @@ class Project extends React.Component {
     })
   }
 
-  handleTabChange = (event, tabValue) => {
-    this.setState({ tabValue })
-  }
-
-
   render() {
     const { classes } = this.props
     const { project, tab, username } = this.state
@@ -431,7 +455,7 @@ class Project extends React.Component {
       </material.Tabs>
 
       <material.Box component="div" display={tab === 'details' ? "block" : "none"}>
-        <ProjectDetails project={project}/>
+        <ProjectDetails project={project} handleOpen={this.handleOpen}/>
       </material.Box>
 
       <material.Box component="div" display={tab === 'render' ? "block" : "none"}>
@@ -453,7 +477,8 @@ class Project extends React.Component {
             filesLimit={20}
           />
           <br/><br/>
-          <material.Button onClick={this.handleUpload}>Upload</material.Button>
+          <material.Button variant='outlined' onClick={this.handleClose}>Close</material.Button>
+          <material.Button variant='outlined' onClick={this.handleUpload}>Upload</material.Button>
         </material.DialogContent>
       </material.Dialog>
 

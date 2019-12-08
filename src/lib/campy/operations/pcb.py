@@ -477,7 +477,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
     #     minx, miny, maxx, maxy = geom.bounds
     # else:
     minx, miny, maxx, maxy = bounds
-    # print "outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff)
+    logger.warn("outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff))
 
     x1 = minx-machine().tool.diameter/2
     x2 = maxx+machine().tool.diameter/2
@@ -602,6 +602,8 @@ class PCBProject(object):
                 v['geometry'] = g
                 union_geom = union_geom.union(shapely.ops.unary_union(g))
 
+            logger.warn("after %r, bounds=%r", k, union_geom.bounds)
+
         self.bounds = union_geom.bounds
         minx, miny, maxx, maxy = self.bounds
 
@@ -611,14 +613,22 @@ class PCBProject(object):
             xoff = -minx
             yoff = -miny
         else:
-            newminx = minx - self.border[0]
-            newminy = miny - self.border[1]
-            xoff = yoff = 0
+            newminx = 0
+            newminy = 0
+            xoff = -minx
+            yoff = -miny
+#            newminx = minx - self.border[0]
+#            newminy = miny - self.border[1]
+#            xoff = yoff = 0
+
+        logger.warn("after done min=(%r, %r) max=(%r, %r)", minx, miny, maxx, maxy)
 
         if union:
+            logger.warn("union trans border=%r", self.border)
             for k, v in self.layers.items():
                 v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
         else:
+            logger.warn("layer trans")
             for k, v in self.layers.items():
                 v['geometry'] = [
                     shapely.affinity.translate(x, xoff=xoff + self.border[0], yoff=yoff + self.border[1]) for x in v['geometry']
@@ -630,6 +640,7 @@ class PCBProject(object):
             newminx + (maxx - minx) + self.border[0] + self.border[2],
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
+        logger.warn("abs end bounds=%r", self.bounds)
 
     def load_layer(self, file_name, fobj):
         ftype = self.identify_file(file_name)

@@ -1,14 +1,10 @@
 import base64
 import boto3
 from flask import send_file
-from gerber import PCB
-from gerber import load_layer
 from gerber.render import RenderSettings, theme
 from gerber.render.cairo_backend import GerberCairoContext
-import logging
 import tempfile
-import zipfile
-from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list
+from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list, api_int, api_float
 from lib.campy import *
 
 from . import queries, projects
@@ -67,7 +63,8 @@ class PCBApi(Api):
         pcb.pcb_job(
             drill='top',
             cutout='bottom',
-            iso_bit='engrave-0.01in-15',
+            # iso_bit='engrave-0.01in-15',
+            iso_bit='engrave-0.1mm-30',
             drill_bit='tiny-0.9mm',
             cutout_bit='1/16in spiral upcut',
             post_bit='1/8in spiral upcut',
@@ -98,7 +95,7 @@ class PCBApi(Api):
     @classmethod
     @Api.config(file_keys=['file'], require_login=False)
     def generate(
-        cls, username=None, project_key=None,
+        cls, project_key=None, username=None,
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x',
         _user=None,
@@ -120,7 +117,7 @@ class PCBApi(Api):
         pcb = PCBProject(
             gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
             border=border,
-            auto_zero=True,
+            auto_zero=True if zprobe_type == 'auto' else False,
             thickness=thickness,
             posts=posts,
         )
@@ -141,7 +138,8 @@ class PCBApi(Api):
         pcb.pcb_job(
             drill='top',
             cutout='bottom',
-            iso_bit='engrave-0.01in-15',
+            # iso_bit='engrave-0.01in-15',
+            iso_bit='engrave-0.1mm-30',
             drill_bit='tiny-0.9mm',
             cutout_bit='1/16in spiral upcut',
             post_bit='1/8in spiral upcut',
@@ -352,7 +350,7 @@ class PCBApi(Api):
             geoms.extend(g)
 
         bounds = geometry.shapely_svg_bounds(geoms)
-        logger.warn("bounds = %r", bounds)
+        # logger.warn("bounds = %r", bounds)
         fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
 
         if not outline:
@@ -468,6 +466,11 @@ class PCBApi(Api):
         max_width=600, max_height=600, _user=None,
     ):
         encode = api_bool(encode)
+        max_height = api_int(max_height)
+        max_width = api_int(max_width)
+        border = api_float(border)
+        posts = api_bool(posts)
+        depth = api_float(depth)
 
         if project_key is None:
             raise cls.BadRequest("project_key is a required field")
@@ -488,7 +491,7 @@ class PCBApi(Api):
         pcb = PCBProject(
             gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
             border=border,
-            auto_zero=False,
+            auto_zero=True if zprobe_type == 'auto' else False,
             thickness=thickness,
             posts=posts,
         )
@@ -498,22 +501,23 @@ class PCBApi(Api):
         machine.max_rpm = machine.min_rpm = 15000
         machine.set_save_geoms(True)
 
-        # if zprobe_type is None:
-        #     zprobe_radius = None
-        # elif zprobe_type == 'auto':
-        #     zprobe_radius = 'auto'
-        # else:
-        #     zprobe_radius = float(zprobe)
+        if zprobe_type is None or zprobe_type == 'none':
+            zprobe_radius = None
+        elif zprobe_type == 'auto':
+            zprobe_radius = 'auto'
+        else:
+            zprobe_radius = float(zprobe)
 
         outdir = tempfile.mkdtemp()
 
         logger.warn("before geom=%r", len(machine.geometry))
         pcb.pcb_job(
             drill='top',
-            cutout='bottom',
-            iso_bit='engrave-0.01in-15',
+            cutout='top',
+            # iso_bit='engrave-0.01in-15',
+            iso_bit='engrave-0.1mm-30',
             drill_bit='tiny-0.9mm',
-            cutout_bit='1/16in spiral upcut',
+            cutout_bit='tiny-3mm',
             post_bit='1/8in spiral upcut',
             file_per_operation=False,
             outline_depth=depth,
@@ -521,7 +525,7 @@ class PCBApi(Api):
             panelx=panelx,
             panely=panely,
             flip='x',
-            # zprobe_radius=zprobe_radius,
+            zprobe_radius=zprobe_radius,
             output_directory=outdir,  # we're gonna ignore this probably though
             side=side,
         )
