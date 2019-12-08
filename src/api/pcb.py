@@ -24,6 +24,7 @@ class PCBApi(Api):
         s3 = boto3.client('s3')
         s3.upload_file(file, bucket, storage_key)
 
+    '''
     @classmethod
     @Api.config(file_keys=['file'], require_login=False)
     def generate_from_zip(
@@ -62,7 +63,7 @@ class PCBApi(Api):
 
         pcb.pcb_job(
             drill='top',
-            cutout='bottom',
+            cutout='top',
             # iso_bit='engrave-0.01in-15',
             iso_bit='engrave-0.1mm-30',
             drill_bit='tiny-0.9mm',
@@ -100,6 +101,13 @@ class PCBApi(Api):
         posts='x',
         _user=None,
     ):
+        depth = api_float(depth)
+        separation = api_float(separation)
+        border = api_float(border)
+        thickness = api_float(thickness)
+        panelx = api_int(panelx)
+        panely = api_int(panely)
+
         if project_key is None:
             raise cls.BadRequest("project_key is a required field")
 
@@ -126,7 +134,7 @@ class PCBApi(Api):
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 15000
 
-        if zprobe_type is None:
+        if zprobe_type is None or zprobe_type == 'none':
             zprobe_radius = None
         elif zprobe_type == 'auto':
             zprobe_radius = 'auto'
@@ -137,7 +145,7 @@ class PCBApi(Api):
 
         pcb.pcb_job(
             drill='top',
-            cutout='bottom',
+            cutout='top',
             # iso_bit='engrave-0.01in-15',
             iso_bit='engrave-0.1mm-30',
             drill_bit='tiny-0.9mm',
@@ -166,9 +174,7 @@ class PCBApi(Api):
                 response_object=send_file(tf.name, mimetype='application/zip'),
                 # content_type='application/zip'
             )
-
-    def open_remote_file(self, ):
-        pass
+    '''
 
     @classmethod
     @Api.config(require_login=False)
@@ -466,11 +472,14 @@ class PCBApi(Api):
         max_width=600, max_height=600, _user=None,
     ):
         encode = api_bool(encode)
-        max_height = api_int(max_height)
-        max_width = api_int(max_width)
-        border = api_float(border)
-        posts = api_bool(posts)
         depth = api_float(depth)
+        separation = api_float(separation)
+        border = api_float(border)
+        thickness = api_float(thickness)
+        panelx = api_int(panelx)
+        panely = api_int(panely)
+        max_width = api_int(max_width)
+        max_height = api_int(max_height)
 
         if project_key is None:
             raise cls.BadRequest("project_key is a required field")
@@ -498,7 +507,7 @@ class PCBApi(Api):
 
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
-        machine.max_rpm = machine.min_rpm = 15000
+        machine.max_rpm = machine.min_rpm = 1000
         machine.set_save_geoms(True)
 
         if zprobe_type is None or zprobe_type == 'none':
@@ -516,10 +525,10 @@ class PCBApi(Api):
             cutout='top',
             # iso_bit='engrave-0.01in-15',
             iso_bit='engrave-0.1mm-30',
-            drill_bit='tiny-0.9mm',
+            drill_bit='tiny-1.0mm',
             cutout_bit='tiny-3mm',
             post_bit='1/8in spiral upcut',
-            file_per_operation=False,
+            file_per_operation=True,
             outline_depth=depth,
             outline_separation=separation,
             panelx=panelx,
@@ -529,7 +538,26 @@ class PCBApi(Api):
             output_directory=outdir,  # we're gonna ignore this probably though
             side=side,
         )
-        logger.warn("after geom=%r", len(machine.geometry))
+
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tf:
+            with zipfile.ZipFile(tf.name, 'w') as zip:
+                for filename in os.listdir(outdir):
+                    zip.write(
+                        os.path.join(outdir, filename),
+                        arcname=os.path.join(p.project_key + '-cam', os.path.split(filename)[-1])
+                    )
+
+            tf.seek(0)
+            error = projects.s3cache.add(
+                # project_key=project_key,
+                project=p,
+                fobj=tf,
+                user_id=_user.user_id,
+                file_name='generated_cam.zip',
+                split_zip=False
+            )
+            if error:
+                raise cls.BadRequest(error)
 
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             # logger.warn("geom = %r", machine.geometry)

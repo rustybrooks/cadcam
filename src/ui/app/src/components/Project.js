@@ -206,12 +206,10 @@ class ProjectCAM extends React.Component {
   render() {
     const { classes, project } = this.props
 
+    const download_url = "http://local-otxp.aveng.us:5000/_api/pcb/generate?username=rbrooks&encode=0&project_key=multiplexer-breakout&zprobe_type=none&posts=0&side=top&border=0"
+
     return <div className={classes.root}>
       <div className={classes.forms}>
-        <material.Button onClick={this.download_gcode} variant='outlined' color="primary">
-          Generate GCODE
-        </material.Button>
-
         {/*<material.FormGroup row>*/}
         {/*<material.FormControl className={classes.formControl}>*/}
         {/*  <material.InputLabel id="demo-simple-select-label">Age</material.InputLabel>*/}
@@ -272,7 +270,7 @@ class CAMRender extends React.Component {
       username: this.props.username,
       side: this.props.side,
       depth: 0.005,
-      separation: 0.020,
+      separation: 0.015,
       border: 0,
       thickness: 1.7,
       panelx: 1,
@@ -345,6 +343,11 @@ class ProjectDetails extends React.Component {
             return <tr key={f.project_file_id}>
               <td colSpan={3}>{f.file_name}</td>
               <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
+              <td>
+                <material.Button onClick={() => {window.location.href = 'http://localhost:5000/api/projects/download_file/' + project.project_key + '-' + f.file_name + '?project_file_id=' + f.project_file_id; return null;}} variant='outlined' color="primary">
+                  Download
+                </material.Button>
+              </td>
             </tr>
           })
         }

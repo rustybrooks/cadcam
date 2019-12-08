@@ -61,7 +61,6 @@ class Framework {
           .catch(error => {
             console.error("ERROR", error)
           });
-
       }
     })
   }

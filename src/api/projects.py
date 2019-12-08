@@ -5,7 +5,7 @@ import os
 import pytz
 import zipfile
 
-from lib.api_framework import api_register, Api
+from lib.api_framework import api_register, Api, FileResponse
 from lib import config
 
 from . import queries
@@ -24,13 +24,14 @@ s3 = boto3.client(
 class S3Cache(object):
     basedir = '/srv/data/s3cache'
 
-    def get(self, project_file_id=None, project_file=None):
+    @classmethod
+    def get(cls, project_file_id=None, project_file=None):
         if project_file:
             pf = project_file.copy()
         else:
             pf = queries.project_file(project_file_id=project_file_id)
 
-        project_path = os.path.join(self.basedir, str(pf.project_id))
+        project_path = os.path.join(cls.basedir, str(pf.project_id))
         if not os.path.exists(project_path):
             try:
                 os.makedirs(project_path)
@@ -49,9 +50,45 @@ class S3Cache(object):
 
         return file_name
 
-    def get_fobj(self, project_file_id=None, project_file=None):
-        file_name = self.get(project_file_id=project_file_id, project_file=project_file)
+    @classmethod
+    def get_fobj(cls, project_file_id=None, project_file=None):
+        file_name = cls.get(project_file_id=project_file_id, project_file=project_file)
         return open(file_name)
+
+    @classmethod
+    def add(cls, project_key=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
+        logger.warn("adding... key=%r, user_id=%r", project_key, user_id)
+        if project is None:
+            project = queries.project(project_key=project_key, user_id=user_id)
+            if not project:
+                return 'project not found'
+
+        storage_key = '{}/{}/{}'.format(user_id, project_key, file_name)
+        logger.warn("Uploading %r to %r", file_name, storage_key)
+        s3.put_object(Body=fobj, Bucket=bucket, Key=storage_key)
+        project_file_id = queries.add_or_update_project_file(
+            project_id=project.project_id,
+            file_name=file_name,
+            s3_key=storage_key,
+            source_project_file_id=None,
+        )
+
+        if os.path.splitext(file_name)[-1].lower() == '.zip' and split_zip:
+            with zipfile.ZipFile(fobj) as z:
+                for i in z.infolist():
+                    file_name = os.path.split(i.filename)[-1]
+                    storage_key = '{}/{}/{}'.format(user_id, project_key, file_name)
+                    with z.open(i) as zf:
+                        s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
+                        queries.add_or_update_project_file(
+                            project_id=project.project_id,
+                            file_name=file_name,
+                            s3_key=storage_key,
+                            source_project_file_id=project_file_id,
+                        )
+
+        return None
+
 
 s3cache = S3Cache()
 
@@ -115,34 +152,41 @@ class ProjectsApi(Api):
     @classmethod
     @Api.config(file_keys=['file'])
     def upload_file(cls, project_key=None, file=None, _user=None):
-        p = queries.project(project_key=project_key, user_id=_user.user_id)
-        if not p:
+        project = queries.project(project_key=project_key, user_id=_user.user_id)
+        if not project:
             raise cls.NotFound()
 
-        file_name = os.path.split(file.name)[-1]
-        storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_name)
-        s3.put_object(Body=file, Bucket=bucket, Key=storage_key)
-        project_file_id = queries.add_or_update_project_file(
-            project_id=p.project_id,
-            file_name=file_name,
-            s3_key=storage_key,
-            source_project_file_id=None,
+        error = s3cache.add(
+            project=project,
+            project_key=project_key,
+            fobj=file,
+            user_id=_user.user_id,
+            file_name=os.path.split(file.name)[-1],
+            split_zip=True,
         )
-
-        if os.path.splitext(file.name)[-1].lower() == '.zip':
-            with zipfile.ZipFile(file) as z:
-                for i in z.infolist():
-                    file_name = os.path.split(i.filename)[-1]
-                    storage_key = '{}/{}/{}'.format(_user.user_id, project_key, file_name)
-                    with z.open(i) as zf:
-                        s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
-                        queries.add_or_update_project_file(
-                            project_id=p.project_id,
-                            file_name=file_name,
-                            s3_key=storage_key,
-                            source_project_file_id=project_file_id,
-                        )
+        if error:
+            raise cls.BadRequest(error)
 
         return {
             'status': 'ok'
         }
+
+    @classmethod
+    @Api.config(require_login=False)  # FIXME for now let's let anyone download by id, fix me with cookie or something
+    def download_file(cls, file_name, project_file_id=None, _user=None):
+        pf = queries.project_file(project_file_id=project_file_id)
+        # pf = queries.project_file(project_file_id=project_file_id, user_id=_user.user_id)
+        if not pf:
+            raise cls.NotFound()
+
+        # project = queries.project(project_id=pf.project_id, user_id=_user.user_id)
+        project = queries.project(project_id=pf.project_id)
+        if not project:
+            raise cls.NotFound()
+
+        file_name = s3cache.get(project_file_id=project_file_id)
+        return FileResponse(
+            content=open(file_name, 'rb').read(),
+            # content='foo',
+            content_type='application/octet-stream',
+        )

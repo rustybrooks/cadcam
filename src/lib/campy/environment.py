@@ -196,6 +196,24 @@ class Environment(object):
         # self.record_linear_move((x, y, z))
         self.write("G1 %s" % (" ".join(self.format_movement(x, y, z, a, feed))))
 
+    def drill_cycle_plain(self, centers, z, depth, rate=None):
+        if not isinstance(centers[0], (list, tuple)):
+            centers = [centers]
+
+        if self.speed is not None and rate is None:
+            feed = "F%0.3f " % self.speed
+            self.speed = None
+        elif rate is not None:
+            feed = "F%0.3f " % rate
+        else:
+            feed = ""
+
+        self.goto(*centers[0])
+        self.write("G99 G81 R{:0.3f} Z{:0.3f} F{}".format(z, -1*depth, feed))
+        for c in centers[1:]:
+            self.goto(*c)
+        self.write("G80")
+
     # x, y forms the center of your arc
     # if I did this right, I think it presumes you're at bx, by already
     def cut_arc_center_rad(

@@ -9,7 +9,7 @@ import shapely.geometry
 import shapely.ops
 import zipfile
 
-from . import operation, machine, helical_drill, rect_stock, zprobe
+from . import operation, machine, helical_drill, rect_stock, zprobe, drill_cycle
 from lib.campy import geometry, constants, environment
 # from lib.campy import *
 
@@ -219,7 +219,7 @@ def pcb_isolation_geometry(
     stepovers = int(math.ceil(offset/stepover))
     stepover = offset/stepovers
     for step in range(1, stepovers+1):
-        print "stepover =", step*stepover
+        # print "stepover =", step*stepover
         bgeom = geom.buffer(step*stepover)
         if isinstance(bgeom, shapely.geometry.Polygon):
             bgeom = shapely.geometry.MultiPolygon([bgeom])
@@ -308,7 +308,7 @@ def pcb_isolation_mill(
             zvar = _zadjust(*coords[0])
             machine().cut(z="[{}-{}]".format(zvar, depth))
         else:
-            machine().cut(z=depth)
+            machine().cut(z=-1*depth)
 
         for c in _zadjust_geom(coords, zrad):
             if zrad:
@@ -318,6 +318,7 @@ def pcb_isolation_mill(
                 machine().cut(c[0], c[1], depth)
 
     clearz = clearz or 0.125
+    logger.warn("tool radius - depth=%r, base dia=%r, diameter at=%r", depth, machine().tool.diameter_at_depth(0), machine().tool.diameter_at_depth(depth))
     tool_radius = machine().tool.diameter_at_depth(depth)/2.0
     geom, geoms = pcb_isolation_geometry(
         gerber_file=gerber_file,
@@ -454,12 +455,16 @@ def pcb_drill(
         hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
     hole_geom = shapely.affinity.translate(hole_geom, xoff=xoff, yoff=yoff)
+    drill_cycle(centers=[x.coords[0][:2] for x in hole_geom], z=0, depth=depth, auto_clear=False)
+    '''
     for h in hole_geom:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
         helical_drill(center=h.coords[0][:2], outer_rad=h.coords[0][2], z=0, depth=depth, stepdown="10%")
+    '''
 
     if auto_clear:
         machine().goto(z=clearz)
+
 
     return shapely.geometry.MultiPolygon(geoms)
 
@@ -477,7 +482,7 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
     #     minx, miny, maxx, maxy = geom.bounds
     # else:
     minx, miny, maxx, maxy = bounds
-    logger.warn("outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff))
+    # logger.warn("outline = ({},{}) to ({},{}) offset by ({}, {})".format(minx, miny, maxx, maxy, xoff, yoff))
 
     x1 = minx-machine().tool.diameter/2
     x2 = maxx+machine().tool.diameter/2
@@ -602,8 +607,6 @@ class PCBProject(object):
                 v['geometry'] = g
                 union_geom = union_geom.union(shapely.ops.unary_union(g))
 
-            logger.warn("after %r, bounds=%r", k, union_geom.bounds)
-
         self.bounds = union_geom.bounds
         minx, miny, maxx, maxy = self.bounds
 
@@ -621,14 +624,10 @@ class PCBProject(object):
 #            newminy = miny - self.border[1]
 #            xoff = yoff = 0
 
-        logger.warn("after done min=(%r, %r) max=(%r, %r)", minx, miny, maxx, maxy)
-
         if union:
-            logger.warn("union trans border=%r", self.border)
             for k, v in self.layers.items():
                 v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
         else:
-            logger.warn("layer trans")
             for k, v in self.layers.items():
                 v['geometry'] = [
                     shapely.affinity.translate(x, xoff=xoff + self.border[0], yoff=yoff + self.border[1]) for x in v['geometry']
@@ -640,7 +639,6 @@ class PCBProject(object):
             newminx + (maxx - minx) + self.border[0] + self.border[2],
             newminy + (maxy - miny) + self.border[1] + self.border[3],
         ]
-        logger.warn("abs end bounds=%r", self.bounds)
 
     def load_layer(self, file_name, fobj):
         ftype = self.identify_file(file_name)
