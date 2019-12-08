@@ -774,7 +774,7 @@ class PCBProject(object):
                 machine().set_tool(cutout_bit)
                 for x in range(panelx):
                     for y in range(panely):
-                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y))
+                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="25%")
 
 
         if side in ['bottom', 'both']:
