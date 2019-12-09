@@ -207,13 +207,8 @@ class ProjectCAM extends React.Component {
     });
   };
 
-  downloadGcode = () => {
-  }
-
   render() {
     const { classes, project } = this.props
-
-    const download_url = "http://local-otxp.aveng.us:5000/_api/pcb/generate?username=rbrooks&encode=0&project_key=multiplexer-breakout&zprobe_type=none&posts=0&side=top&border=0"
 
     return <div className={classes.root}>
       <div className={classes.forms}>
@@ -235,7 +230,10 @@ class ProjectCAM extends React.Component {
         <tbody>
           <tr>
             <td valign="top">
-              <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='top'/>
+              <CAMRender
+                store={this.props.store} project_key={project.project_key} username={project.username} side='top'
+                zprobe_type={this.state.zprobe_type}
+              />
             </td>
             <td valign="top">
               {/*<CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'/>*/}
@@ -269,21 +267,23 @@ class CAMRender extends React.Component {
   async updateImage() {
     const fw = this.props.store.get('frameworks')
     this.setState({img: ''})
-    const data = await fw.PCBApi.render_cam({
+    const args = {
       project_key: this.props.project_key,
       username: this.props.username,
       side: this.props.side,
       depth: 0.005,
-      separation: 0.015,
+      separation: 0.020,
       border: 0,
       thickness: 1.7,
       panelx: 1,
       panely: 1,
-      zprobe_type: 'none',
+      zprobe_type: this.props.zprobe_type,
       posts: null,
       max_width: 600,
       max_height: 600,
-    })
+    }
+    console.log(args)
+    const data = await fw.PCBApi.render_cam(args)
     this.setState({img: 'data:image/svg+xml;base64,' + data})
   }
 
