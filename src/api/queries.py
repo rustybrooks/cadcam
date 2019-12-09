@@ -63,6 +63,7 @@ class User(object):
         self.is_active = False
         self.is_anonymous = False
         self.user_id = 0
+        self.username = 'Anonymous'
 
         where, bindvars = SQL.auto_where(api_key=api_key, username=username, user_id=user_id, email=email)
 
@@ -95,10 +96,11 @@ class User(object):
     def get_id(self):
         return str(self.user_id)
 
-    def generate_token(self):
+    def generate_token(self, expiration=None):
+        expiration = expiration or datetime.timedelta(hours=24)
         payload = {
             'user_id': self.user_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            'exp': datetime.datetime.utcnow() + expiration
         }
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 

@@ -94,10 +94,10 @@ class PCBRender extends React.Component {
     }
 
     // This binding is necessary to make `this` work in the callback
-    this.handleCheckChange = this.handleCheckChange.bind(this)
+    this.handleChange = this.handleChange.bind(this)
   }
 
-  handleCheckChange = name => event => {
+  handleChange = name => event => {
     this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
   }
 
@@ -135,19 +135,19 @@ class PCBRender extends React.Component {
         <div className={classes.forms}>
           <material.FormGroup row>
             <material.FormControlLabel
-              control={<material.Checkbox checked={copper} onChange={this.handleCheckChange('copper')} value="copper" />}
+              control={<material.Checkbox checked={copper} onChange={this.handleChange('copper')} value="copper" />}
               label="Copper"
             />
             <material.FormControlLabel
-              control={<material.Checkbox checked={solderMask} onChange={this.handleCheckChange('solder-mask')} value="solder-mask" />}
+              control={<material.Checkbox checked={solderMask} onChange={this.handleChange('solder-mask')} value="solder-mask" />}
               label="Solder Mask"
             />
             <material.FormControlLabel
-              control={<material.Checkbox checked={silkScreen} onChange={this.handleCheckChange('silk-screen')} value="silk-screen" />}
+              control={<material.Checkbox checked={silkScreen} onChange={this.handleChange('silk-screen')} value="silk-screen" />}
               label="Silk Screen"
             />
             <material.FormControlLabel
-              control={<material.Checkbox checked={drill} onChange={this.handleCheckChange('drill')} value="drill" />}
+              control={<material.Checkbox checked={drill} onChange={this.handleChange('drill')} value="drill" />}
               label="Drill"
             />
           </material.FormGroup>
@@ -188,17 +188,24 @@ class ProjectCAM extends React.Component {
     super(props)
 
     this.state = {
-      'age': 10,
+      'trace_depth': [0.005, 'in'],
+      'trace_separation': [0.015, 'in'],
+      'zprobe_type': 'none',
+      'bordern': [0, 'in'],
+      'thickness': [.067, 'in'],
+      'panelx': 1,
+      'panely': 1,
+      'posts': 'none',
+      'two_sided': false,
     }
-
-    // This binding is necessary to make `this` work in the callback
-    this.handleCheckChange = this.handleCheckChange.bind(this)
   }
 
-  handleCheckChange = name => {
-    console.log('handleCheckChange')
-    this.setState({layers: {...this.state.layers, [name]: event.target.checked }})
-  }
+  handleChange = name => event => {
+    this.setState({
+      ...this.state,
+      [name]: event.target.value,
+    });
+  };
 
   downloadGcode = () => {
   }
@@ -210,21 +217,18 @@ class ProjectCAM extends React.Component {
 
     return <div className={classes.root}>
       <div className={classes.forms}>
-        {/*<material.FormGroup row>*/}
-        {/*<material.FormControl className={classes.formControl}>*/}
-        {/*  <material.InputLabel id="demo-simple-select-label">Age</material.InputLabel>*/}
-        {/*  <material.Select*/}
-        {/*    labelId="demo-simple-select-label"*/}
-        {/*    id="demo-simple-select"*/}
-        {/*    value={this.state.age}*/}
-        {/*    onChange={this.handleCheckChange}*/}
-        {/*  >*/}
-        {/*    <material.MenuItem value={10}>Ten</material.MenuItem>*/}
-        {/*    <material.MenuItem value={20}>Twenty</material.MenuItem>*/}
-        {/*    <material.MenuItem value={30}>Thirty</material.MenuItem>*/}
-        {/*  </material.Select>*/}
-        {/*</material.FormControl>*/}
-        {/*</material.FormGroup>*/}
+        <material.FormGroup row>
+        <material.FormControl className={classes.formControl}>
+          <material.InputLabel id="zprobe-type-label">Z Probe Type</material.InputLabel>
+          <material.Select
+            labelId="zprob-type-label" id="zprobe-type-select"
+            value={this.state.zprobe_type} onChange={this.handleChange('zprobe_type').bind(this)}
+          >
+            <material.MenuItem value='none'>None</material.MenuItem>
+            <material.MenuItem value='auto'>Auto</material.MenuItem>
+          </material.Select>
+        </material.FormControl>
+        </material.FormGroup>
       </div>
 
       <table border={0} cellSpacing={2}>

@@ -110,11 +110,11 @@ def zprobe(
         machine().goto(z=clearz)
 
 @operation(
-    required=['centers', 'z', 'depth'],
+    required=['centers', 'z', 'depth', 'retract_distance'],
     operation_feedrate='plunge',
-    comment='Peck drilling holes, depth={depth:.3f}',
+    comment='Peck drilling holes z={z:.3f}, depth={depth:.3f}, retract_distance={retract_distance:.3f}',
 )
-def drill_cycle(centers=None, z=None, depth=None, clearz=None, auto_clear=True):
+def drill_cycle(centers=None, z=None, retract_distance=None, depth=None, clearz=None, auto_clear=True):
     clearz = clearz or (z + 0.125)
 
     machine().drill_cycle_plain(centers=centers, z=z, depth=depth)

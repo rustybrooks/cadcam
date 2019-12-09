@@ -118,6 +118,7 @@ class ProjectsApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def project(cls, username=None, project_key=None, _user=None):
+        logger.warn("user = %r", _user.__class__)
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,

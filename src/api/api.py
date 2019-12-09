@@ -24,7 +24,7 @@ app.secret_key = config.get_config_key('app_secret')
 
 @app.before_request
 def before_request():
-    request.user = login.is_logged_in(request, None, None)
+    request.user = login.is_logged_in(request, None, request.args)
 
 
 @app.after_request
@@ -71,18 +71,6 @@ class AdminApi(Api):
 
 @api_register(None, require_login=True)
 class UserApi(Api):
-    # @classmethod
-    # @Api.config(require_login=False)
-    # def login(cls, username=None, password=None):
-    #     if username and password:
-    #         user = queries.User(username=username, password=password)
-    #         if user.is_authenticated:
-    #             flask_login.login_user(user)
-    #         else:
-    #             return HttpResponse(render_template('login.html'))
-    #     else:
-    #         return HttpResponse(render_template('login.html'))
-
     @classmethod
     @Api.config(require_login=False)
     def signup(cls, username, email, password1, password2):
@@ -104,6 +92,11 @@ class UserApi(Api):
                 return user.generate_token()
 
         return None
+
+    @classmethod
+    @Api.config(require_login=True)
+    def generate_temp_token(cls, _user=None):
+        return _user.generate_token(minutes=10)
 
     @classmethod
     def change_password(cls, new_password=None, _user=None):
