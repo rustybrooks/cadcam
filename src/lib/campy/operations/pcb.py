@@ -455,7 +455,7 @@ def pcb_drill(
         hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
     hole_geom = shapely.affinity.translate(hole_geom, xoff=xoff, yoff=yoff)
-    drill_cycle(centers=[x.coords[0][:2] for x in hole_geom], z=0, depth=depth, auto_clear=False)
+    drill_cycle(centers=[x.coords[0][:2] for x in hole_geom], z=0, depth=depth, retract_distance=1*constants.MM)
     '''
     for h in hole_geom:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
@@ -464,7 +464,6 @@ def pcb_drill(
 
     if auto_clear:
         machine().goto(z=clearz)
-
 
     return shapely.geometry.MultiPolygon(geoms)
 

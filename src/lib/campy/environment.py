@@ -196,9 +196,16 @@ class Environment(object):
         # self.record_linear_move((x, y, z))
         self.write("G1 %s" % (" ".join(self.format_movement(x, y, z, a, feed))))
 
-    def drill_cycle_plain(self, centers, z, depth, rate=None):
+    # z is the top of the material being drilled into
+    # retract_distance and depth are relative to z
+    def drill_cycle_plain(self, centers, z, depth, retract_distance=None, rate=None):
         if not isinstance(centers[0], (list, tuple)):
             centers = [centers]
+
+        retract_distance = retract_distance or .125
+
+        z_retract = z + retract_distance
+        cycle_depth = depth + retract_distance
 
         if self.speed is not None and rate is None:
             feed = "F%0.3f " % self.speed
@@ -208,8 +215,10 @@ class Environment(object):
         else:
             feed = ""
 
+        retract_type = 'G99'   # G98 would retract to initial Z every time
+
         self.goto(*centers[0])
-        self.write("G99 G81 R{:0.3f} Z{:0.3f} F{}".format(z, -1*depth, feed))
+        self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, -1*cycle_depth, feed))
         for c in centers[1:]:
             self.goto(*c)
         self.write("G80")
