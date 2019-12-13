@@ -40,11 +40,12 @@ class CAMRender extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.state.layers === prevState.layers) return
+    if (this.props.regenerate === prevProps.regenerate) return
     this.updateImage()
   }
 
   async updateImage() {
+    const { params } = this.props
     const fw = this.props.store.get('frameworks')
     this.setState({img: ''})
     const args = {
@@ -57,7 +58,7 @@ class CAMRender extends React.Component {
       thickness: 1.7,
       panelx: 1,
       panely: 1,
-      zprobe_type: this.props.zprobe_type,
+      zprobe_type: params.zprobe_type,
       posts: null,
       max_width: 600,
       max_height: 600,
