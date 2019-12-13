@@ -14,6 +14,7 @@ import { withRouter } from 'react-router'
 import { withStore } from '../global-store'
 import CreateProject from './CreateProject'
 
+import { Project } from './project/Project'
 
 const style = theme => ({
   root: {

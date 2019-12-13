@@ -7,7 +7,7 @@ import { BASE_URL } from './constants/api'
 import fetchFrameworks from './framework_client'
 import Home from './components/Home'
 import Projects from './components/Projects'
-import Project from './components/Project'
+import Project from './components/project/Project'
 import Header from './components/Header'
 
 
