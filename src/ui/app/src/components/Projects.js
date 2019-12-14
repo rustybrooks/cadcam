@@ -50,12 +50,12 @@ class ProjectRow extends React.Component {
 
   render() {
     let x = this.props.row
-    const {classes} = this.props
+    const {classes, username} = this.props
     return <tr key={1} className={this.props.selected ?
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
     }>
-      <td><Link to={'/projects/me/' + x.project_key}>{x.project_key}</Link></td>
+      <td><Link to={'/projects/' + username + '/' + x.project_key}>{x.project_key}</Link></td>
       <td>{x.name}</td>
       <td>{moment.duration(x.created_ago, 'seconds').humanize()} ago</td>
       <td>{moment.duration(x.modified_ago, 'seconds').humanize()} ago</td>
@@ -99,7 +99,7 @@ class Projects extends React.Component {
 
   onRouteChanged() {
     console.log('route', this.props.location.pathname)
-    if (this.props.location.pathname === '/projects/me/create') {
+    if (this.props.location.pathname === '/projects/' + this.props.store.get('user').username + '/create') {
       this.setState({...this.state, createModal: true})
     }
   }
@@ -112,13 +112,7 @@ class Projects extends React.Component {
     store.set('projects', null)
     let username = this.props.match.params.username
 
-    let data = {}
-    if (username === "me") {
-      data = await fw.ProjectsApi.my_index({page: 1, limit: 100})
-    } else {
-      data = await fw.ProjectsApi.index({username: username, page: 1, limit: 100})
-    }
-
+    const data = await fw.ProjectsApi.index({username: username, page: 1, limit: 100})
     this.setState({'projects': data})
   }
 
@@ -144,8 +138,8 @@ class Projects extends React.Component {
   handleClose() {
     // this.setState({...this.state, 'createModal': false})
     // console.log("closing")
-      this.props.history.push('/projects')
-
+    const username = this.props.store.get('user').username
+    this.props.history.push('/projects/' + username)
   }
 
 
@@ -163,9 +157,11 @@ class Projects extends React.Component {
     let owner = this
     const { order, orderBy, selected, rowsPerPage, page } = this.state;
 
+    const username = store.get('user').username
+
     return (
       <Paper className={classes.paper}>
-        <Button component={Link} to="/projects/me/create">Create New Project</Button>
+        <Button component={Link} to={"/projects/" + username + "/create"}>Create New Project</Button>
 
         <div className={classes.root}>
           <TablePagination
@@ -194,7 +190,7 @@ class Projects extends React.Component {
                 even = !even
                 return (
                   <ProjectRow
-                    key={x.project_id} classes={classes} row={x}
+                    key={x.project_id} classes={classes} row={x} username={username}
                   />
                 )
               })

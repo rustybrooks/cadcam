@@ -99,7 +99,7 @@ class ProjectsApi(Api):
     @Api.config(require_login=False)
     def index(cls, username=None, page=1, limit=10, _user=None):
         out = {
-            'results': queries.projects(username=_user.username if username == 'me' else username, page=page, limit=limit),
+            'results': queries.projects(username=username, page=page, limit=limit),
         }
 
         for r in out['results']:
@@ -111,17 +111,12 @@ class ProjectsApi(Api):
         return out
 
     @classmethod
-    @Api.config(require_login=True)
-    def my_index(cls, page=1, limit=10, _user=None):
-        return cls.index(username='me', page=page, limit=limit, _user=_user)
-
-    @classmethod
     @Api.config(require_login=False)
     def project(cls, username=None, project_key=None, _user=None):
         logger.warn("user = %r", _user.__class__)
         p = queries.project(
             project_key=project_key,
-            username=_user.username if username == 'me' else username,
+            username=username,
             viewing_user_id=_user.user_id,
             allow_public=True,
         )

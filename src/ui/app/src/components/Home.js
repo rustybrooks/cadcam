@@ -11,7 +11,6 @@ const style = theme => ({
 
 
 class Home extends React.Component {
-
   render() {
     const { classes } = this.props
 

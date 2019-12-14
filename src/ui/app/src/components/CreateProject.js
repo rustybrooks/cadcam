@@ -28,6 +28,7 @@ class CreateProject extends React.Component {
   }
 
   handleCreate() {
+    console.log("handlecreate")
     // this.setState({...this.state, 'createModal': false})
     console.log("closing")
     const { store } = this.props

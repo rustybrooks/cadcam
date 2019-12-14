@@ -102,6 +102,13 @@ class UserApi(Api):
     def change_password(cls, new_password=None, _user=None):
         queries.update_user(user_id=_user.user_id, password=new_password)
 
+    @classmethod
+    def user(cls, _user):
+        return {
+            'username': _user.username,
+            'user_id': _user.user_id,
+        }
+
 
 app_class_proxy(app, '', 'api/admin', AdminApi())
 app_class_proxy(app, '', 'api/user', UserApi())
