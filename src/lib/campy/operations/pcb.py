@@ -56,14 +56,13 @@ class OurRenderContext(render.GerberContext):
 
 
 class GerberSVGContext(OurRenderContext):
-    def __init__(self, svg_file, width, height, viewbox='', units='inch'):
+    def __init__(self, svg_file, width, height, units='inch'):
         super(GerberSVGContext, self).__init__(units=units)
 
         self.dwg = svgwrite.Drawing(
             svg_file,
             profile='full',
             size=(width, height),
-            viewBox="0.0 -2.811 3.9887 2.811"
         )
 
         w = 3.9887
@@ -74,11 +73,36 @@ class GerberSVGContext(OurRenderContext):
         self.fgalpha = 1
         self.bgalpha = 1
 
+        self.minx = 0
+        self.miny = 0
+        self.width = 1
+        self.height = 1
+
     def save(self):
-        logger.warn("saving")
+        logger.warn("saving viewbox=%0.3f %0.3f %0.3f %0.3f", self.minx, -1*self.height + self.miny, self.width, self.height)
+        self.dwg.viewbox(self.minx, -1*self.height + self.miny, self.width, self.height)
         self.dwg.save()
 
     def render_layer(self, layer, fgcolor, bgcolor, fgalpha=1, bgalpha=1):
+        bounds = layer.bounds
+        import logging
+        logging.warn("bounds = %r", bounds)
+
+        x_range = [10000, -10000]
+        y_range = [10000, -10000]
+
+        if bounds is not None:
+            layer_x, layer_y = bounds
+            x_range[0] = min(x_range[0], layer_x[0])
+            x_range[1] = max(x_range[1], layer_x[1])
+            y_range[0] = min(y_range[0], layer_y[0])
+            y_range[1] = max(y_range[1], layer_y[1])
+
+        self.minx = min(self.minx, x_range[0])
+        self.miny = min(self.miny, y_range[0])
+        self.width = max(self.width, x_range[1] - x_range[0])
+        self.height = max(self.height, y_range[1] - y_range[0])
+
         self.fgcolor = fgcolor
         self.bgcolor = bgcolor
         self.fgalpha = fgalpha
@@ -86,9 +110,6 @@ class GerberSVGContext(OurRenderContext):
 
         for prim in layer.primitives:
             self.render(prim)
-
-    def scale_point(self, point):
-        return tuple([coord * scale for coord, scale in zip(point, self.scale)])
 
     def _render_line(self, line, color):
         start = line.start
@@ -113,7 +134,9 @@ class GerberSVGContext(OurRenderContext):
         x1, y1 = primitive.lower_left
         x2 = x1 + primitive.width
         y2 = y1 + primitive.height
-        box = shapely.geometry.box(x1, y1, x2, y2, ccw=False)
+
+        # self.minx = min(self.minx, x1)
+        # self.miny = min(self.miny, y1)
 
         mask = None
         maskname = None
