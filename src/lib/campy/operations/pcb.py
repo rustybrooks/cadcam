@@ -203,7 +203,6 @@ class GerberSVGContext(OurRenderContext):
         else:
             raise Exception("render_circle doesn't know what to do with polarity!=dark")
 
-
     def _render_region(self, region, color):
         logger.warn("render_region polarity=%r", region.level_polarity)
 
@@ -216,7 +215,7 @@ class GerberSVGContext(OurRenderContext):
                 logger.warn('notline')
         self.dwg.add(self.dwg.polygon(
             coords, fill=self.fgcolor, fill_opacity=self.fgalpha,
-            transform="scale(1, -1)", 
+            transform="scale(1, -1)",
         ))
 
     def _render_arc(self, arc, color):

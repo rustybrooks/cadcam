@@ -325,11 +325,12 @@ class PCBApi(Api):
             outline = None
 
         color_map = {
-            'solder-mask': ['#cfb797', '#4e2a87', .75, 1],
-            'drill': ['#cccccc', '#444444', 1, 1],
-            'copper': ['#cfb797', 'red', 1, 1],
-            'outline': ['black', 'white', 1, 1],
-            'silk-screen': ['yellow', 'black', 1, 1],
+            'solder-mask': ['blue', 'purple', .75, .5],
+            # 'solder-mask': ['#cfb797', '#4e2a87', .75, 1],
+            'drill': ['#cccccc', '#444444', .5, .5],
+            'copper': ['#cfb797', 'red', .5, .5],
+            'outline': ['black', 'green', .5, .5],
+            'silk-screen': ['yellow', 'black', .5, .5],
         }
 
         bgalphamap = {
