@@ -56,7 +56,7 @@ class OurRenderContext(render.GerberContext):
 
 
 class GerberSVGContext(OurRenderContext):
-    def __init__(self, svg_file, width, height, units='inch'):
+    def __init__(self, svg_file, width, height, flipx=False, units='inch'):
         super(GerberSVGContext, self).__init__(units=units)
 
         self.dwg = svgwrite.Drawing(
@@ -68,6 +68,7 @@ class GerberSVGContext(OurRenderContext):
         self.mask_count = 0
         self.layer_mask = None
         self.layer_mask_name = None
+        self.flipx = flipx
 
     def save(self):
         self.dwg.save()
@@ -95,7 +96,7 @@ class GerberSVGContext(OurRenderContext):
 
         self.group = self.dwg.add(
             self.dwg.g(
-                transform="scale(1, -1)",
+                transform="scale({}, -1)".format(-1 if self.flipx else 1),
             )
         )
 
@@ -107,7 +108,10 @@ class GerberSVGContext(OurRenderContext):
         )
 
         self.dwg.viewbox(
-            self.bounds[0], self.bounds[1] + -1*height, self.bounds[2], self.bounds[3]
+            self.bounds[0] + (-1*width if self.flipx else 0),
+            self.bounds[1] + -1*height,
+            self.bounds[2],
+            self.bounds[3]
         )
 
         for layer in layers:
@@ -465,8 +469,8 @@ class GerberDrillContext(render.GerberContext):
 # FIXME making 2 sided boards has not been tested or really considered.  Won't work without some refactoring
 @operation(required=['tool_radius'])
 def pcb_isolation_geometry(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', outline_separation=0.020, tool_radius=None,
-    flipx=False, flipy=False, depth=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='40%', outline_separation=0.020, tool_radius=None,
+    flipx=False, flipy=False,
 ):
     if gerber_geometry:
         geom = gerber_geometry
@@ -483,24 +487,36 @@ def pcb_isolation_geometry(
         geom = shapely.affinity.scale(geom, yfact=-1, origin=(0, 0))
         geom = shapely.affinity.translate(geom, yoff=maxy+miny)
 
+    if isinstance(geom, shapely.geometry.MultiPolygon):
+        in_geoms = geom.geoms
+    else:
+        in_geoms = []
+
+    # union_geom = shapely.geometry.GeometryCollection()
+
     geoms = []
     offset = (outline_separation - tool_radius)
     stepovers = int(math.ceil(offset/stepover))
     stepover = offset/stepovers
-    for step in range(1, stepovers+1):
-        # print "stepover =", step*stepover
-        bgeom = geom.buffer(step*stepover)
-        if isinstance(bgeom, shapely.geometry.Polygon):
-            bgeom = shapely.geometry.MultiPolygon([bgeom])
 
-        geoms.append(bgeom)
+    for g in in_geoms:
+        for step in range(1, stepovers+1):
+            # print "stepover =", step*stepover
+            bgeom = g.buffer(step*stepover)
+                 # .difference(union_geom)
+            if isinstance(bgeom, shapely.geometry.Polygon):
+                bgeom = shapely.geometry.MultiPolygon([bgeom])
+
+            # union_geom = union_geom.union(bgeom)
+
+            geoms.append(bgeom)
 
     return geom, geoms
 
 
 @operation(required=['depth', 'outline_separation'], operation_feedrate='vector_engrave')
 def pcb_isolation_mill(
-    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='45%', outline_separation=None, depth=None, clearz=None,
+    gerber_file=None, gerber_data=None, gerber_geometry=None, stepover='40%', outline_separation=None, depth=None, clearz=None,
     xoff=0, yoff=0,
     auto_clear=True, flipx=False, flipy=False, simplify=0.001, zprobe_radius=None,
 ):
@@ -515,13 +531,6 @@ def pcb_isolation_mill(
             match = next(x for x in delauney if x.contains(pt))
         except StopIteration:
             raise Exception("Did not find triangle for point {}".format(list(pt.coords)))
-
-        # px = w1*x1 + w2*x2 + w3*x3
-        # py = w1*y1 + w2*y2 + w3*y3
-        # w1 = ((y2-y3)(px-x3) + (x3-x2)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
-        # w2 = ((y3-y1)(px-x3) + (x1-x3)(py-y3)) / ((y2-y3)(x1-x3) + (x3-x2)(y1-y3))
-        # w3 = 1 - w2 - w1
-        # z = w1*z1 + w2*z2 + z3*z3
 
         vars = {
             'px': x,
@@ -596,7 +605,7 @@ def pcb_isolation_mill(
         stepover=stepover,
         outline_separation=outline_separation,
         tool_radius=tool_radius,
-        flipx=flipx, flipy=flipy, depth=depth,
+        flipx=flipx, flipy=flipy,
     )
     geom = shapely.affinity.translate(geom, xoff=xoff, yoff=yoff)
     delauney = None
@@ -1021,7 +1030,7 @@ class PCBProject(object):
                         zprobe_radius=zprobe_radius,
                     )
 
-            if drill == 'top':
+            if drill == 'top' and ('both', 'drill') in self.layers:
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
                     self.auto_set_stock(side='top')
@@ -1074,7 +1083,7 @@ class PCBProject(object):
                         zprobe_radius=zprobe_radius,
                     )
 
-            if drill == 'bottom':
+            if drill == 'bottom' and ('both', 'drill') in self.layers:
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
                     self.auto_set_stock(side='bottom')

@@ -1,6 +1,5 @@
 import base64
 import boto3
-from gerber.render import RenderSettings, theme
 from gerber.render.cairo_backend import GerberCairoContext
 import tempfile
 from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list, api_int, api_float
@@ -318,7 +317,7 @@ class PCBApi(Api):
             render_layers.append(mapkey)
 
         with tempfile.NamedTemporaryFile(delete=True) as tf:
-            ctx = GerberSVGContext(svg_file=tf.name, width=max_width, height=max_height)
+            ctx = GerberSVGContext(svg_file=tf.name, width=max_width, height=max_height, flipx=side == 'bottom')
             ctx.render_layers([pcb.get_layer(x) for x in render_layers], theme=theme.THEMES[theme_name])
             ctx.save()
 

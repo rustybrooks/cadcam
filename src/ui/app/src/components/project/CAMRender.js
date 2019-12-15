@@ -59,8 +59,8 @@ class CAMRender extends React.Component {
       panely: params.panely,
       zprobe_type: params.zprobe_type,
       posts: params.posts,
-      max_width: 800,
-      max_height: 800,
+      max_width: 700,
+      max_height: 700,
     }
     console.log(args)
     const data = await fw.PCBApi.render_cam(args)
