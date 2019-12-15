@@ -12,6 +12,24 @@ const style = theme => ({
 
 
 class ProjectDetails extends React.Component {
+  constructor(props) {
+    super(props)
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleDelete = this.handleDelete.bind(this)
+  }
+
+
+  handleDelete(project_file_id) {
+    return () => {
+      let { store } = this.props
+      let fw = store.get('frameworks')
+
+      fw.ProjectsApi.delete_file({project_key: this.props.project.project_key, project_file_id: project_file_id}).then(data => console.log(data))
+      this.props.update()
+    }
+  }
+
   render () {
     const { project, classes } = this.props
 
@@ -56,6 +74,10 @@ class ProjectDetails extends React.Component {
                 <material.Button onClick={() => {window.location.href = 'http://localhost:5000/api/projects/download_file/' + project.project_key + '-' + f.file_name + '?project_file_id=' + f.project_file_id; return null;}} variant='outlined' color="primary">
                   Download
                 </material.Button>
+                {
+                  project.is_ours ? <material.Button onClick={this.handleDelete(f.project_file_id)}>Delete</material.Button> : <div></div>
+                }
+
               </td>
             </tr>
           })
