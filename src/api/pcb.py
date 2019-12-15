@@ -11,6 +11,7 @@ from . import queries, projects
 logger = logging.getLogger(__name__)
 
 
+
 @api_register(None, require_login=True)
 class PCBApi(Api):
     @classmethod
@@ -185,7 +186,6 @@ class PCBApi(Api):
         layers = api_list(layers) if layers else [
             'copper', 'solder-mask', 'drill', 'outline'
         ]
-
         encode = api_bool(encode)
         p = queries.project(
             project_key=project_key,
@@ -255,6 +255,7 @@ class PCBApi(Api):
     @Api.config(require_login=False)
     def render_svg(
         cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None,
+        theme_name='OSH Park'
     ):
         if project_key is None:
             raise cls.BadRequest("project_key is a required field")
@@ -294,7 +295,6 @@ class PCBApi(Api):
         except KeyError:
             pass
 
-
         render_layers = []
         for mapkey in [
             ('both', 'outline'),
@@ -317,102 +317,10 @@ class PCBApi(Api):
 
             render_layers.append(mapkey)
 
-
-        try:
-            outline = pcb.layers[('both', 'outline')]['data']
-        except KeyError:
-            logger.warn("NO OUTLINE")
-            outline = None
-
-        color_map = {
-            'solder-mask': ['blue', 'purple', .75, .5],
-            # 'solder-mask': ['#cfb797', '#4e2a87', .75, 1],
-            'drill': ['#cccccc', '#444444', .5, .5],
-            'copper': ['#cfb797', 'red', .5, .5],
-            'outline': ['black', 'green', .5, .5],
-            'silk-screen': ['yellow', 'black', .5, .5],
-        }
-
-        bgalphamap = {
-            'silk-screen': 1,
-            'solder-mask': 1,
-        }
-
-        fgalphamap = {
-            'solder-mask': .75,
-            'silk-screen': 1,
-        }
-
-        # if outline:
-        #     geoms = list([outline])
-        # else:
-        #     geoms = []
-        # for l in render_layers:
-        #     g = pcb.layers[l]['geometry']
-        #     geoms.extend([g])
-
-        # bounds = geometry.shapely_svg_bounds(geoms)
-        # logger.warn("bounds = %r", bounds)
-        # fbounds = [bounds['minx'], bounds['miny'], bounds['maxx'], bounds['maxy']]
-
-        # if not outline:
-        #     bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
-        #     outline = shapely.geometry.Polygon([
-        #         [bounds2['minx'], bounds2['miny']],
-        #         [bounds2['minx'], bounds2['maxy']],
-        #         [bounds2['maxx'], bounds2['maxy']],
-        #         [bounds2['maxx'], bounds2['miny']],
-        #     ])
-        # else:
-        #     bounds2 = geometry.shapely_svg_bounds(geoms, flip=False)
-        #     gout = shapely.ops.unary_union(outline)
-        #     outline = shapely.geometry.Polygon(gout.exterior).simplify(0.005)
-
-
-            # logger.warn("before %r %r", list(gout.exterior.coords), gout.interiors)
-            # outline = shapely.geometry.Polygon([
-            #    [bounds2['minx'], bounds2['miny']],
-            #    [bounds2['minx'], bounds2['maxy']],
-            #    [bounds2['maxx'], bounds2['maxy']],
-            #    [bounds2['maxx'], bounds2['miny']],
-            # ])
-            # logger.warn("after %r %r", list(outline.exterior.coords), outline.interiors)
-
         with tempfile.NamedTemporaryFile(delete=True) as tf:
-            pcb.process_layers_svg(
-                tf.name, width=max_width, height=max_height, color_map=color_map,
-            )
-
-            # geometry.shapely_add_to_dwg(
-            #     dwg, geoms=outline,
-            #     # bounds=bounds, fill_box=True,
-            #     background=
-            # )
-            #
-            # for l in render_layers:
-            #     geom = pcb.layers[l]['geometry']
-            #     if not isinstance(geom, (list, tuple)):
-            #         geom = [geom]
-            #
-            #     if side == 'bottom':
-            #         geom = [cls._flip(g, fbounds) for g in geom]
-            #
-            #     if l[1] == 'solder-mask':
-            #         gout = shapely.ops.unary_union(outline)
-            #         if not isinstance(gout, (shapely.geometry.LineString, shapely.geometry.Polygon)):
-            #             gout = gout[0]
-            #         gout = shapely.geometry.Polygon(gout)
-            #         geom = gout.difference(shapely.ops.unary_union(geom))
-            #
-            #     geometry.shapely_add_to_dwg(
-            #         dwg, geoms=geom,
-            #         background=bgmap.get(l[1], '#4e2a87'),
-            #         foreground=fgmap.get(l[1], 'green'),
-            #         foreground_alpha=fgalphamap.get(l[1], 1),
-            #         background_alpha=bgalphamap.get(l[1], 1),
-            #     )
-            #
-            # ctx.save()
+            ctx = GerberSVGContext(svg_file=tf.name, width=max_width, height=max_height)
+            ctx.render_layers([pcb.get_layer(x) for x in render_layers], theme=theme.THEMES[theme_name])
+            ctx.save()
 
             if encode:
                 data = base64.b64encode(open(tf.name).read())
@@ -508,7 +416,6 @@ class PCBApi(Api):
         except KeyError:
             pass
 
-        render_layers = []
         for mapkey in [
             ('both', 'outline'),
             (side, 'copper'),

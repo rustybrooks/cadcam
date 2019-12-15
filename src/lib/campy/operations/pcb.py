@@ -1,5 +1,5 @@
 import gerber
-from gerber.render import render
+from gerber.render import render, theme, RenderSettings
 import gerber.primitives as primitives
 import logging
 import math
@@ -64,52 +64,80 @@ class GerberSVGContext(OurRenderContext):
             profile='full',
             size=(width, height),
         )
+        self.group = self.dwg.add(
+            self.dwg.g(transform="scale(1, -1)")
+        )
 
-        w = 3.9887
-        h = 2.811
         self.mask_count = 0
-        self.fgcolor = 'green'
-        self.bgcolor = 'red'
-        self.fgalpha = 1
-        self.bgalpha = 1
-
-        self.minx = 0
-        self.miny = 0
-        self.width = 1
-        self.height = 1
+        self.layer_mask = None
+        self.layer_mask_name = None
 
     def save(self):
-        logger.warn("saving viewbox=%0.3f %0.3f %0.3f %0.3f", self.minx, -1*self.height + self.miny, self.width, self.height)
-        self.dwg.viewbox(self.minx, -1*self.height + self.miny, self.width, self.height)
         self.dwg.save()
 
-    def render_layer(self, layer, fgcolor, bgcolor, fgalpha=1, bgalpha=1):
-        bounds = layer.bounds
-        import logging
-        logging.warn("bounds = %r", bounds)
-
+    def render_layers(self, layers, theme=theme.THEMES['default']):
+        # Calculate scale parameter
         x_range = [10000, -10000]
         y_range = [10000, -10000]
+        for layer in layers:
+            bounds = layer.bounds
+            import logging
+            if bounds is not None:
+                layer_x, layer_y = bounds
+                x_range[0] = min(x_range[0], layer_x[0])
+                x_range[1] = max(x_range[1], layer_x[1])
+                y_range[0] = min(y_range[0], layer_y[0])
+                y_range[1] = max(y_range[1], layer_y[1])
+        width = x_range[1] - x_range[0]
+        height = y_range[1] - y_range[0]
 
-        if bounds is not None:
-            layer_x, layer_y = bounds
-            x_range[0] = min(x_range[0], layer_x[0])
-            x_range[1] = max(x_range[1], layer_x[1])
-            y_range[0] = min(y_range[0], layer_y[0])
-            y_range[1] = max(y_range[1], layer_y[1])
+        self.bounds = [x_range[0], y_range[0], width, height]
 
-        self.minx = min(self.minx, x_range[0])
-        self.miny = min(self.miny, y_range[0])
-        self.width = max(self.width, x_range[1] - x_range[0])
-        self.height = max(self.height, y_range[1] - y_range[0])
+        self.dwg.viewbox(
+            self.bounds[0], self.bounds[1] + -1*height, self.bounds[2], self.bounds[3]
+        )
 
-        self.fgcolor = fgcolor
-        self.bgcolor = bgcolor
-        self.fgalpha = fgalpha
-        self.bgalpha = bgalpha
+        bgsettings = theme['background']
+        for layer in layers:
+            settings = theme.get(layer.layer_class, RenderSettings())
+            self.render_layer(layer, settings=settings, bgsettings=bgsettings)
+
+    def render_layer(self, layer, settings, bgsettings):
+        self.layer_mask_name = "mask{}".format(self.mask_count)
+        self.mask_count += 1
+        self.layer_mask = self.dwg.mask((self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]), id=self.layer_mask_name)
+        self.dwg.defs.add(self.layer_mask)
+
+        self.layer_mask.add(
+            self.dwg.rect(
+                (self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]),
+                fill='#000000',
+            )
+        )
+
+        if settings is None:
+            settings = theme.THEMES['default'].get(layer.layer_class, RenderSettings())
+        if bgsettings is None:
+            bgsettings = theme.THEMES['default'].get('background', RenderSettings())
+
+        self.invert = settings.invert
+        c = list(settings.color)
+        self.fgcolor = "rgb(%d, %d, %d)" % (
+            c[0]*255, c[1]*255, c[2]*255
+            # , settings.alpha
+        )
+        self.fgalpha = settings.alpha
+        logger.warn("color = %r", self.fgcolor)
 
         for prim in layer.primitives:
             self.render(prim)
+
+        self.group.add(
+            self.dwg.rect(
+                (self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]),
+                fill=self.fgcolor, mask='url(#{})'.format(self.layer_mask_name),
+            )
+        )
 
     def _render_line(self, line, color):
         start = line.start
@@ -119,12 +147,11 @@ class GerberSVGContext(OurRenderContext):
             logger.warn("line polarity! = %r", line.level_polarity)
 
         if isinstance(line.aperture, primitives.Circle):
-            self.dwg.add(
+            self.layer_mask.add(
                 self.dwg.line(
-                    start, end, stroke=self.fgcolor, stroke_opacity=self.fgalpha,
+                    start, end, stroke='white', stroke_opacity=self.fgalpha,
                     stroke_width=line.aperture.diameter,
                     stroke_linejoin='round', stroke_linecap='round',
-                    transform="scale(1, -1)"
                 )
             )
         elif hasattr(line, 'vertices') and line.vertices is not None:
@@ -132,17 +159,10 @@ class GerberSVGContext(OurRenderContext):
 
     def _render_rectangle(self, primitive, color):
         x1, y1 = primitive.lower_left
-        x2 = x1 + primitive.width
-        y2 = y1 + primitive.height
-
-        # self.minx = min(self.minx, x1)
-        # self.miny = min(self.miny, y1)
-
-        mask = None
-        maskname = None
 
         center = primitive.position
         if primitive.hole_diameter > 0:
+            raise Exception('fixme')
             maskname = "mask{}".format(self.mask_count)
             self.mask_count += 1
             d = primitive.hole_diameter
@@ -153,6 +173,7 @@ class GerberSVGContext(OurRenderContext):
 
         if primitive.hole_width > 0 and primitive.hole_height > 0:
             if primitive.hole_width > 0 and primitive.hole_height > 0:
+                raise Exception('fixme')
                 maskname = "mask{}".format(self.mask_count)
                 self.mask_count += 1
 
@@ -166,26 +187,21 @@ class GerberSVGContext(OurRenderContext):
                 ))
                 self.dwg.defs.add(mask)
 
-        args = {
-        }
-        if mask:
-            logger.warn("circle mask")
-            args['mask'] = "url({})".format(maskname)
-
-        self.dwg.add(self.dwg.rect(
+        self.layer_mask.add(self.dwg.rect(
             (x1, y1),
             (primitive.width, primitive.height),
-            fill=self.fgcolor, fill_opacity=self.fgalpha,
-            transform="scale(1, -1)",
-            **args
+            fill='white', fill_opacity=self.fgalpha,
         ))
 
     def _render_circle(self, primitive, color):
+        if primitive.level_polarity != 'dark':
+            logger.warn("line polarity! = %r", primitive.level_polarity)
+
         center = primitive.position
 
-        mask = maskname = None
         if hasattr(primitive, 'hole_diameter') and primitive.hole_diameter is not None and primitive.hole_diameter > 0:
-            maskname = "mask{}".format(self.mask_count)
+            raise Exception('fixme')
+            # maskname = "mask{}".format(self.mask_count)
             self.mask_count += 1
             d = primitive.hole_diameter
             r = d/1.
@@ -196,9 +212,7 @@ class GerberSVGContext(OurRenderContext):
         if (hasattr(primitive, 'hole_width') and hasattr(primitive, 'hole_height')
             and primitive.hole_width is not None and primitive.hole_height is not None
             and primitive.hole_width > 0 and primitive.hole_height > 0):
-
-            maskname = "mask{}".format(self.mask_count)
-            self.mask_count += 1
+            raise Exception('fixme')
 
             cx, cy = center
             w = primitive.hole_width
@@ -211,20 +225,14 @@ class GerberSVGContext(OurRenderContext):
             self.dwg.defs.add(mask)
 
         if not self.invert and primitive.level_polarity == 'dark':
-            args = {
-                'center': center,
-                'r': primitive.radius,
-                'transform': "scale(1, -1)",
-                'fill': self.fgcolor, 'fill_opacity': self.fgalpha,
-            }
-            if mask:
-                logger.warn("circle mask")
-                args['mask'] = "url({})".format(maskname)
-
-            self.dwg.add(self.dwg.circle(**args))
+            self.layer_mask.add(self.dwg.circle(
+                center=center, r=primitive.radius,
+                fill='white', fill_opacity=self.fgalpha,
+            ))
 
         else:
-            raise Exception("render_circle doesn't know what to do with polarity!=dark")
+            pass
+            # raise Exception("render_circle doesn't know what to do with polarity!=dark")
 
     def _render_region(self, region, color):
         logger.warn("render_region polarity=%r", region.level_polarity)
@@ -236,9 +244,8 @@ class GerberSVGContext(OurRenderContext):
             else:
                 pass
                 logger.warn('notline')
-        self.dwg.add(self.dwg.polygon(
-            coords, fill=self.fgcolor, fill_opacity=self.fgalpha,
-            transform="scale(1, -1)",
+        self.layer_mask.add(self.dwg.polygon(
+            coords, fill='white', fill_opacity=self.fgalpha,
         ))
 
     def _render_arc(self, arc, color):
@@ -278,13 +285,13 @@ class GerberSVGContext(OurRenderContext):
 
         coords = [(arc.center[0] + arc.radius*math.cos(a), arc.center[1] + arc.radius*math.sin(a)) for a in angles]
 
-        self.dwg.add(
+        self.layer_mask.add(
             self.dwg.polyline(
                 coords,
-                stroke=self.fgcolor, stroke_opacity=self.fgalpha,
+                stroke='white', stroke_opacity=self.fgalpha,
                 stroke_width=arc.aperture.diameter,
                 stroke_linejoin='round', stroke_linecap='round',
-                transform="scale(1, -1)", fill_opacity=0,
+                fill_opacity=0,
             )
         )
 
@@ -888,21 +895,9 @@ class PCBProject(object):
 
         self.process_layers()
 
-    def process_layers_svg(self, svg_file, width, height, color_map=None):
-        color_map = color_map or {}
-        ctx = GerberSVGContext(svg_file=svg_file, width=width,  height=height)
-        for k, v in self.layers.items():
-            if k == ('both', 'drill'):
-                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
-            elif k[1] == ('outline'):
-                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
-            else:
-                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
-
-            cm = color_map.get(k[1], ['green', 'red', 1, 1])
-            ctx.render_layer(layer, cm[0], cm[1], cm[2], cm[3])
-
-        ctx.save()
+    def get_layer(self, layer):
+        v = self.layers[layer]
+        return pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
 
     def process_layers(self, union=True):
         union_geom = shapely.geometry.GeometryCollection()
