@@ -28,6 +28,15 @@ class Header extends React.Component {
     'anchorEl': null,
   }
 
+  async updateUser() {
+    const { store } = this.props
+    let fw = store.get('frameworks')
+    if (fw === null || fw === undefined) return
+
+    const data = await fw.UserApi.user()
+    store.set('user', data)
+  }
+
   toggleDrawerEvent(open) {
     return event => {
       if (event.type === 'keydown' && (event.key !== 'Escape')) {
@@ -44,16 +53,23 @@ class Header extends React.Component {
   componentDidMount() {
     const { store } = this.props
     store.set('login-widget', this)
+    this.updateUser()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    //console.log("update", this.props)
   }
 
   render() {
-    const { classes } = this.props
+    const { store, classes } = this.props
+
     return (
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
             <Button color="inherit" component={Link} to="/">Home</Button>
-            <Button color="inherit" component={Link} to="/projects/me">Projects</Button>
+            <Button color="inherit" component={Link} to={"/projects/" + this.props.store.get('user').username}>Projects</Button>
+            User={store.get('user').username}
           </Toolbar>
         </AppBar>
         <Drawer anchor="top" open={this.state['login-open']} onClose={this.toggleDrawerEvent(false)}>
@@ -68,4 +84,4 @@ class Header extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(Header))
+export default withStore(withStyles(style)(Header), ['user'])

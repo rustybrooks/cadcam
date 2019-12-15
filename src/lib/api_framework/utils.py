@@ -516,6 +516,16 @@ def api_int(intstr, default=0):
         return default
 
 
+def api_float(floatstr, default=0):
+    if floatstr is None:
+        return None
+
+    try:
+        return float(floatstr)
+    except ValueError:
+        return default
+
+
 def api_datetime(dtstr, default=None):
     if isinstance(dtstr, datetime.datetime):
         dt = dtstr

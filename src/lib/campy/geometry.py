@@ -643,6 +643,15 @@ def shapely_add_to_dwg(dwg, geoms, bounds=None, background='white', foreground='
                 fill=background, fill_opacity=background_alpha
            ))
 
+    def _drawlines(poly):
+        poly = poly.simplify(0.001)
+        coords = [foo[:2] for foo in poly.coords]
+        # logger.warn("coords = %r", coords)
+        dwg.add(dwg.polyline(
+            coords,
+            stroke=foreground, stroke_width=0.001,
+        ))
+
     def _draw_geoms(_geoms):
         for g in _geoms:
             if isinstance(g, shapely.geometry.Polygon):
@@ -659,6 +668,8 @@ def shapely_add_to_dwg(dwg, geoms, bounds=None, background='white', foreground='
                     dwg.add(dwg.ellipse((x, y), (.02, .02), fill=foreground, fill_opacity=foreground_alpha))
             elif isinstance(g, shapely.geometry.GeometryCollection):
                 _draw_geoms(g)
+            elif isinstance(g, shapely.geometry.LineString):
+                _drawlines(g)
             else:
                 raise Exception("unsupported shapely type: %r", g.__class__.__name__)
 

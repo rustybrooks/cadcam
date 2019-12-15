@@ -11,8 +11,6 @@ from ..cammath import frange
 # stepdown is X% for a percentage of bit diameter, X for absolute
 
 
-
-
 def operation(required=None, operation_feedrate=None, comment=None):
     required = required or []
 
@@ -111,6 +109,18 @@ def zprobe(
     if auto_clear:
         machine().goto(z=clearz)
 
+@operation(
+    required=['centers', 'z', 'depth', 'retract_distance'],
+    operation_feedrate='plunge',
+    comment='Peck drilling holes z={z:.3f}, depth={depth:.3f}, retract_distance={retract_distance:.3f}',
+)
+def drill_cycle(centers=None, z=None, retract_distance=None, depth=None, clearz=None, auto_clear=True):
+    clearz = clearz or (z + 0.125)
+
+    machine().drill_cycle_plain(centers=centers, z=z, depth=depth)
+
+    if auto_clear:
+        machine().goto(z=clearz)
 
 # This will make a helical arc with the outter radius = outter-rad
 # it only operates at one radius
@@ -127,7 +137,7 @@ def helical_drill(center=None, z=None, outer_rad=None, depth=None, stepdown="25%
     x1, y1 = center
     z1 = z
     z2 = z1 - depth
-    clearz = clearz or (z1 + 0.25)
+    clearz = clearz or (z1 + 0.125)
 
     if depth == 0:
         return
@@ -164,7 +174,7 @@ def hsm_circle_pocket(
     depth = depth or 0
     xc, yc = center
     zc = z
-    clearz = clearz or (zc + 0.25)
+    clearz = clearz or (zc + 0.125)
 
     R = machine().tool.diameter / 2.
 
@@ -218,7 +228,7 @@ def rect_pocket(p1, p2, z, depth, stepover="50%", stepdown="50%", type='x', roug
     # FIXME reset after?
     # machine().set_speed(machine().tool.rough_speed)
 
-    clearz = clearz or (z + .25)
+    clearz = clearz or (z + .125)
 
     for Z in machine().zstep(0, -1 * depth, stepdown=stepdown):
         # Don't actually need to go very far up
@@ -269,7 +279,7 @@ def rect_pocket_corner_relief(p1, p2, z, depth, stepdown="50%", auto_clear=True,
     px2 -= r
     py2 -= r
 
-    clearz = clearz or (z + 0.25)
+    clearz = clearz or (z + 0.125)
 
     z1 = z
     z2 = z - depth

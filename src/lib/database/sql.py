@@ -42,9 +42,6 @@ def chunked(iterator, chunksize):
         yield chunk
 
 
-
-
-
 def thread_id():
     t = threading.current_thread()
     return '{}/{}'.format(t.name, t.ident % 100000)
@@ -105,7 +102,7 @@ class SQLBase(object):
 
         return logs
 
-    # transaction decorator
+    # transaction decoratrenor
     def is_transaction(self, orig_fn):
         def new_fn(*args, **kwargs):
             with self.transaction():

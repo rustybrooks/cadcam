@@ -50,46 +50,12 @@ if __name__ == '__main__':
 
     with tempfile.NamedTemporaryFile(suffix='.zip') as tf:
         with open(tf.name, 'w+b') as f:
-            f.write(cadcam.PCBApi.generate(
-                file=args[0]
+            f.write(cadcam.PCBApi.generate_from_zip(
+                file=args[0],
+                depth=options.depth, separation=options.separation, border=options.border, thickness=options.thickness, 
+                panelx=options.panelx, panely=options.panely, zprobe=options.zprobe, posts=options.posts,
             ))
 
         with zipfile.ZipFile(tf.name) as z:
             z.extractall(path=options.output)
-    # pcb = PCBProject(
-    #     gerber_input=args[0],
-    #     border=options.border,
-    #     auto_zero=True,
-    #     thickness=options.thickness,
-    #     posts=options.posts,
-    #     fixture_width=options.fixture_width,
-    # )
-    #
-    # machine = set_machine('k2cnc')
-    # machine.set_material('fr4-1oz')
-    # machine.max_rpm = machine.min_rpm = 15000
-    #
-    # if options.zprobe == 'none':
-    #     zprobe_radius = None
-    # elif options.zprobe == 'auto':
-    #     zprobe_radius = 'auto'
-    # else:
-    #     zprobe_radius = float(options.zprobe)
-    #
-    # pcb.pcb_job(
-    #     output_directory=options.output,
-    #     drill='top',
-    #     cutout='bottom',
-    #     iso_bit='engrave-0.01in-15',
-    #     drill_bit='tiny-0.9mm',
-    #     cutout_bit='1/16in spiral upcut',
-    #     post_bit='1/8in spiral upcut',
-    #     file_per_operation=not options.one_file,
-    #     outline_depth=options.depth,
-    #     outline_separation=options.separation,
-    #     panelx=options.panelx,
-    #     panely=options.panely,
-    #     flip='x',
-    #     zprobe_radius=zprobe_radius,
-    # )
 

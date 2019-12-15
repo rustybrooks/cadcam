@@ -63,6 +63,7 @@ class User(object):
         self.is_active = False
         self.is_anonymous = False
         self.user_id = 0
+        self.username = 'Anonymous'
 
         where, bindvars = SQL.auto_where(api_key=api_key, username=username, user_id=user_id, email=email)
 
@@ -95,10 +96,11 @@ class User(object):
     def get_id(self):
         return str(self.user_id)
 
-    def generate_token(self):
+    def generate_token(self, expiration=None):
+        expiration = expiration or datetime.timedelta(hours=24)
         payload = {
             'user_id': self.user_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            'exp': datetime.datetime.utcnow() + expiration
         }
         return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
@@ -153,8 +155,11 @@ def users(username=None):
 #############################################
 # projects
 
-def project(user_id=None, username=None, viewing_user_id=None, project_key=None, allow_public=None):
-    r = projects(user_id=user_id, username=username, viewing_user_id=viewing_user_id, project_key=project_key, allow_public=allow_public, limit=2)
+def project(user_id=None, username=None, viewing_user_id=None, project_key=None, project_id=None, allow_public=None):
+    r = projects(
+        user_id=user_id, username=username, viewing_user_id=viewing_user_id, project_key=project_key, project_id=project_id,
+        allow_public=allow_public, limit=2
+    )
 
     if len(r) > 1:
         raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
@@ -162,8 +167,8 @@ def project(user_id=None, username=None, viewing_user_id=None, project_key=None,
     return r[0] if r else None
 
 
-def projects(user_id=None, username=None, viewing_user_id=None, project_key=None, allow_public=None, page=None, limit=None, sort=None):
-    where, bindvars = SQL.auto_where(project_key=project_key)
+def projects(user_id=None, username=None, viewing_user_id=None, project_key=None, project_id=None, allow_public=None, page=None, limit=None, sort=None):
+    where, bindvars = SQL.auto_where(project_key=project_key, project_id=project_id)
 
     if allow_public and viewing_user_id is not None:
         if user_id is not None:

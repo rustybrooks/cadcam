@@ -1,20 +1,22 @@
-from shapely import geometry
+import logging
+import shapely
 
 from .cammath import frange
 from .tools import *
 from . import constants
-
-
 
 import copy
 import math
 import os
 
 
+logger = logging.getLogger(__name__)
+
 colors = {
     'goto': 'green',
     'cut': 'red',
 }
+
 
 class Material(object):
     def __init__(self, name, sfm_hss, sfm_carbide, fpt_hss, fpt_carbide):
@@ -29,7 +31,7 @@ class Material(object):
 
 
 class Environment(object):
-    def __init__(self, min_rpm, max_rpm, max_feedrates):
+    def __init__(self, min_rpm, max_rpm, max_feedrates, save_geoms=False):
         self.tool = None
         self.material = None
         self.material_factor = 1
@@ -40,18 +42,22 @@ class Environment(object):
         self.files = {}
         self.f = None
         self.level = 0
+        self.save_geoms = save_geoms
+        self.geometry = []
 
         self.min_rpm = min_rpm
         self.max_rpm = max_rpm
         self.max_feedrates = max_feedrates
         self.peak_feedrate = max(max_feedrates)
 
-        self.position = None
-        # self.geometry = []
+        self.position = (0, 0, 0)
 
     def __del__(self):
         for k, v in self.files.items():
             self.close_file(k)
+
+    def set_save_geoms(self, save_geoms):
+        self.save_geoms = save_geoms
 
     @classmethod
     def format_movement(cls, x=None, y=None, z=None, a=None, rate=None):
@@ -146,25 +152,21 @@ class Environment(object):
         self.write("(%s)" % (c,))
 
     def _new_position(self, x, y, z):
-        new_position = self.position.copy()
-        for i, v in enumerate([x, y, z]):
-            if v:
-                new_position[i] = v
-
+        new_position = tuple(b if b is not None else a for a, b in zip(self.position, [x, y, z]))
         return new_position
 
     def goto(self, x=None, y=None, z=None, a=None, point=None, rate=None):
         if point is not None:
             x, y, z = point
 
-        # new_position = self._new_position(x, y, z)
-        # if self.position:
-        #     self.geometry.append((
-        #         geometry.Line(coords=[self.position, new_position]),
-        #         'goto'
-        #     ))
-        # 
-        # self.position = new_position
+        new_position = self._new_position(x, y, z)
+        if self.position:
+            self.geometry.append((
+                shapely.geometry.LineString([self.position, new_position]),
+                'goto'
+            ))
+
+        self.position = new_position
 
         # self.record_linear_move((x, y, z), speed=self.rapid_speed)
         self.write("G0 %s" % (" ".join(self.format_movement(x, y, z, a, rate))))
@@ -181,17 +183,45 @@ class Environment(object):
         else:
             feed = None
 
-        # new_position = self._new_position(x, y, z)
-        # if self.position:
-        #     self.geometry.append((
-        #         geometry.Line(coords=[self.position, new_position]),
-        #         'cut'
-        #     ))
+        new_position = self._new_position(x, y, z)
+        if self.position:
+            # logger.warn("%r - %r", self.position, new_position)
+            self.geometry.append((
+                shapely.geometry.LineString([self.position, new_position]),
+                'cut'
+            ))
 
-        # self.position = new_position
+        self.position = new_position
 
         # self.record_linear_move((x, y, z))
         self.write("G1 %s" % (" ".join(self.format_movement(x, y, z, a, feed))))
+
+    # z is the top of the material being drilled into
+    # retract_distance and depth are relative to z
+    def drill_cycle_plain(self, centers, z, depth, retract_distance=None, rate=None):
+        if not isinstance(centers[0], (list, tuple)):
+            centers = [centers]
+
+        retract_distance = retract_distance or .125
+
+        z_retract = z + retract_distance
+        cycle_depth = depth + retract_distance
+
+        if self.speed is not None and rate is None:
+            feed = "F%0.3f " % self.speed
+            self.speed = None
+        elif rate is not None:
+            feed = "F%0.3f " % rate
+        else:
+            feed = ""
+
+        retract_type = 'G99'   # G98 would retract to initial Z every time
+
+        self.goto(*centers[0])
+        self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, -1*cycle_depth, feed))
+        for c in centers[1:]:
+            self.goto(*c)
+        self.write("G80")
 
     # x, y forms the center of your arc
     # if I did this right, I think it presumes you're at bx, by already
@@ -232,7 +262,6 @@ class Environment(object):
             # self.geometry.append((arc, 'cut'))
 
             self._cut_arc(bx2, by2, x - bx, y - by, rate=rate, z=z, clockwise=clockwise)
-
 
         if return_to:
             if cut_to:
@@ -442,8 +471,8 @@ materials = {
 
 
 machines = {
-    'k2cnc': Environment(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
-    'lms': Environment(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
+    'k2cnc': dict(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
+    'lms': dict(min_rpm=10000, max_rpm=20000, max_feedrates=[144, 144, 20]),
 }
 
 holes = HoleSize()

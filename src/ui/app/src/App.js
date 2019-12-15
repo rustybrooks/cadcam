@@ -7,7 +7,7 @@ import { BASE_URL } from './constants/api'
 import fetchFrameworks from './framework_client'
 import Home from './components/Home'
 import Projects from './components/Projects'
-import Project from './components/Project'
+import Project from './components/project/Project'
 import Header from './components/Header'
 
 
@@ -50,6 +50,7 @@ class App extends Component {
 const initialValue = {
   'frameworks': null,
   'login-widget': null,
+  'user': {'username': 'Anonymous', 'user_id': 0}
 }
 
 const config = {}

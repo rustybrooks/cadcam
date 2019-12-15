@@ -42,7 +42,8 @@
     "webpack-cli": "latest",
     "webpack-dev-server": "latest",
     "webpack-merge": "latest",
-    "uglifyjs-webpack-plugin": "latest"
+    "uglifyjs-webpack-plugin": "latest",
+    "clsx": "latest"
   },
   "questionable": {
     "@babel/preset-stage-2": "latest",

@@ -24,7 +24,7 @@ WORKDIR /srv
 ENTRYPOINT ["bash"]
 
 COPY requirements.txt /srv/src
-RUN pip install setuptools==9.1 \
-  && pip install -r /srv/src/requirements.txt
+RUN pip install --no-cache-dir setuptools==9.1 \
+  && pip install --no-cache-dir -r /srv/src/requirements.txt
 
 

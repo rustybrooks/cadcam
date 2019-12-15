@@ -1,9 +1,8 @@
-from flask import Flask, render_template, redirect, request
-# import flask_login
+from flask import Flask, request
 import logging
 import os
 
-from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, HttpResponse, utils
+from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, utils
 from lib import config
 from . import migrations
 from flask_cors import CORS
@@ -24,7 +23,17 @@ app.secret_key = config.get_config_key('app_secret')
 
 @app.before_request
 def before_request():
-    request.user = login.is_logged_in(request, None, None)
+    request.user = login.is_logged_in(request, None, request.args)
+
+
+@app.after_request
+def cleanup(response):
+    try:
+        queries.SQL.cleanup_conn(dump_log=False)
+    except Exception, e:
+        logger.warn("after (path=%r): cleanup failed: %r", request.full_path, e)
+
+    return response
 
 
 @app.after_request
@@ -71,18 +80,6 @@ class AdminApi(Api):
 
 @api_register(None, require_login=True)
 class UserApi(Api):
-    # @classmethod
-    # @Api.config(require_login=False)
-    # def login(cls, username=None, password=None):
-    #     if username and password:
-    #         user = queries.User(username=username, password=password)
-    #         if user.is_authenticated:
-    #             flask_login.login_user(user)
-    #         else:
-    #             return HttpResponse(render_template('login.html'))
-    #     else:
-    #         return HttpResponse(render_template('login.html'))
-
     @classmethod
     @Api.config(require_login=False)
     def signup(cls, username, email, password1, password2):
@@ -106,8 +103,20 @@ class UserApi(Api):
         return None
 
     @classmethod
+    @Api.config(require_login=True)
+    def generate_temp_token(cls, _user=None):
+        return _user.generate_token(minutes=10)
+
+    @classmethod
     def change_password(cls, new_password=None, _user=None):
         queries.update_user(user_id=_user.user_id, password=new_password)
+
+    @classmethod
+    def user(cls, _user):
+        return {
+            'username': _user.username,
+            'user_id': _user.user_id,
+        }
 
 
 app_class_proxy(app, '', 'api/admin', AdminApi())
