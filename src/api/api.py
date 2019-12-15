@@ -1,9 +1,8 @@
-from flask import Flask, render_template, redirect, request
-# import flask_login
+from flask import Flask, request
 import logging
 import os
 
-from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, HttpResponse, utils
+from lib.api_framework import api_register, Api, app_class_proxy, api_list, api_bool, utils
 from lib import config
 from . import migrations
 from flask_cors import CORS
@@ -25,6 +24,16 @@ app.secret_key = config.get_config_key('app_secret')
 @app.before_request
 def before_request():
     request.user = login.is_logged_in(request, None, request.args)
+
+
+@app.after_request
+def cleanup(response):
+    try:
+        queries.SQL.cleanup_conn(dump_log=False)
+    except Exception, e:
+        logger.warn("after (path=%r): cleanup failed: %r", request.full_path, e)
+
+    return response
 
 
 @app.after_request

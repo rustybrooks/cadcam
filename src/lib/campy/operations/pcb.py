@@ -7,10 +7,11 @@ import os
 import shapely.affinity
 import shapely.geometry
 import shapely.ops
+import svgwrite
 import zipfile
 
 from . import operation, machine, helical_drill, rect_stock, zprobe, drill_cycle
-from lib.campy import geometry, constants, environment
+from lib.campy import geometry, constants, environment, cammath
 # from lib.campy import *
 
 logger = logging.getLogger(__name__)
@@ -54,22 +55,257 @@ class OurRenderContext(render.GerberContext):
         raise Exception("Missing render")
 
 
+class GerberSVGContext(OurRenderContext):
+    def __init__(self, svg_file, width, height, viewbox='', units='inch'):
+        super(GerberSVGContext, self).__init__(units=units)
+
+        self.dwg = svgwrite.Drawing(
+            svg_file,
+            profile='full',
+            size=(width, height),
+            viewBox="0.0 -2.811 3.9887 2.811"
+        )
+
+        w = 3.9887
+        h = 2.811
+        self.mask_count = 0
+        self.fgcolor = 'green'
+        self.bgcolor = 'red'
+        self.fgalpha = 1
+        self.bgalpha = 1
+
+    def save(self):
+        logger.warn("saving")
+        self.dwg.save()
+
+    def render_layer(self, layer, fgcolor, bgcolor, fgalpha=1, bgalpha=1):
+        self.fgcolor = fgcolor
+        self.bgcolor = bgcolor
+        self.fgalpha = fgalpha
+        self.bgalpha = bgalpha
+
+        for prim in layer.primitives:
+            self.render(prim)
+
+    def scale_point(self, point):
+        return tuple([coord * scale for coord, scale in zip(point, self.scale)])
+
+    def _render_line(self, line, color):
+        start = line.start
+        end = line.end
+
+        if line.level_polarity != 'dark':
+            logger.warn("line polarity! = %r", line.level_polarity)
+
+        if isinstance(line.aperture, primitives.Circle):
+            self.dwg.add(
+                self.dwg.line(
+                    start, end, stroke=self.fgcolor, stroke_opacity=self.fgalpha,
+                    stroke_width=line.aperture.diameter,
+                    stroke_linejoin='round', stroke_linecap='round',
+                    transform="scale(1, -1)"
+                )
+            )
+        elif hasattr(line, 'vertices') and line.vertices is not None:
+            raise Exception("render_line don't know what to do")
+
+    def _render_rectangle(self, primitive, color):
+        x1, y1 = primitive.lower_left
+        x2 = x1 + primitive.width
+        y2 = y1 + primitive.height
+        box = shapely.geometry.box(x1, y1, x2, y2, ccw=False)
+
+        mask = None
+        maskname = None
+
+        center = primitive.position
+        if primitive.hole_diameter > 0:
+            maskname = "mask{}".format(self.mask_count)
+            self.mask_count += 1
+            d = primitive.hole_diameter
+            r = d/1.
+            mask = self.dwg.mask((center[0]-r, center[1]-r), (d, d), id=maskname)
+            mask.add(self.dwg.circle(center, r, fill="#ffffff"))
+            self.dwg.defs.add(mask)
+
+        if primitive.hole_width > 0 and primitive.hole_height > 0:
+            if primitive.hole_width > 0 and primitive.hole_height > 0:
+                maskname = "mask{}".format(self.mask_count)
+                self.mask_count += 1
+
+                cx, cy = center
+                w = primitive.hole_width
+                h = primitive.hole_height
+
+                mask = self.dwg.mask(((cx-w)/2., (cy-h)/2.), (w, h), id=maskname)
+                mask.add(self.dwg.rect(
+                    ((cx - w) / 2., (cy - h) / 2.), (w, h), file="#ffffff"
+                ))
+                self.dwg.defs.add(mask)
+
+        args = {
+        }
+        if mask:
+            logger.warn("circle mask")
+            args['mask'] = "url({})".format(maskname)
+
+        self.dwg.add(self.dwg.rect(
+            (x1, y1),
+            (primitive.width, primitive.height),
+            fill=self.fgcolor, fill_opacity=self.fgalpha,
+            transform="scale(1, -1)",
+            **args
+        ))
+
+    def _render_circle(self, primitive, color):
+        center = primitive.position
+
+        mask = maskname = None
+        if hasattr(primitive, 'hole_diameter') and primitive.hole_diameter is not None and primitive.hole_diameter > 0:
+            maskname = "mask{}".format(self.mask_count)
+            self.mask_count += 1
+            d = primitive.hole_diameter
+            r = d/1.
+            mask = self.dwg.mask((center[0]-r, center[1]-r), (d, d), id=maskname)
+            mask.add(self.dwg.circle(center, r, fill="#ffffff"))
+            self.dwg.defs.add(mask)
+
+        if (hasattr(primitive, 'hole_width') and hasattr(primitive, 'hole_height')
+            and primitive.hole_width is not None and primitive.hole_height is not None
+            and primitive.hole_width > 0 and primitive.hole_height > 0):
+
+            maskname = "mask{}".format(self.mask_count)
+            self.mask_count += 1
+
+            cx, cy = center
+            w = primitive.hole_width
+            h = primitive.hole_height
+
+            mask = self.dwg.mask(((cx-w)/2., (cy-h)/2.), (w, h), id=maskname)
+            mask.add(self.dwg.rect(
+                ((cx - w) / 2., (cy - h) / 2.), (w, h), file="#ffffff"
+            ))
+            self.dwg.defs.add(mask)
+
+        if not self.invert and primitive.level_polarity == 'dark':
+            args = {
+                'center': center,
+                'r': primitive.radius,
+                'transform': "scale(1, -1)",
+                'fill': self.fgcolor, 'fill_opacity': self.fgalpha,
+            }
+            if mask:
+                logger.warn("circle mask")
+                args['mask'] = "url({})".format(maskname)
+
+            self.dwg.add(self.dwg.circle(**args))
+
+        else:
+            raise Exception("render_circle doesn't know what to do with polarity!=dark")
+
+
+    def _render_region(self, region, color):
+        logger.warn("render_region polarity=%r", region.level_polarity)
+
+        coords = [region.primitives[0].start]
+        for prim in region.primitives:
+            if isinstance(prim, primitives.Line):
+                coords.append(prim.end)
+            else:
+                pass
+                logger.warn('notline')
+        self.dwg.add(self.dwg.polygon(
+            coords, fill=self.fgcolor, fill_opacity=self.fgalpha,
+            transform="scale(1, -1)", 
+        ))
+
+    def _render_arc(self, arc, color):
+        is_circle = False
+        two_pi = 2 * math.pi
+        angle1 = arc.start_angle
+        angle2 = arc.end_angle
+        if angle1 == angle2 and arc.quadrant_mode != 'single-quadrant':
+            is_circle = True
+            # Make the angles slightly different otherwise Cario will draw nothing
+            if angle1 == 0:
+                if arc.direction == 'counterclockwise':
+                    angle1 = two_pi
+                else:
+                    angle2 = two_pi
+            else:
+                angle2 -= 0.000000001
+        if isinstance(arc.aperture, primitives.Circle):
+            width = arc.aperture.diameter if arc.aperture.diameter != 0 else 0.001
+        else:
+            width = max(arc.aperture.width, arc.aperture.height, 0.001)
+
+        # logger.warn(
+        #     "render arc - center=(%0.3f, %0.3f), radius=%0.3f, angles=%d %d orig=%d %d dir=%r",
+        #     arc.center[0], arc.center[1], arc.radius,
+        #     math.degrees(angle1), math.degrees(angle2), math.degrees(arc.start_angle), math.degrees(arc.end_angle), arc.direction
+        # )
+
+        step = abs(angle2 - angle1) / 25.
+        if arc.direction == 'counterclockwise':
+            if not is_circle and (angle1 > angle2):
+                angle1 -= two_pi
+        else:
+            pass
+
+        angles = list(cammath.frange(angle1, angle2, step))
+
+        coords = [(arc.center[0] + arc.radius*math.cos(a), arc.center[1] + arc.radius*math.sin(a)) for a in angles]
+
+        self.dwg.add(
+            self.dwg.polyline(
+                coords,
+                stroke=self.fgcolor, stroke_opacity=self.fgalpha,
+                stroke_width=arc.aperture.diameter,
+                stroke_linejoin='round', stroke_linecap='round',
+                transform="scale(1, -1)", fill_opacity=0,
+            )
+        )
+
+    def _render_drill(self, primitive, color):
+        self._render_circle(primitive, color)
+        # self.hole_pos.append(shapely.geometry.Point(primitive.position[0], primitive.position[1], primitive.radius))
+
+
 class GerberGeometryContext(OurRenderContext):
     def __init__(self, units='inch'):
         super(GerberGeometryContext, self).__init__(units=units)
 
         self.polys = []
         self.remove_polys = []
+        self.running_poly = None
+
+    def update_running(self, p, add=True):
+        if add:
+            self.polys.append(p)
+            if self.running_poly:
+                self.running_poly = self.running_poly.union(p)
+            else:
+                self.running_poly = p
+        else:
+            self.remove_polys.append(p)
+            self.running_poly = self.running_poly.difference(p)
 
     def render_layer(self, layer, union=True):
-        # logger.warn("render_layer")
         for prim in layer.primitives:
             self.render(prim)
 
+        clear = shapely.ops.unary_union(self.remove_polys)
         if union:
-            return shapely.ops.unary_union(self.polys)
+            # adds = shapely.ops.unary_union(self.polys)
+            # return adds.difference(clear)
+            return self.running_poly
         else:
-            return self.polys
+            ret = []
+            for p in self.polys:
+                np = p.difference(clear)
+                if np.bounds:
+                    ret.append(np)
+            return ret
 
     def _render_line(self, line, color):
         start = line.start
@@ -88,8 +324,9 @@ class GerberGeometryContext(OurRenderContext):
             if not poly.exterior and not poly.interiors:
                 pass
             else:
-                # logger.warn("Adding poly %r - %r", poly.exterior, poly.interiors)
-                self.polys.append(poly)
+                pass
+                logger.warn("Adding poly %r - %r", poly.exterior, poly.interiors)
+                self.update_running(poly)
 
         elif hasattr(line, 'vertices') and line.vertices is not None:
             raise Exception("render_line don't know what to do")
@@ -110,6 +347,7 @@ class GerberGeometryContext(OurRenderContext):
                 raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
 
         if primitive.hole_width > 0 and primitive.hole_height > 0:
+            # logger.warn("box hole")
             cx, cy = center
             w = primitive.hole_width
             h = primitive.hole_height
@@ -118,8 +356,8 @@ class GerberGeometryContext(OurRenderContext):
                 box = box.difference(box2)
             else:
                 raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
-
-        self.polys.append(box)
+        # logger.warn("box - %r - %r", self.invert, primitive.level_polarity)
+        # self.update_running(box)
 
     def _render_circle(self, primitive, color):
         # logger.warn("render_circle")
@@ -145,19 +383,21 @@ class GerberGeometryContext(OurRenderContext):
                 if primitive.level_polarity == 'dark':
                     circle = circle.difference(box2)
 
-        self.polys.append(circle)
+        # self.update_running(circle)
 
-    def _render_region(self, primitive, color):
-        # logger.warn("render_region")
+    def _render_region(self, region, color):
+        # logger.warn("render_region polarity=%r", region.level_polarity)
 
-        # raise Exception("_render_region not implemented")
-        # logger.warn("render_region is doing nothing %r", primitive.primitives)
-        pass
         # p = shapely.geometry.MultiPolygon()
-        # for prim in primitive.primitives:
-        #     if isinstance(prim, Line):
+        coords = [region.primitives[0].start]
+        for prim in region.primitives:
+            if isinstance(prim, primitives.Line):
+                coords.append(prim.end)
+                # logger.warn('line')
         #                 mask.ctx.line_to(*self.scale_point(prim.end))
-        #             else:
+            else:
+                pass
+                logger.warn('notline')
         #                 center = self.scale_point(prim.center)
         #                 radius = self.scale[0] * prim.radius
         #                 angle1 = prim.start_angle
@@ -171,10 +411,53 @@ class GerberGeometryContext(OurRenderContext):
         #         mask.ctx.fill()
         #         self.ctx.mask_surface(mask.surface, self.origin_in_pixels[0])
 
-        if not self.invert and primitive.level_polarity == 'dark':
-            pass  # add
+        # logger.warn("%r", coords)
+        poly = shapely.geometry.Polygon(coords)
+        # self.update_running(poly, add=not self.invert and region.level_polarity == 'dark')
+
+    def _render_arc(self, arc, color):
+        is_circle = False
+        two_pi = 2 * math.pi
+        angle1 = arc.start_angle
+        angle2 = arc.end_angle
+        if angle1 == angle2 and arc.quadrant_mode != 'single-quadrant':
+            is_circle = True
+            # Make the angles slightly different otherwise Cario will draw nothing
+            if angle1 == 0:
+                if arc.direction == 'counterclockwise':
+                    angle1 = two_pi
+                else:
+                    angle2 = two_pi
+            else:
+                angle2 -= 0.000000001
+        if isinstance(arc.aperture, primitives.Circle):
+            width = arc.aperture.diameter if arc.aperture.diameter != 0 else 0.001
         else:
-            pass  # remove
+            width = max(arc.aperture.width, arc.aperture.height, 0.001)
+
+        # logger.warn(
+        #     "render arc - center=(%0.3f, %0.3f), radius=%0.3f, angles=%d %d orig=%d %d dir=%r",
+        #     arc.center[0], arc.center[1], arc.radius,
+        #     math.degrees(angle1), math.degrees(angle2), math.degrees(arc.start_angle), math.degrees(arc.end_angle), arc.direction
+        # )
+
+        step = abs(angle2 - angle1) / 25.
+        if arc.direction == 'counterclockwise':
+            if not is_circle and (angle1 > angle2):
+                angle1 -= two_pi
+        else:
+            pass
+
+        angles = list(cammath.frange(angle1, angle2, step))
+
+        coords = [(arc.center[0] + arc.radius*math.cos(a), arc.center[1] + arc.radius*math.sin(a)) for a in angles]
+        arc_geom = shapely.geometry.LineString(coords).buffer(
+            width/2.,
+            cap_style=shapely.geometry.CAP_STYLE.round if isinstance(arc.aperture, primitives.Circle) else shapely.geometry.CAP_STYLE.flat
+        )
+        # self.update_running(arc_geom)
+
+
 
 
 class GerberDrillContext(render.GerberContext):
@@ -401,32 +684,27 @@ def pcb_isolation_mill(
     return geom, geoms
 
 
-def pcb_trace_geometry(gerber_file=None, gerber_data=None, union=True):
+def pcb_layer(gerber_file=None, gerber_data=None):
     if gerber_data is not None:
-        b = gerber.load_layer_data(gerber_data, gerber_file)
+        return gerber.load_layer_data(gerber_data, gerber_file)
     else:
-        b = gerber.load_layer(gerber_file)
+        return gerber.load_layer(gerber_file)
 
+
+def pcb_trace_geometry(gerber_file=None, gerber_data=None, union=True):
+    b = pcb_layer(gerber_file=gerber_file, gerber_data=gerber_data)
     ctx = GerberGeometryContext()
     return ctx.render_layer(b, union=union)
 
 
 def pcb_drill_geometry(gerber_file=None, gerber_data=None):
-    if gerber_data is not None:
-        b = gerber.load_layer_data(gerber_data, gerber_file)
-    else:
-        b = gerber.load_layer(gerber_file)
-
+    b = pcb_layer(gerber_file=gerber_file, gerber_data=gerber_data)
     ctx = GerberDrillContext()
     return ctx.render_layer(b)
 
 
 def pcb_outline_geometry(gerber_file=None, gerber_data=None, union=True):
-    if gerber_data is not None:
-        b = gerber.load_layer_data(gerber_data, gerber_file)
-    else:
-        b = gerber.load_layer(gerber_file)
-
+    b = pcb_layer(gerber_file=gerber_file, gerber_data=gerber_data)
     ctx = GerberGeometryContext()
     return ctx.render_layer(b, union=union)
 
@@ -588,17 +866,35 @@ class PCBProject(object):
 
         self.process_layers()
 
+    def process_layers_svg(self, svg_file, width, height, color_map=None):
+        color_map = color_map or {}
+        ctx = GerberSVGContext(svg_file=svg_file, width=width,  height=height)
+        for k, v in self.layers.items():
+            if k == ('both', 'drill'):
+                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
+            elif k[1] == ('outline'):
+                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
+            else:
+                layer = pcb_layer(gerber_data=v['data'], gerber_file=v['filename'])
+
+            cm = color_map.get(k[1], ['green', 'red', 1, 1])
+            ctx.render_layer(layer, cm[0], cm[1], cm[2], cm[3])
+
+        ctx.save()
+
     def process_layers(self, union=True):
         union_geom = shapely.geometry.GeometryCollection()
 
         for k, v in self.layers.items():
             if k == ('both', 'drill'):
                 g = pcb_drill_geometry(gerber_data=v['data'], gerber_file=v['filename'])
-            elif k[1] == ('both', 'outline'):
+            elif k[1] == ('outline'):
                 g = pcb_outline_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
             else:
+            # elif k[1] == ('copper'):
                 g = pcb_trace_geometry(gerber_data=v['data'], gerber_file=v['filename'], union=union)
 
+            # logger.warn('%r - %r', k, g.bounds)
             if union:
                 v['geometry'] = g
                 union_geom = union_geom.union(g)

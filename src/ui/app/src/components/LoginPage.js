@@ -6,14 +6,14 @@ import { withStore } from '../global-store'
 
 class LoginPage extends React.Component {
   signupWasClickedCallback = (data) => {
-    console.log(data);
+    // console.log(data);
     alert('Signup callback, see log on the console to see the data.')
   }
 
   loginWasClickedCallback = (data) => {
     const { store } = this.props
 
-    console.log(data);
+    // console.log(data);
     let fw = store.get('frameworks')
     let val = fw.UserApi.api_login({'username': data.username, 'password': data.password})
     val.then(data => localStorage.setItem('api-key', data))
@@ -21,7 +21,7 @@ class LoginPage extends React.Component {
   }
 
   recoverPasswordWasClickedCallback = (data) => {
-    console.log(data);
+    // console.log(data);
     alert('Recover password callback, see log on the console to see the data.')
   }
 

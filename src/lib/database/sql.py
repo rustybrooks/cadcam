@@ -102,7 +102,7 @@ class SQLBase(object):
 
         return logs
 
-    # transaction decorator
+    # transaction decoratrenor
     def is_transaction(self, orig_fn):
         def new_fn(*args, **kwargs):
             with self.transaction():
