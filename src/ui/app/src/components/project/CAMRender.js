@@ -23,8 +23,6 @@ const style = theme => ({
   }
 })
 
-
-
 class CAMRender extends React.Component {
   loading_color = '#555888'
 
@@ -49,6 +47,7 @@ class CAMRender extends React.Component {
     const fw = this.props.store.get('frameworks')
     this.setState({img: ''})
     const args = {
+      url_token: localStorage.getItem('api-key'),
       project_key: this.props.project_key,
       username: this.props.username,
       side: this.props.side,
@@ -60,8 +59,8 @@ class CAMRender extends React.Component {
       panely: params.panely,
       zprobe_type: params.zprobe_type,
       posts: params.posts,
-      max_width: 600,
-      max_height: 600,
+      max_width: 800,
+      max_height: 800,
     }
     console.log(args)
     const data = await fw.PCBApi.render_cam(args)
@@ -71,7 +70,7 @@ class CAMRender extends React.Component {
   render() {
     const { classes } = this.props
 
-    console.log("rendercam props", this.props)
+    // console.log("rendercam props", this.props)
 
     return (
       <div className={classes.root}>

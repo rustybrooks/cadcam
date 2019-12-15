@@ -32,7 +32,7 @@ class ProjectCAM extends React.Component {
       regenerate: 0,
       params: {
         'cut_depth': 0.005,
-        'trace_separation': 0.015,
+        'trace_separation': 0.020,
         'zprobe_type': 'none',
         'border': 0,
         'thickness': .067,

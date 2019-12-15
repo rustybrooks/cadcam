@@ -63,7 +63,7 @@ class S3Cache(object):
             if not project:
                 return 'project not found'
 
-        storage_key = '{}/{}/{}'.format(user_id, project_key, file_name)
+        storage_key = '{}/{}/{}'.format(user_id, project.project_key, file_name)
         logger.warn("Uploading %r to %r", file_name, storage_key)
         s3.put_object(Body=fobj, Bucket=bucket, Key=storage_key)
         project_file_id = queries.add_or_update_project_file(

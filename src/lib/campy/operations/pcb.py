@@ -202,9 +202,6 @@ class GerberSVGContext(OurRenderContext):
         ))
 
     def _render_circle(self, primitive, color):
-        if primitive.level_polarity != 'dark':
-            logger.warn("line polarity! = %r", primitive.level_polarity)
-
         center = primitive.position
 
         if hasattr(primitive, 'hole_diameter') and primitive.hole_diameter is not None and primitive.hole_diameter > 0:
@@ -232,22 +229,19 @@ class GerberSVGContext(OurRenderContext):
             ))
             self.dwg.defs.add(mask)
 
-        logger.warn("circle invert = %r, polarity = %r", self.invert, primitive.level_polarity)
         self.layer_mask.add(self.dwg.circle(
             center=center, r=primitive.radius,
             fill='white' if not self.invert and primitive.level_polarity == 'dark' else 'black',
         ))
 
     def _render_region(self, region, color):
-        logger.warn("render_region polarity=%r", region.level_polarity)
-
         coords = [region.primitives[0].start]
         for prim in region.primitives:
             if isinstance(prim, primitives.Line):
                 coords.append(prim.end)
             else:
-                pass
                 logger.warn('notline')
+
         self.layer_mask.add(self.dwg.polygon(
             coords,
             fill='white' if not self.invert and region.level_polarity == 'dark' else 'black',
@@ -338,9 +332,6 @@ class GerberGeometryContext(OurRenderContext):
         start = line.start
         end = line.end
 
-        if line.level_polarity != 'dark':
-            logger.warn("line = %r", line.level_polarity)
-
         if isinstance(line.aperture, primitives.Circle):
             poly = shapely.geometry.LineString([start, end]).buffer(
                 line.aperture.diameter/2.,
@@ -351,15 +342,12 @@ class GerberGeometryContext(OurRenderContext):
             if not poly.exterior and not poly.interiors:
                 pass
             else:
-                pass
-                logger.warn("Adding poly %r - %r", poly.exterior, poly.interiors)
                 self.update_running(poly)
 
         elif hasattr(line, 'vertices') and line.vertices is not None:
             raise Exception("render_line don't know what to do")
 
     def _render_rectangle(self, primitive, color):
-        # logger.warn("render_rect")
         x1, y1 = primitive.lower_left
         x2 = x1 + primitive.width
         y2 = y1 + primitive.height
@@ -374,7 +362,6 @@ class GerberGeometryContext(OurRenderContext):
                 raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
 
         if primitive.hole_width > 0 and primitive.hole_height > 0:
-            # logger.warn("box hole")
             cx, cy = center
             w = primitive.hole_width
             h = primitive.hole_height
@@ -383,11 +370,10 @@ class GerberGeometryContext(OurRenderContext):
                 box = box.difference(box2)
             else:
                 raise Exception("render_rectangle doesn't really know what to do with non-dark circle in it...")
-        # logger.warn("box - %r - %r", self.invert, primitive.level_polarity)
-        # self.update_running(box)
+
+        self.update_running(box)
 
     def _render_circle(self, primitive, color):
-        # logger.warn("render_circle")
         center = primitive.position
         if not self.invert and primitive.level_polarity == 'dark':
             circle = shapely.geometry.Point(*center).buffer(distance=primitive.radius)
@@ -410,37 +396,18 @@ class GerberGeometryContext(OurRenderContext):
                 if primitive.level_polarity == 'dark':
                     circle = circle.difference(box2)
 
-        # self.update_running(circle)
+        self.update_running(circle)
 
     def _render_region(self, region, color):
-        # logger.warn("render_region polarity=%r", region.level_polarity)
-
-        # p = shapely.geometry.MultiPolygon()
         coords = [region.primitives[0].start]
         for prim in region.primitives:
             if isinstance(prim, primitives.Line):
                 coords.append(prim.end)
-                # logger.warn('line')
-        #                 mask.ctx.line_to(*self.scale_point(prim.end))
             else:
                 pass
                 logger.warn('notline')
-        #                 center = self.scale_point(prim.center)
-        #                 radius = self.scale[0] * prim.radius
-        #                 angle1 = prim.start_angle
-        #                 angle2 = prim.end_angle
-        #                 if prim.direction == 'counterclockwise':
-        #                     mask.ctx.arc(center[0], center[1], radius,
-        #                                  angle1, angle2)
-        #                 else:
-        #                     mask.ctx.arc_negative(center[0], center[1], radius,
-        #                                           angle1, angle2)
-        #         mask.ctx.fill()
-        #         self.ctx.mask_surface(mask.surface, self.origin_in_pixels[0])
-
-        # logger.warn("%r", coords)
         poly = shapely.geometry.Polygon(coords)
-        # self.update_running(poly, add=not self.invert and region.level_polarity == 'dark')
+        self.update_running(poly, add=not self.invert and region.level_polarity == 'dark')
 
     def _render_arc(self, arc, color):
         is_circle = False
@@ -462,12 +429,6 @@ class GerberGeometryContext(OurRenderContext):
         else:
             width = max(arc.aperture.width, arc.aperture.height, 0.001)
 
-        # logger.warn(
-        #     "render arc - center=(%0.3f, %0.3f), radius=%0.3f, angles=%d %d orig=%d %d dir=%r",
-        #     arc.center[0], arc.center[1], arc.radius,
-        #     math.degrees(angle1), math.degrees(angle2), math.degrees(arc.start_angle), math.degrees(arc.end_angle), arc.direction
-        # )
-
         step = abs(angle2 - angle1) / 25.
         if arc.direction == 'counterclockwise':
             if not is_circle and (angle1 > angle2):
@@ -482,9 +443,7 @@ class GerberGeometryContext(OurRenderContext):
             width/2.,
             cap_style=shapely.geometry.CAP_STYLE.round if isinstance(arc.aperture, primitives.Circle) else shapely.geometry.CAP_STYLE.flat
         )
-        # self.update_running(arc_geom)
-
-
+        self.update_running(arc_geom)
 
 
 class GerberDrillContext(render.GerberContext):
@@ -760,12 +719,15 @@ def pcb_drill(
         hole_geom = shapely.affinity.translate(hole_geom, yoff=maxy+miny)
 
     hole_geom = shapely.affinity.translate(hole_geom, xoff=xoff, yoff=yoff)
-    drill_cycle(centers=[x.coords[0][:2] for x in hole_geom], z=0, depth=depth, retract_distance=1*constants.MM)
-    '''
-    for h in hole_geom:
+
+    tool_dia = machine().tool.diameter
+    drill_holes = [x for x in hole_geom if x.coords[0][2] <= tool_dia]
+    helical_holes = [x for x in hole_geom if x.coords[0][2] > tool_dia]
+    drill_cycle(centers=[x.coords[0][:2] for x in drill_holes], z=0, depth=depth, retract_distance=1*constants.MM)
+
+    for h in helical_holes:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
         helical_drill(center=h.coords[0][:2], outer_rad=h.coords[0][2], z=0, depth=depth, stepdown="10%")
-    '''
 
     if auto_clear:
         machine().goto(z=clearz)

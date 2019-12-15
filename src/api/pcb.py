@@ -254,14 +254,14 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_svg(
-        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=600, max_height=600, _user=None,
+        cls, project_key=None, username=None, side='top', encode=True, layers=None, max_width=700, max_height=700, _user=None,
         theme_name='OSH Park'
     ):
         if project_key is None:
             raise cls.BadRequest("project_key is a required field")
 
         encode = api_bool(encode)
-        layers = set(api_list(layers) or [])
+        layers = list(set(api_list(layers) or [])) + ['outline']
         p = queries.project(
             project_key=project_key,
             username=_user.username if username == 'me' else username,
@@ -367,7 +367,7 @@ class PCBApi(Api):
         cls, project_key=None, username=None, side='top', encode=True,
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x',
-        max_width=600, max_height=600, _user=None,
+        max_width=800, max_height=800, _user=None,
     ):
         encode = api_bool(encode)
         depth = api_float(depth)
@@ -384,7 +384,7 @@ class PCBApi(Api):
 
         p = queries.project(
             project_key=project_key,
-            username=_user.username if username == 'me' else username,
+            username=username,
             viewing_user_id=_user.user_id,
             allow_public=True,
         )
@@ -396,7 +396,6 @@ class PCBApi(Api):
             return cls._empty_svg(encode=encode)
 
         pcb = PCBProject(
-            # gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
             border=border,
             auto_zero=True if zprobe_type == 'auto' else False,
             thickness=thickness,
@@ -419,16 +418,11 @@ class PCBApi(Api):
         for mapkey in [
             ('both', 'outline'),
             (side, 'copper'),
-            # (side, 'solder-mask'),
-            # (side, 'silk-screen'),
             ('both', 'drill'),
         ]:
             if mapkey not in fmap:
                 logger.warn("Not found: %r", mapkey)
                 continue
-
-            # if mapkey[1] not in layers:
-            #     continue
 
             if mapkey[0] not in [side, 'both']:
                 continue
@@ -467,7 +461,7 @@ class PCBApi(Api):
             panely=panely,
             flip='x',
             zprobe_radius=zprobe_radius,
-            output_directory=outdir,  # we're gonna ignore this probably though
+            output_directory=outdir,
             side=side,
         )
 
