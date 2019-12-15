@@ -64,9 +64,6 @@ class GerberSVGContext(OurRenderContext):
             profile='full',
             size=(width, height),
         )
-        self.group = self.dwg.add(
-            self.dwg.g(transform="scale(1, -1)")
-        )
 
         self.mask_count = 0
         self.layer_mask = None
@@ -93,16 +90,33 @@ class GerberSVGContext(OurRenderContext):
 
         self.bounds = [x_range[0], y_range[0], width, height]
 
+        bgsettings = theme['background']
+        c = list(bgsettings.color)
+
+        self.group = self.dwg.add(
+            self.dwg.g(
+                transform="scale(1, -1)",
+            )
+        )
+
+        self.group.add(
+            self.dwg.rect(
+                (self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]),
+                fill="rgb(%d, %d, %d)" % (c[0]*255, c[1]*255, c[2]*255),
+            )
+        )
+
         self.dwg.viewbox(
             self.bounds[0], self.bounds[1] + -1*height, self.bounds[2], self.bounds[3]
         )
 
-        bgsettings = theme['background']
         for layer in layers:
             settings = theme.get(layer.layer_class, RenderSettings())
-            self.render_layer(layer, settings=settings, bgsettings=bgsettings)
+            self.render_layer(layer, settings=settings)
 
-    def render_layer(self, layer, settings, bgsettings):
+    def render_layer(self, layer, settings):
+        self.invert = settings.invert
+
         self.layer_mask_name = "mask{}".format(self.mask_count)
         self.mask_count += 1
         self.layer_mask = self.dwg.mask((self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]), id=self.layer_mask_name)
@@ -111,23 +125,15 @@ class GerberSVGContext(OurRenderContext):
         self.layer_mask.add(
             self.dwg.rect(
                 (self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]),
-                fill='#000000',
+                fill='white' if self.invert else 'black',
             )
         )
 
         if settings is None:
             settings = theme.THEMES['default'].get(layer.layer_class, RenderSettings())
-        if bgsettings is None:
-            bgsettings = theme.THEMES['default'].get('background', RenderSettings())
 
-        self.invert = settings.invert
         c = list(settings.color)
-        self.fgcolor = "rgb(%d, %d, %d)" % (
-            c[0]*255, c[1]*255, c[2]*255
-            # , settings.alpha
-        )
-        self.fgalpha = settings.alpha
-        logger.warn("color = %r", self.fgcolor)
+        fgcolor = "rgb(%d, %d, %d)" % (c[0]*255, c[1]*255, c[2]*255)
 
         for prim in layer.primitives:
             self.render(prim)
@@ -135,7 +141,8 @@ class GerberSVGContext(OurRenderContext):
         self.group.add(
             self.dwg.rect(
                 (self.bounds[0], self.bounds[1]), (self.bounds[2], self.bounds[3]),
-                fill=self.fgcolor, mask='url(#{})'.format(self.layer_mask_name),
+                fill=fgcolor, mask='url(#{})'.format(self.layer_mask_name),
+                fill_opacity=settings.alpha,
             )
         )
 
@@ -149,7 +156,8 @@ class GerberSVGContext(OurRenderContext):
         if isinstance(line.aperture, primitives.Circle):
             self.layer_mask.add(
                 self.dwg.line(
-                    start, end, stroke='white', stroke_opacity=self.fgalpha,
+                    start, end,
+                    stroke='white' if not self.invert and line.level_polarity == 'dark' else 'black',
                     stroke_width=line.aperture.diameter,
                     stroke_linejoin='round', stroke_linecap='round',
                 )
@@ -190,7 +198,7 @@ class GerberSVGContext(OurRenderContext):
         self.layer_mask.add(self.dwg.rect(
             (x1, y1),
             (primitive.width, primitive.height),
-            fill='white', fill_opacity=self.fgalpha,
+            fill='white' if not self.invert and primitive.level_polarity == 'dark' else 'black',
         ))
 
     def _render_circle(self, primitive, color):
@@ -224,15 +232,11 @@ class GerberSVGContext(OurRenderContext):
             ))
             self.dwg.defs.add(mask)
 
-        if not self.invert and primitive.level_polarity == 'dark':
-            self.layer_mask.add(self.dwg.circle(
-                center=center, r=primitive.radius,
-                fill='white', fill_opacity=self.fgalpha,
-            ))
-
-        else:
-            pass
-            # raise Exception("render_circle doesn't know what to do with polarity!=dark")
+        logger.warn("circle invert = %r, polarity = %r", self.invert, primitive.level_polarity)
+        self.layer_mask.add(self.dwg.circle(
+            center=center, r=primitive.radius,
+            fill='white' if not self.invert and primitive.level_polarity == 'dark' else 'black',
+        ))
 
     def _render_region(self, region, color):
         logger.warn("render_region polarity=%r", region.level_polarity)
@@ -245,7 +249,8 @@ class GerberSVGContext(OurRenderContext):
                 pass
                 logger.warn('notline')
         self.layer_mask.add(self.dwg.polygon(
-            coords, fill='white', fill_opacity=self.fgalpha,
+            coords,
+            fill='white' if not self.invert and region.level_polarity == 'dark' else 'black',
         ))
 
     def _render_arc(self, arc, color):
@@ -268,12 +273,6 @@ class GerberSVGContext(OurRenderContext):
         else:
             width = max(arc.aperture.width, arc.aperture.height, 0.001)
 
-        # logger.warn(
-        #     "render arc - center=(%0.3f, %0.3f), radius=%0.3f, angles=%d %d orig=%d %d dir=%r",
-        #     arc.center[0], arc.center[1], arc.radius,
-        #     math.degrees(angle1), math.degrees(angle2), math.degrees(arc.start_angle), math.degrees(arc.end_angle), arc.direction
-        # )
-
         step = abs(angle2 - angle1) / 25.
         if arc.direction == 'counterclockwise':
             if not is_circle and (angle1 > angle2):
@@ -288,8 +287,8 @@ class GerberSVGContext(OurRenderContext):
         self.layer_mask.add(
             self.dwg.polyline(
                 coords,
-                stroke='white', stroke_opacity=self.fgalpha,
-                stroke_width=arc.aperture.diameter,
+                stroke='white' if not self.invert and arc.level_polarity == 'dark' else 'black',
+                stroke_width=width,
                 stroke_linejoin='round', stroke_linecap='round',
                 fill_opacity=0,
             )
@@ -297,7 +296,6 @@ class GerberSVGContext(OurRenderContext):
 
     def _render_drill(self, primitive, color):
         self._render_circle(primitive, color)
-        # self.hole_pos.append(shapely.geometry.Point(primitive.position[0], primitive.position[1], primitive.radius))
 
 
 class GerberGeometryContext(OurRenderContext):
