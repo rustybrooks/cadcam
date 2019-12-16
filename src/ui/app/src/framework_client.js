@@ -47,7 +47,7 @@ class Framework {
             return new Status(400, "Bad Request")
           } else if (response.status === 403) {
             console.log("NO AUTH", storage.get('login-callback'))
-            storage.get('login-widget').toggleDrawer(true)
+            // storage.get('login-widget').toggleDrawer(true)
             return new Status(403, "Unauthorized")
           } else if (response.status === 404) {
             console.log("Returning response", response)

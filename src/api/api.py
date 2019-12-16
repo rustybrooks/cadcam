@@ -97,10 +97,9 @@ class UserApi(Api):
         if username and password:
             user = queries.User(username=username, password=password)
             if user and user.is_authenticated:
-                logger.warn("user = %r - %r", user, user.generate_token())
                 return user.generate_token()
 
-        return None
+        raise cls.Forbidden()
 
     @classmethod
     @Api.config(require_login=True)

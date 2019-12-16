@@ -10,14 +10,20 @@ class LoginPage extends React.Component {
     alert('Signup callback, see log on the console to see the data.')
   }
 
-  loginWasClickedCallback = (data) => {
+  loginWasClickedCallback = async (data) => {
     const { store } = this.props
 
     // console.log(data);
     let fw = store.get('frameworks')
-    let val = fw.UserApi.api_login({'username': data.username, 'password': data.password})
-    val.then(data => localStorage.setItem('api-key', data))
-    store.get('login-widget').toggleDrawer(false)
+    let result = await fw.UserApi.api_login({'username': data.username, 'password': data.password})
+    console.log(result)
+    if (result.status === 403) {
+      localStorage.setItem('api-key', null)
+    } else {
+      localStorage.setItem('api-key', result)
+      store.get('login-widget').closeDrawer()
+      store.get('login-widget').updateUser()
+    }
   }
 
   recoverPasswordWasClickedCallback = (data) => {
@@ -38,4 +44,4 @@ class LoginPage extends React.Component {
   }
 }
 
-export default withStore(LoginPage)
+export default withStore(LoginPage, ['login-widget'])

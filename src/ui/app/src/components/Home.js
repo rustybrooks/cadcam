@@ -15,7 +15,7 @@ class Home extends React.Component {
     const { classes } = this.props
 
     return (
-      <Paper className={classes.paper}>Hi</Paper>
+     <div>Hi</div>
     )
   }
 }

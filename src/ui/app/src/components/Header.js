@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom'
 import AppBar from '@material-ui/core/AppBar'
 import Drawer from '@material-ui/core/Drawer'
 import { makeStyles } from '@material-ui/core/styles';
+import * as material from '@material-ui/core'
+import { withRouter } from 'react-router'
 
 import { withStore } from '../global-store'
 import LoginPage from './LoginPage'
@@ -15,7 +17,7 @@ const style = theme => ({
     flexGrow: 1,
   },
   menuButton: {
-    // marginRight: theme.spacing(2),
+    marginRight: theme.spacing(2),
   },
   title: {
     flexGrow: 1,
@@ -23,9 +25,17 @@ const style = theme => ({
 })
 
 class Header extends React.Component {
-  state = {
-    'login-open': false,
-    'anchorEl': null,
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      'login-open': false,
+      'anchorEl': null,
+    }
+
+    this.openDrawer = this.openDrawer.bind(this)
+    this.closeDrawer = this.closeDrawer.bind(this)
+    this.logout = this.logout.bind(this)
   }
 
   async updateUser() {
@@ -34,20 +44,27 @@ class Header extends React.Component {
     if (fw === null || fw === undefined) return
 
     const data = await fw.UserApi.user()
-    store.set('user', data)
+    console.log("user data", data)
+    if (data.status == 403) {
+      store.set('user', null)
+    } else {
+      store.set('user', data)
+    }
   }
 
-  toggleDrawerEvent(open) {
-    return event => {
-      if (event.type === 'keydown' && (event.key !== 'Escape')) {
-        return;
-      }
-      this.toggleDrawer(open)
-    }
-  };
+  closeDrawer() {
+    this.setState({...this.state, 'login-open': false});
+  }
 
-  toggleDrawer(open) {
-      this.setState({...this.state, 'login-open': open});
+  openDrawer() {
+    this.setState({...this.state, 'login-open': true});
+  }
+
+  logout = () => {
+    localStorage.setItem('api-key', null)
+    const { store } = this.props
+    store.set('user', null)
+    this.props.history.push('/')
   }
 
   componentDidMount() {
@@ -63,19 +80,23 @@ class Header extends React.Component {
   render() {
     const { store, classes } = this.props
 
+    const user = store.get('user')
+
     return (
       <div className={classes.root}>
         <AppBar position="static">
           <Toolbar>
             <Button color="inherit" component={Link} to="/">Home</Button>
-            <Button color="inherit" component={Link} to={"/projects/" + this.props.store.get('user').username}>Projects</Button>
-            User={store.get('user').username}
+            {user ? <Button color="inherit" component={Link} to={"/projects/" + user.username}>Projects</Button> : <div></div>}
+            {user ? <Button color="inherit" component={Link} to={"/machines/" + user.username}>Machines</Button> : <div></div>}
+            {user ? <Button color="inherit" component={Link} to={"/tools/" + user.username}>Tools</Button> : <div></div>}
+            <div className={classes.title}> </div>
+
+            {user ? <div>({user.username}) <Button color="inherit" onClick={this.logout}>Logout</Button></div> : <Button color="inherit" onClick={this.openDrawer}>Login</Button> }
           </Toolbar>
         </AppBar>
-        <Drawer anchor="top" open={this.state['login-open']} onClose={this.toggleDrawerEvent(false)}>
-          <div
-              role="presentation"
-            >
+        <Drawer anchor="top" open={this.state['login-open']} onClose={this.closeDrawer}>
+          <div role="presentation">
             <LoginPage/>
           </div>
         </Drawer>
@@ -84,4 +105,4 @@ class Header extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(Header), ['user'])
+export default withRouter(withStore(withStyles(style)(Header), ['user']))

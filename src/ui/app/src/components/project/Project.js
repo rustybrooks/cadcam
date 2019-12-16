@@ -104,7 +104,7 @@ class Project extends React.Component {
 
   handleTabChange = (event, tab) => {
     const { project, username } = this.state
-    const urlbase = '/projects/' + username + '/' + project.project_key
+    const urlbase = '/projects/' + project.username + '/' + project.project_key
 
     const url = urlbase + '/' + tab
     this.setState({

@@ -9,7 +9,8 @@ import Home from './components/Home'
 import Projects from './components/Projects'
 import Project from './components/project/Project'
 import Header from './components/Header'
-
+import Machines from './components/Machines'
+import Tools from './components/Machines'
 
 
 
@@ -40,6 +41,8 @@ class App extends Component {
           <Route exact path="/projects/:username" component={Projects} />
           <Route exact path="/projects/:username/create" component={Projects} />
           <Route exact path="/projects/:username/:project_key/:tab" component={Project} />
+          <Route exact path="/machines/:username" component={Machines} />
+          <Route exact path="/tools/:username" component={Tools} />
         </div>
       </BrowserRouter>
     )

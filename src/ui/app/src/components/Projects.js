@@ -55,7 +55,7 @@ class ProjectRow extends React.Component {
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
     }>
-      <td><Link to={'/projects/' + username + '/' + x.project_key + '/details'}>{x.project_key}</Link></td>
+      <td><Link to={'/projects/' + x.username + '/' + x.project_key + '/details'}>{x.project_key}</Link></td>
       <td>{x.name}</td>
       <td>{moment.duration(x.created_ago, 'seconds').humanize()} ago</td>
       <td>{moment.duration(x.modified_ago, 'seconds').humanize()} ago</td>
