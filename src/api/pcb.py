@@ -4,6 +4,7 @@ from gerber.render.cairo_backend import GerberCairoContext
 import tempfile
 from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list, api_int, api_float
 from lib.campy import *
+import shutil
 
 from . import queries, projects
 
@@ -446,6 +447,7 @@ class PCBApi(Api):
         outdir = tempfile.mkdtemp()
 
         logger.warn("before geom=%r", len(machine.geometry))
+
         pcb.pcb_job(
             drill='top',
             cutout='top',
@@ -511,9 +513,17 @@ class PCBApi(Api):
             dwg.save()
 
             if encode:
-                data = base64.b64encode(open(tf.name).read())
+                data = {
+                    'image': base64.b64encode(open(tf.name).read()),
+                    'cam': {}
+                }
+                for fname in os.listdir(outdir):
+                    data['cam'][fname] = open(os.path.join(outdir, fname)).read()
+
+                shutil.rmtree(outdir)
                 return data
             else:
+                shutil.rmtree(outdir)
                 return FileResponse(
                     content=open(tf.name),
                     content_type='image/svg+xml',

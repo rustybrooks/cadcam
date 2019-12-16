@@ -29,7 +29,9 @@ class CAMRender extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      show_cam: false,
       img: '',
+      cam: null
     }
   }
 
@@ -65,7 +67,7 @@ class CAMRender extends React.Component {
     }
     // console.log(args)
     const data = await fw.PCBApi.render_cam(args)
-    this.setState({img: 'data:image/svg+xml;base64,' + data})
+    this.setState({...this.state, img: 'data:image/svg+xml;base64,' + data.image, cam: data.cam})
   }
 
   render() {

@@ -7,6 +7,9 @@ import { withStyles } from '@material-ui/core/styles'
 
 import { withStore } from '../../global-store'
 
+import { BASE_URL } from '../../constants/api'
+
+
 const style = theme => ({
 })
 
@@ -20,14 +23,24 @@ class ProjectDetails extends React.Component {
   }
 
 
-  handleDelete(project_file_id) {
-    return () => {
-      let { store } = this.props
-      let fw = store.get('frameworks')
+  handleDelete = (project_file_id) => () => {
+    const { store } = this.props
+    const fw = store.get('frameworks')
 
-      fw.ProjectsApi.delete_file({project_key: this.props.project.project_key, project_file_id: project_file_id}).then(data => console.log(data))
-      this.props.update()
-    }
+    fw.ProjectsApi.delete_file({project_key: this.props.project.project_key, project_file_id: project_file_id}).then(data => console.log(data))
+    this.props.update()
+  }
+
+  downloadFile = (file_name, project_file_id) => async () => {
+    const { store } = this.props
+    const fw = store.get('frameworks')
+
+    const data = await fw.UserApi.generate_temp_token({})
+    console.log('data =', data)
+    const { project } = this.props
+    const url = BASE_URL + '/api/projects/download_file/' + project.project_key + '-' + file_name + '?project_file_id=' + project_file_id + '&url_token=' + data
+    console.log(url)
+    window.location.href = url
   }
 
   render () {
@@ -71,7 +84,7 @@ class ProjectDetails extends React.Component {
               <td colSpan={3}>{f.file_name}</td>
               <td colSpan={1}>{moment.duration(f.uploaded_ago, 'seconds').humanize()}</td>
               <td>
-                <material.Button onClick={() => {window.location.href = 'http://localhost:5000/api/projects/download_file/' + project.project_key + '-' + f.file_name + '?project_file_id=' + f.project_file_id; return null;}} variant='outlined' color="primary">
+                <material.Button onClick={this.downloadFile(f.file_name, f.project_file_id).bind(this)} variant='outlined' color="primary">
                   Download
                 </material.Button>
                 {

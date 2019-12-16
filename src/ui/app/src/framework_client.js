@@ -87,7 +87,6 @@ let fetchFrameworks = (site, prefix, storage) => {
     headers["X-API-KEY"] = api_key
   }
 
-
   return fetch(url, {'headers': headers})
     .then(response => response.json())
     .then(json => { return new Frameworks(site, json, storage) })

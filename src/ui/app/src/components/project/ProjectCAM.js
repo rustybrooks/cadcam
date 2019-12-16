@@ -130,7 +130,7 @@ class ProjectCAM extends React.Component {
 
       <material.Button color="primary" variant="outlined" onClick={this.handleGenerate.bind(this)}>Generate</material.Button>
       {
-        project.is_ours ? <material.Button color="primary" variant="outlined" onClick={this.handleGenerateDownload.bind(this)}>Generate and Save</material.Button> : <div></div>
+        // project.is_ours ? <material.Button color="primary" variant="outlined" onClick={this.handleGenerateDownload.bind(this)}>Generate and Save</material.Button> : <div></div>
       }
 
       <table border={0} cellSpacing={2}>

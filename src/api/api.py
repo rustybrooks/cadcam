@@ -1,4 +1,5 @@
 from flask import Flask, request
+import datetime
 import logging
 import os
 
@@ -104,7 +105,7 @@ class UserApi(Api):
     @classmethod
     @Api.config(require_login=True)
     def generate_temp_token(cls, _user=None):
-        return _user.generate_token(minutes=10)
+        return _user.generate_token(datetime.timedelta(minutes=10))
 
     @classmethod
     def change_password(cls, new_password=None, _user=None):

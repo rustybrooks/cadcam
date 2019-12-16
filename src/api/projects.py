@@ -180,10 +180,9 @@ class ProjectsApi(Api):
         return {'status': 'ok'}
 
     @classmethod
-    @Api.config(require_login=False)  # FIXME for now let's let anyone download by id, fix me with cookie or something
+    @Api.config(require_login=False)
     def download_file(cls, file_name, project_file_id=None, _user=None):
-        pf = queries.project_file(project_file_id=project_file_id)
-        # pf = queries.project_file(project_file_id=project_file_id, user_id=_user.user_id)
+        pf = queries.project_file(project_file_id=project_file_id, user_id=_user.user_id)
         if not pf:
             raise cls.NotFound()
 
