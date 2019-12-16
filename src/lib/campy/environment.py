@@ -205,7 +205,8 @@ class Environment(object):
         retract_distance = retract_distance or .125
 
         z_retract = z + retract_distance
-        cycle_depth = depth + retract_distance
+        # cycle_depth = -1 * (depth + retract_distance)  # this is supposed to be how it works but it doesn't seem to
+        cycle_depth = z - depth
 
         if self.speed is not None and rate is None:
             feed = "F%0.3f " % self.speed
@@ -218,7 +219,7 @@ class Environment(object):
         retract_type = 'G99'   # G98 would retract to initial Z every time
 
         self.goto(*centers[0])
-        self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, -1*cycle_depth, feed))
+        self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, cycle_depth, feed))
         for c in centers[1:]:
             self.goto(*c, prefix='')
         self.write("G80")

@@ -85,7 +85,7 @@ class CAMRender extends React.Component {
     return (
       <div className={classes.root}>
         <div>
-          <material.Button onClick={this.swapImage}>Swap to {this.state.show_image ? "CAM" : "Image"}</material.Button>
+          <material.Button onClick={this.swapImage}>Swap to {this.state.show_image ? "Gcode" : "Image"}</material.Button>
         </div>
         <div className={classes.image}>
         {

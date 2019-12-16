@@ -51,9 +51,10 @@ class Gcode extends React.Component {
 
       </material.List>
       <material.Paper className={classes.code}>
-        <code className={classes.code}>
-          {this.state.selected ? this.props.cam[this.state.selected].split ('\n').map ((item, i) => <span key={i}>{item}<br/></span>) : ''}
-        </code>
+        <pre className={classes.code}>
+          {/*{this.state.selected ? this.props.cam[this.state.selected].split ('\n').map ((item, i) => <span key={i}>{item}<br/></span>) : ''}*/}
+          {this.state.selected ? this.props.cam[this.state.selected] : ''}
+        </pre>
       </material.Paper>
     </div>
   }
