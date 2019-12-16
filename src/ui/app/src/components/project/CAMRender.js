@@ -1,9 +1,11 @@
 import React from 'react'
 import ReactLoading from 'react-loading'
+import * as material from '@material-ui/core'
 
 import { withStyles } from '@material-ui/core/styles'
 import { withStore } from '../../global-store'
 
+import Gcode from './Gcode'
 
 const style = theme => ({
   'loadingDiv': {
@@ -16,7 +18,8 @@ const style = theme => ({
   'forms': {
     'align-items': 'top'
   },
-  'root': {
+  'root': {},
+  'image': {
     'align-items': 'top',
     // background: 'green',
     display: 'flex',
@@ -29,7 +32,7 @@ class CAMRender extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      show_cam: false,
+      show_image: true,
       img: '',
       cam: null
     }
@@ -70,6 +73,10 @@ class CAMRender extends React.Component {
     this.setState({...this.state, img: 'data:image/svg+xml;base64,' + data.image, cam: data.cam})
   }
 
+  swapImage = () => {
+    this.setState({...this.state, show_image: !this.state.show_image})
+  }
+
   render() {
     const { classes } = this.props
 
@@ -77,11 +84,16 @@ class CAMRender extends React.Component {
 
     return (
       <div className={classes.root}>
+        <div>
+          <material.Button onClick={this.swapImage}>Swap to {this.state.show_image ? "CAM" : "Image"}</material.Button>
+        </div>
+        <div className={classes.image}>
         {
           (!this.state.img.length)
             ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
-            : <img src={this.state.img}/>
+            : (this.state.show_image ? <img src={this.state.img}/> : <Gcode cam={this.state.cam}></Gcode>)
         }
+        </div>
       </div>
     )
   }

@@ -21,6 +21,10 @@ const style = theme => ({
     margin: theme.spacing(1),
     minWidth: 120,
   },
+
+  render: {
+    width: '50%'
+  }
 })
 
 
@@ -136,15 +140,15 @@ class ProjectCAM extends React.Component {
       <table border={0} cellSpacing={2}>
         <tbody>
           <tr>
-            <td valign="top">
+            <td valign="top" width="50%">
               <CAMRender
-                store={this.props.store} project_key={project.project_key} username={project.username} side='top'
-                params={this.state.params} regenerate={this.state.regenerate} regenerate_download={this.state.regenerate_download}
+                className={classes.render}  project_key={project.project_key} username={project.username} side='top'
+                params={this.state.params} regenerate={this.state.regenerate}
               />
             </td>
-            <td valign="top">
-              <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'
-                         params={this.state.params} regenerate={this.state.regenerate} regenerate_download={this.state.regenerate_download}
+            <td valign="top" width="50%">
+              <CAMRender className={classes.render} project_key={project.project_key} username={project.username} side='bottom'
+                         params={this.state.params} regenerate={this.state.regenerate}
               />
             </td>
           </tr>
