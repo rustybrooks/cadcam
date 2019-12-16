@@ -62,7 +62,7 @@ class AdminApi(Api):
             SQL=queries.SQL,
             dry_run=False,
             initial=api_bool(initial),
-            apply_versions=[int(x) for x in api_list(apply)]
+            apply_versions=[int(x) for x in api_list(apply or [])]
         )
 
         cls._bootstrap_admin()
