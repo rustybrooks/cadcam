@@ -31,7 +31,8 @@ class CreateProject extends React.Component {
     console.log("closing")
     const { store } = this.props
     const fw = store.get('frameworks')
-    fw.ProjectsApi.create({project_key: this.state.project_key, name: this.state.name}).then(data => this.props.history.push('/projects/me/' + this.state.project_key))
+    const user = store.get('user')
+    fw.ProjectsApi.create({project_key: this.state.project_key, name: this.state.name}).then(data => this.props.history.push('/projects/' + user.username + '/' + this.state.project_key + '/details'))
   }
 
   handleNameChange = event => {
@@ -80,4 +81,4 @@ class CreateProject extends React.Component {
   }
 }
 
-export default withRouter(withStore(withStyles(style)(CreateProject)))
+export default withRouter(withStore(withStyles(style)(CreateProject), ['user']))

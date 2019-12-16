@@ -113,7 +113,7 @@ class PCBApi(Api):
 
         p = queries.project(
             project_key=project_key,
-            username=_user.username if username == 'me' else username,
+            username=username,
             viewing_user_id=_user.user_id,
             allow_public=True,
         )
@@ -189,7 +189,7 @@ class PCBApi(Api):
         encode = api_bool(encode)
         p = queries.project(
             project_key=project_key,
-            username=_user.username if username == 'me' else username,
+            username=username,
             viewing_user_id=_user.user_id,
             allow_public=True,
         )
@@ -264,7 +264,7 @@ class PCBApi(Api):
         layers = list(set(api_list(layers) or [])) + ['outline']
         p = queries.project(
             project_key=project_key,
-            username=_user.username if username == 'me' else username,
+            username=username,
             viewing_user_id=_user.user_id,
             allow_public=True,
         )

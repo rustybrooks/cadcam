@@ -50,7 +50,7 @@ class ProjectRow extends React.Component {
 
   render() {
     let x = this.props.row
-    const {classes, username} = this.props
+    const {classes} = this.props
     return <tr key={1} className={this.props.selected ?
       (this.props.even ? classes.matchrow_select_even : classes.matchrow_select_odd) :
       (this.props.even ? classes.matchrow_even : classes.matchrow_odd)
@@ -68,6 +68,7 @@ class Projects extends React.Component {
     super(props);
 
     this.state = {
+      username: null,
       projects: null,
       order: 'desc',
       orderBy: 'created_at',
@@ -113,7 +114,7 @@ class Projects extends React.Component {
     let username = this.props.match.params.username
 
     const data = await fw.ProjectsApi.index({username: username, page: 1, limit: 100})
-    this.setState({'projects': data})
+    this.setState({...this.state, 'username': username, 'projects': data})
   }
 
   handleRequestSort = (event, property) => {
@@ -156,11 +157,11 @@ class Projects extends React.Component {
     let owner = this
     const { order, orderBy, selected, rowsPerPage, page } = this.state;
 
-    const username = store.get('user').username
+    const user = store.get('user')
 
     return (
       <Paper className={classes.paper}>
-        <Button component={Link} to={"/projects/" + username + "/create"}>Create New Project</Button>
+        {user && user.username === this.state.username ? <Button component={Link} to={"/projects/" + user.username + "/create"}>Create New Project</Button> : ''}
 
         <div className={classes.root}>
           <TablePagination
@@ -189,7 +190,7 @@ class Projects extends React.Component {
                 even = !even
                 return (
                   <ProjectRow
-                    key={x.project_id} classes={classes} row={x} username={username}
+                    key={x.project_id} classes={classes} row={x}
                   />
                 )
               })

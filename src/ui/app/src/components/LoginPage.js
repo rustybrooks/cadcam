@@ -16,7 +16,6 @@ class LoginPage extends React.Component {
     // console.log(data);
     let fw = store.get('frameworks')
     let result = await fw.UserApi.api_login({'username': data.username, 'password': data.password})
-    console.log(result)
     if (result.status === 403) {
       localStorage.setItem('api-key', null)
     } else {

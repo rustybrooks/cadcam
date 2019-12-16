@@ -44,8 +44,7 @@ class Header extends React.Component {
     if (fw === null || fw === undefined) return
 
     const data = await fw.UserApi.user()
-    console.log("user data", data)
-    if (data.status == 403) {
+    if (data.status === 403) {
       store.set('user', null)
     } else {
       store.set('user', data)
