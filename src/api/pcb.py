@@ -367,6 +367,7 @@ class PCBApi(Api):
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x',
         max_width=800, max_height=800, _user=None,
+        download=False,
     ):
         encode = api_bool(encode)
         depth = api_float(depth)
@@ -464,24 +465,25 @@ class PCBApi(Api):
             side=side,
         )
 
-        with tempfile.NamedTemporaryFile(suffix='.zip', delete=True) as tf:
-            with zipfile.ZipFile(tf.name, 'w') as zip:
-                for filename in os.listdir(outdir):
-                    zip.write(
-                        os.path.join(outdir, filename),
-                        arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
-                    )
+        if download:
+            with tempfile.NamedTemporaryFile(suffix='.zip', delete=True) as tf:
+                with zipfile.ZipFile(tf.name, 'w') as zip:
+                    for filename in os.listdir(outdir):
+                        zip.write(
+                            os.path.join(outdir, filename),
+                            arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
+                        )
 
-            tf.seek(0)
-            error = projects.s3cache.add(
-                project=p,
-                fobj=tf,
-                user_id=_user.user_id,
-                file_name='cam-{}.zip'.format(side),
-                split_zip=False
-            )
-            if error:
-                raise cls.BadRequest(error)
+                tf.seek(0)
+                error = projects.s3cache.add(
+                    project=p,
+                    fobj=tf,
+                    user_id=_user.user_id,
+                    file_name='cam-{}.zip'.format(side),
+                    split_zip=False
+                )
+                if error:
+                    raise cls.BadRequest(error)
 
         with tempfile.NamedTemporaryFile(delete=True) as tf:
             # logger.warn("geom = %r", machine.geometry)

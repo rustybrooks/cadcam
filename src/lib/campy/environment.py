@@ -155,7 +155,7 @@ class Environment(object):
         new_position = tuple(b if b is not None else a for a, b in zip(self.position, [x, y, z]))
         return new_position
 
-    def goto(self, x=None, y=None, z=None, a=None, point=None, rate=None):
+    def goto(self, x=None, y=None, z=None, a=None, point=None, rate=None, prefix='G0'):
         if point is not None:
             x, y, z = point
 
@@ -169,7 +169,8 @@ class Environment(object):
         self.position = new_position
 
         # self.record_linear_move((x, y, z), speed=self.rapid_speed)
-        self.write("G0 %s" % (" ".join(self.format_movement(x, y, z, a, rate))))
+        prefix = prefix + (' ' if prefix else '')
+        self.write("%s %s" % (prefix, " ".join(self.format_movement(x, y, z, a, rate))))
 
     def cut(self, x=None, y=None, z=None, a=None, point=None, rate=None):
         if point is not None:
@@ -219,7 +220,7 @@ class Environment(object):
         self.goto(*centers[0])
         self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, -1*cycle_depth, feed))
         for c in centers[1:]:
-            self.goto(*c)
+            self.goto(*c, prefix='')
         self.write("G80")
 
     # x, y forms the center of your arc

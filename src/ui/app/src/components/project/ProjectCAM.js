@@ -30,6 +30,7 @@ class ProjectCAM extends React.Component {
 
     this.state = {
       regenerate: 0,
+      regenerate_download: 0,
       params: {
         'cut_depth': 0.007,
         'trace_separation': 0.020,
@@ -45,6 +46,10 @@ class ProjectCAM extends React.Component {
 
   handleGenerate = event => {
     this.setState({...this.state, regenerate: this.state.regenerate+1})
+  }
+
+  handleGenerateDownload = event => {
+    this.setState({...this.state, regenerate: this.state.regenerate_download+1})
   }
 
   handleChange = name => event => {
@@ -124,6 +129,9 @@ class ProjectCAM extends React.Component {
         </material.FormGroup>
 
       <material.Button color="primary" variant="outlined" onClick={this.handleGenerate.bind(this)}>Generate</material.Button>
+      {
+        project.is_ours ? <material.Button color="primary" variant="outlined" onClick={this.handleGenerateDownload.bind(this)}>Generate and Save</material.Button> : <div></div>
+      }
 
       <table border={0} cellSpacing={2}>
         <tbody>
@@ -131,12 +139,12 @@ class ProjectCAM extends React.Component {
             <td valign="top">
               <CAMRender
                 store={this.props.store} project_key={project.project_key} username={project.username} side='top'
-                params={this.state.params} regenerate={this.state.regenerate}
+                params={this.state.params} regenerate={this.state.regenerate} regenerate_download={this.state.regenerate_download}
               />
             </td>
             <td valign="top">
               <CAMRender store={this.props.store} project_key={project.project_key} username={project.username} side='bottom'
-                         params={this.state.params} regenerate={this.state.regenerate}
+                         params={this.state.params} regenerate={this.state.regenerate} regenerate_download={this.state.regenerate_download}
               />
             </td>
           </tr>

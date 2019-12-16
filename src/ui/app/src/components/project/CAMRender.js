@@ -38,15 +38,16 @@ class CAMRender extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.props.regenerate === prevProps.regenerate) return
-    this.updateImage()
+    if (this.props.regenerate === prevProps.regenerate && this.props.regenerate_download === prevProps.regenerate_download) return
+    this.updateImage(this.props.regenerate_download !== prevProps.regenerate_download)
   }
 
-  async updateImage() {
+  async updateImage(download=false) {
     const { params } = this.props
     const fw = this.props.store.get('frameworks')
     this.setState({img: ''})
     const args = {
+      download: download,
       url_token: localStorage.getItem('api-key'),
       project_key: this.props.project_key,
       username: this.props.username,

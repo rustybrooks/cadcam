@@ -732,7 +732,11 @@ def pcb_drill(
     tool_dia = machine().tool.diameter
     drill_holes = [x for x in hole_geom if x.coords[0][2] <= tool_dia]
     helical_holes = [x for x in hole_geom if x.coords[0][2] > tool_dia]
-    drill_cycle(centers=[x.coords[0][:2] for x in drill_holes], z=0, depth=depth, retract_distance=1*constants.MM)
+
+    machine().goto(z=1*constants.MM)
+    drill_cycle(
+        centers=[x.coords[0][:2] for x in drill_holes], z=0, depth=depth, retract_distance=1*constants.MM, rate=2, auto_clear=False
+    )
 
     for h in helical_holes:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
