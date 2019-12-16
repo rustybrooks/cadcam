@@ -593,7 +593,7 @@ def pcb_isolation_mill(
                 zvar = _zadjust(*coords[0])
                 machine().cut(c[0], c[1], "[{}-{}]".format(zvar, depth))
             else:
-                machine().cut(c[0], c[1], depth)
+                machine().cut(c[0], c[1], -1*depth)
 
     clearz = clearz or 1*constants.MM
     logger.warn("tool radius - depth=%r, base dia=%r, diameter at=%r", depth, machine().tool.diameter_at_depth(0), machine().tool.diameter_at_depth(depth))
@@ -1053,7 +1053,7 @@ class PCBProject(object):
                 machine().set_tool(cutout_bit)
                 for x in range(panelx):
                     for y in range(panely):
-                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="25%")
+                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="15%")
 
         if side in ['bottom', 'both']:
             # .... BOTTOM ....
@@ -1107,5 +1107,5 @@ class PCBProject(object):
                 machine().set_tool(cutout_bit)
                 for x in range(panelx):
                     for y in range(panely):
-                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y))
+                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y), stepdown="15%")
 

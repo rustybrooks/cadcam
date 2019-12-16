@@ -1,10 +1,10 @@
 import React from 'react'
 import * as material from '@material-ui/core'
-import * as moment from 'moment'
 
 import { withStyles } from '@material-ui/core/styles'
 
-import { Switch, Route, Link, BrowserRouter, Redirect } from "react-router-dom";
+// import { Switch, Route, Link, BrowserRouter, Redirect } from "react-router-dom";
+import { withRouter } from 'react-router'
 
 
 import { withStore } from '../../global-store'
@@ -38,6 +38,7 @@ class Project extends React.Component {
     }
 
     // This binding is necessary to make `this` work in the callback
+    this.handleTabChange = this.handleTabChange.bind(this)
     this.handleClose = this.handleClose.bind(this)
     this.handleOpen = this.handleOpen.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -73,11 +74,13 @@ class Project extends React.Component {
   }
 
   componentDidMount() {
+    console.log('component mount')
     this.onRouteChanged()
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.props.location.pathname !== prevProps.location.pathname) {
+  componentDidUpdate(prevProps, prevState) {
+    // console.log('component update', this.state.project_key, prevState.project_key)
+    if (this.state.project_key !== prevState.project_key) {
       this.onRouteChanged()
     }
   }
@@ -86,6 +89,7 @@ class Project extends React.Component {
     const params = this.props.match.params
     const { username, project_key, tab } = params
 
+    console.log("fetching project because", project_key, this.state.project_key)
     let { store } = this.props
     let fw = store.get('frameworks')
     fw.ProjectsApi.project({project_key: project_key, username: username}).then(data => {
@@ -98,10 +102,20 @@ class Project extends React.Component {
     })
   }
 
+  handleTabChange = (event, tab) => {
+    const { project, username } = this.state
+    const urlbase = '/projects/' + username + '/' + project.project_key
+
+    const url = urlbase + '/' + tab
+    this.setState({
+      ...this.state, tab: tab,
+    });
+    this.props.history.push(url);
+  };
+
   render() {
     const { classes } = this.props
     const { project, tab, username } = this.state
-
 
     if (project === null) {
       return <div>Loading</div>
@@ -113,17 +127,17 @@ class Project extends React.Component {
       return <div>Error: project.details</div>
     }
 
-    const urlbase = '/projects/' + username + '/' + project.project_key
+    // const urlbase = '/projects/' + username + '/' + project.project_key
 
     return <material.Paper className={classes.paper}>
-      <material.Tabs value={location.pathname} >
-        <material.Tab label="Summary" value={urlbase} component={Link} to={urlbase}>
+      <material.Tabs value={tab} onChange={this.handleTabChange}>
+        <material.Tab label="Summary" value='details'>
         </material.Tab>
 
-        <material.Tab label="PCB Renders" value={urlbase + '/render'} component={Link} to={urlbase + '/render'}>
+        <material.Tab label="PCB Renders" value='render'>
         </material.Tab>
 
-        <material.Tab label="CAM" value={urlbase + '/cam'} component={Link} to={urlbase + '/cam'}>
+        <material.Tab label="CAM" value='cam'>
         </material.Tab>
       </material.Tabs>
 
@@ -159,4 +173,4 @@ class Project extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(Project))
+export default withStore(withRouter(withStyles(style)(Project)))

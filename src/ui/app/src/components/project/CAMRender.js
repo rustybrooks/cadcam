@@ -62,7 +62,7 @@ class CAMRender extends React.Component {
       max_width: 700,
       max_height: 700,
     }
-    console.log(args)
+    // console.log(args)
     const data = await fw.PCBApi.render_cam(args)
     this.setState({img: 'data:image/svg+xml;base64,' + data})
   }

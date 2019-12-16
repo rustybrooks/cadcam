@@ -107,3 +107,9 @@ new.add_statement("create index project_files_project_id on project_files(projec
 
 new = Migration(3, "Adding columns to project")
 new.add_statement("alter table projects add column is_public bool not null default true")
+
+new = Migration(6, "Adding columns to project")
+new.add_statement("alter table project_files add column date_deleted timestamp")
+new.add_statement("alter table project_files add column is_deleted bool not null default false")
+
+

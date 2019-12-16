@@ -234,7 +234,7 @@ def project_files(
     )
 
     if is_deleted is not None:
-        where += ['is_deleted' if is_deleted else 'not is_deleted']
+        where += ['is_deleted' if is_deleted else 'not pf.is_deleted']
 
     query = """
         select project_id, project_key, project_file_id, user_id, username, file_name, s3_key, source_project_file_id, date_uploaded

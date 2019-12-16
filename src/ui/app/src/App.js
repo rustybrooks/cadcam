@@ -39,7 +39,6 @@ class App extends Component {
           <Route exact path="/" component={Home} />
           <Route exact path="/projects/:username" component={Projects} />
           <Route exact path="/projects/:username/create" component={Projects} />
-          <Route exact path="/projects/:username/:project_key/" component={Project} />
           <Route exact path="/projects/:username/:project_key/:tab" component={Project} />
         </div>
       </BrowserRouter>

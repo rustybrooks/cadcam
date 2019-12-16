@@ -469,7 +469,7 @@ class PCBApi(Api):
                 for filename in os.listdir(outdir):
                     zip.write(
                         os.path.join(outdir, filename),
-                        arcname=os.path.join(p.project_key + '-cam', os.path.split(filename)[-1])
+                        arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
                     )
 
             tf.seek(0)
@@ -477,7 +477,7 @@ class PCBApi(Api):
                 project=p,
                 fobj=tf,
                 user_id=_user.user_id,
-                file_name='generated_cam_{}.zip'.format(side),
+                file_name='cam-{}.zip'.format(side),
                 split_zip=False
             )
             if error:

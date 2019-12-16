@@ -31,7 +31,7 @@ class ProjectCAM extends React.Component {
     this.state = {
       regenerate: 0,
       params: {
-        'cut_depth': 0.005,
+        'cut_depth': 0.007,
         'trace_separation': 0.020,
         'zprobe_type': 'none',
         'border': 0,
@@ -39,7 +39,6 @@ class ProjectCAM extends React.Component {
         'panelx': 1,
         'panely': 1,
         'posts': 'none',
-        // 'two_sided': false,
       }
     }
   }

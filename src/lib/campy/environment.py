@@ -162,7 +162,7 @@ class Environment(object):
         new_position = self._new_position(x, y, z)
         if self.position:
             self.geometry.append((
-                shapely.geometry.LineString([self.position, new_position]),
+                shapely.geometry.LineString([self.position[:2], new_position[:2]]),
                 'goto'
             ))
 
@@ -185,9 +185,8 @@ class Environment(object):
 
         new_position = self._new_position(x, y, z)
         if self.position:
-            # logger.warn("%r - %r", self.position, new_position)
             self.geometry.append((
-                shapely.geometry.LineString([self.position, new_position]),
+                shapely.geometry.LineString([self.position[:2], new_position[:2]]),
                 'cut'
             ))
 
@@ -453,10 +452,10 @@ materials = {
     # FIXME - these numbers are pure guesses
     'fr4-1oz': Material(
         name='FR4 PCB, 1oz copper',
-        sfm_hss=[250, 800],
-        sfm_carbide=[600, 1000],
-        fpt_hss=[(.025, .027), (.025, .027), (.013, .016), (.004, .007), (.001, .002), (.0005, .001)],
-        fpt_carbide=[(.025, .027), (.025, .027), (.013, .016), (.004, .007),],
+        sfm_hss=[200, 600],
+        sfm_carbide=[400, 800],
+        fpt_hss=[(.020, .027), (.020, .027), (.010, .016), (.004, .007), (.001, .002), (.0005, .001)],
+        fpt_carbide=[(.020, .027), (.020, .027), (.010, .016), (.004, .007), (.001, .002), (.0005, .001)],
     ),
     'foam': Material(
         name='foam',
