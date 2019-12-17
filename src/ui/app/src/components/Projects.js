@@ -100,8 +100,11 @@ class Projects extends React.Component {
 
   onRouteChanged() {
     console.log('route', this.props.location.pathname)
-    if (this.props.location.pathname === '/projects/' + this.props.store.get('user').username + '/create') {
-      this.setState({...this.state, createModal: true})
+    const user = this.props.store.get('user')
+    if (user) {
+      if (this.props.location.pathname === '/projects/' + this.props.store.get('user').username + '/create') {
+        this.setState({...this.state, createModal: true})
+      }
     }
   }
 
@@ -110,7 +113,6 @@ class Projects extends React.Component {
     let fw = store.get('frameworks')
     if (fw === null || fw === undefined) return
 
-    store.set('projects', null)
     let username = this.props.match.params.username
 
     const data = await fw.ProjectsApi.index({username: username, page: 1, limit: 100})

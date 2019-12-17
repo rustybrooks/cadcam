@@ -152,6 +152,19 @@ def users(username=None):
     return list(SQL.select_foreach(query))
 
 
+def user_projects(page=None, limit=None):
+    query = """
+        select user_id, username, count(*) as count
+        from users u
+        join projects p using (user_id)
+        where p.is_public 
+        group by 1, 2
+        order by count(*) desc
+        {limit}
+    """.format(limit=SQL.limit(page=page, limit=limit))
+    return list(SQL.select_foreach(query))
+
+
 #############################################
 # projects
 

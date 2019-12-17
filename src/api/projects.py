@@ -197,3 +197,8 @@ class ProjectsApi(Api):
             # content='foo',
             content_type='application/octet-stream',
         )
+
+    @classmethod
+    @Api.config(require_login=False)
+    def user_projects(self, limit=20):
+        return queries.user_projects(limit=limit)

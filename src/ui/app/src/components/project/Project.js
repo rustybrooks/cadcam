@@ -2,11 +2,7 @@ import React from 'react'
 import * as material from '@material-ui/core'
 
 import { withStyles } from '@material-ui/core/styles'
-
-// import { Switch, Route, Link, BrowserRouter, Redirect } from "react-router-dom";
 import { withRouter } from 'react-router'
-
-
 import { withStore } from '../../global-store'
 import DropzoneArea from '../dropzone/DropZoneArea'
 
