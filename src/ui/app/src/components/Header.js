@@ -91,7 +91,7 @@ class Header extends React.Component {
             {user ? <Button color="inherit" component={Link} to={"/tools/" + user.username}>Tools</Button> : <div></div>}
             <div className={classes.title}> </div>
 
-            {user ? <div>({user.username}) <Button color="inherit" onClick={this.logout}>Logout</Button></div> : <Button color="inherit" onClick={this.openDrawer}>Login</Button> }
+            {user ? <div>({user.username}) <Button color="inherit" onClick={this.logout}>Logout</Button></div> : <Button color="inherit" onClick={this.openDrawer}>Login / Sign up</Button> }
           </Toolbar>
         </AppBar>
         <Drawer anchor="top" open={this.state['login-open']} onClose={this.closeDrawer}>

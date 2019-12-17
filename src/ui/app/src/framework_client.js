@@ -9,16 +9,14 @@ export class Status {
 
 
 class Framework {
-  constructor(base_url, data, storage) {
-    // console.log(data)
+  constructor(base_url, data) {
     Object.keys(data).filter((k) => {
       return (k[0] !== '_')
     }).map((k) => {
       let cmd = data[k]
       const whole_url = base_url + '/' + cmd['simple_url']
 
-
-      this[k] = (context) => {
+      this[k] = async (context) => {
         let headers = {}
 
         const api_key = localStorage.getItem('api-key')
@@ -36,31 +34,23 @@ class Framework {
         }
 
         // console.log("posting ", JSON.stringify(context), "to", whole_url)
-        return fetch(whole_url, {
+        const response = await fetch(whole_url, {
           method: 'POST',
           body: body,
           headers: headers,
-        }).then(response => {
-          if (response.status === 500) {
-            return new Status(500, "A server error occurred")
-          } else if (response.status === 400) {
-            return new Status(400, "Bad Request")
-          } else if (response.status === 403) {
-            console.log("NO AUTH", storage.get('login-callback'))
-            // storage.get('login-widget').toggleDrawer(true)
-            return new Status(403, "Unauthorized")
-          } else if (response.status === 404) {
-            console.log("Returning response", response)
-            return new Status(404, "Not Found")
-          }
-
-          return response.json()
-        }).then((json) => {
-          return json
         })
-          .catch(error => {
-            console.error("ERROR", error)
-          });
+
+        if (response.status === 500) {
+          return new Status(500, "A server error occurred")
+        } else if (response.status === 400) {
+          return new Status(400, await response.json())
+        } else if (response.status === 403) {
+          return new Status(403, await response.json())
+        } else if (response.status === 404) {
+          return new Status(404, "Not Found")
+        }
+
+        return response.json()
       }
     })
   }

@@ -25,11 +25,17 @@ const style = theme => ({
 function LoginPage({store, classes}) {
   const [tab, setTab] = useState('login');
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState({'password': null, 'password2': null, 'username': ''})
+  const [password2, setPassword2] = useState('')
+  const [errors, setErrors] = useState({})
 
   const handleTabChange = (event, newTab) => {
     setTab(newTab)
+  }
+
+  const doCancel = () => {
+      store.get('login-widget').closeDrawer()
   }
 
   const doLogin = async () => {
@@ -39,21 +45,33 @@ function LoginPage({store, classes}) {
       localStorage.setItem('api-key', null)
       setErrors({...errors, 'password': 'Error logging in'})
     } else {
-      setErrors({...errors, 'password': ''})
+      setErrors({})
       localStorage.setItem('api-key', result)
       store.get('login-widget').closeDrawer()
       store.get('login-widget').updateUser()
     }
   }
 
-  const doCancel = () => {
+  const doSignup = async () => {
+    let fw = store.get('frameworks')
+    let result = await fw.UserApi.signup({
+      'username': username, 'email': email,
+      'password': password, 'password2': password2
+    })
+    if (result.status === 400) {
+      console.log(result.details)
+      console.log(Object.assign(errors, result.details))
+      setErrors(result.details)
+    } else {
+      setErrors({})
+      localStorage.setItem('api-key', result)
       store.get('login-widget').closeDrawer()
-  }
-
-  const doSignup = () => {
+      store.get('login-widget').updateUser()
+    }
   }
 
   return <div className={classes.root}>
+    {console.log('render', errors)}
     <material.Tabs value={tab} onChange={handleTabChange}>
       <material.Tab label="Login" value="login"/>
       <material.Tab label="Signup" value="signup"/>
@@ -63,15 +81,19 @@ function LoginPage({store, classes}) {
       <material.FormGroup>
 
         <material.FormControl className={classes.formControl}>
-          <material.TextField error={Boolean(errors.username)} helperText={errors.username} id="username" label="Username" onChange={event => setUsername(event.target.value)} />
+          <material.TextField error={Boolean(errors.username)} helperText={errors.username} id="susername" label="Username" onChange={event => setUsername(event.target.value)} />
         </material.FormControl>
 
         <material.FormControl className={classes.formControl}>
-          <material.TextField error={Boolean(errors.username)} helperText={errors.password} id="password" label="Password" type="password" onChange={event => setPassword(event.target.value)} />
+          <material.TextField error={Boolean(errors.email)} helperText={errors.username} id="semail" label="Email" onChange={event => setEmail(event.target.value)} />
         </material.FormControl>
 
         <material.FormControl className={classes.formControl}>
-          <material.TextField error={Boolean(errors.username)} helperText={errors.password2} id="password2" label="Confirm Password" type="password" onChange={event => setPassword2(event.target.value)} />
+          <material.TextField error={Boolean(errors.password)} helperText={errors.password} id="spassword" label="Password" type="password" onChange={event => setPassword(event.target.value)} />
+        </material.FormControl>
+
+        <material.FormControl className={classes.formControl}>
+          <material.TextField error={Boolean(errors.password2)} helperText={errors.password2} id="spassword2" label="Confirm Password" type="password" onChange={event => setPassword2(event.target.value)} />
         </material.FormControl>
 
       </material.FormGroup>

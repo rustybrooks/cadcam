@@ -83,14 +83,17 @@ class AdminApi(Api):
 class UserApi(Api):
     @classmethod
     @Api.config(require_login=False)
-    def signup(cls, username, email, password1, password2):
-        if password1 != password2:
-            return cls.BadRequest("Passwords don't match")
+    def signup(cls, username=None, email=None, password=None, password2=None):
+        if password != password2:
+            raise cls.BadRequest({'password2': 'Passwords don\'t match'})
 
-        if len(password1) < 8:
-            return cls.BadRequest("Passwords must be at least 8 characters")
+        if len(password) < 8:
+            raise cls.BadRequest({'password': 'Passwords must be at least 8 characters'})
 
-        queries.add_user(username=username, password=password1, email=email)
+        if not email:
+            raise cls.BadRequest({'email': 'Email required'})
+
+        queries.add_user(username=username, password=password, email=email)
 
     @classmethod
     @Api.config(require_login=False)
