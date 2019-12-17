@@ -52,7 +52,7 @@ class App extends Component {
 const initialValue = {
   'frameworks': null,
   'login-widget': null,
-  'user': {'username': 'Anonymous', 'user_id': 0}
+  'user': null,
 }
 
 const config = {}

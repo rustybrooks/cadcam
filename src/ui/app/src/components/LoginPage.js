@@ -59,8 +59,6 @@ function LoginPage({store, classes}) {
       'password': password, 'password2': password2
     })
     if (result.status === 400) {
-      console.log(result.details)
-      console.log(Object.assign(errors, result.details))
       setErrors(result.details)
     } else {
       setErrors({})
@@ -71,7 +69,6 @@ function LoginPage({store, classes}) {
   }
 
   return <div className={classes.root}>
-    {console.log('render', errors)}
     <material.Tabs value={tab} onChange={handleTabChange}>
       <material.Tab label="Login" value="login"/>
       <material.Tab label="Signup" value="signup"/>

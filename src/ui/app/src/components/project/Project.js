@@ -13,10 +13,13 @@ import ProjectRender from './ProjectRender'
 import ProjectCAM from './ProjectCAM'
 
 
-
 const style = theme => ({
   tab: {
   },
+  button: {
+    margin: theme.spacing(1)
+  }
+
 })
 
 
@@ -27,10 +30,8 @@ class Project extends React.Component {
     this.state = {
       uploadModal: false,
       files: [],
-      project_key: null,
       project: null,
-      username: null,
-      // tabValue: 0,
+      tab: 'details',
     }
 
     // This binding is necessary to make `this` work in the callback
@@ -38,6 +39,7 @@ class Project extends React.Component {
     this.handleClose = this.handleClose.bind(this)
     this.handleOpen = this.handleOpen.bind(this)
     this.handleChange = this.handleChange.bind(this)
+    this.handleSave = this.handleSave.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
   }
 
@@ -57,16 +59,25 @@ class Project extends React.Component {
     console.log("save handled")
   }
 
-  handleUpload() {
+  async handleUpload() {
     let { store } = this.props
     let fw = store.get('frameworks')
 
-    this.state.files.map(file => {
+    const { files } = this.state
+
+    for (let i=0; i<files.length; i++) {
       let formData = new FormData()
-      formData.append('file', file)
-      formData.append('project_key', this.state.project_key)
-      fw.ProjectsApi.upload_file(formData).then(data => console.log(file, data))
-    })
+      formData.append('file', files[i])
+      formData.append('project_key', this.state.project.project_key)
+      const res = await fw.ProjectsApi.upload_file(formData)
+      console.log(files[i], res)
+    }
+
+    this.handleClose()
+    this.updateFiles(
+      this.state.project.username,
+      this.state.project.project_key,
+    )
   }
 
   componentDidMount() {
@@ -75,37 +86,38 @@ class Project extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    // console.log('component update', this.state.project_key, prevState.project_key)
-    if (this.state.project_key !== prevState.project_key) {
-      this.onRouteChanged()
+    console.log('project component update')
+
+    const { username, project_key, tab } = this.props.match.params
+    if (this.state.tab != tab) {
+      this.setState({...this.state, tab: tab})
     }
   }
 
   onRouteChanged() {
-    const params = this.props.match.params
-    const { username, project_key, tab } = params
+    const { username, project_key, tab } = this.props.match.params
 
+    this.updateFiles(username, project_key)
+  }
+
+  updateFiles(username, project_key) {
     console.log("fetching project because", project_key, this.state.project_key)
     let { store } = this.props
     let fw = store.get('frameworks')
+    if (fw === null || fw === undefined) return
+
     fw.ProjectsApi.project({project_key: project_key, username: username}).then(data => {
       this.setState({
-        project_key: project_key,
-        username: username,
-        tab: tab ? tab : 'details',
         project: data,
       })
     })
   }
 
   handleTabChange = (event, tab) => {
-    const { project, username } = this.state
+    const { project } = this.state
     const urlbase = '/projects/' + project.username + '/' + project.project_key
 
     const url = urlbase + '/' + tab
-    this.setState({
-      ...this.state, tab: tab,
-    });
     this.props.history.push(url);
   };
 
@@ -154,14 +166,13 @@ class Project extends React.Component {
         <material.DialogContent>
           <DropzoneArea
             onChange={this.handleChange}
-            onSave={this.handleSave}
             dropzoneText="Drag and drop gerber files here or click"
             maxFileSize={1024*1024*10}
             filesLimit={20}
           />
           <br/><br/>
-          <material.Button variant='outlined' onClick={this.handleClose}>Close</material.Button>
-          <material.Button variant='outlined' onClick={this.handleUpload}>Upload</material.Button>
+          <material.Button className={classes.button} variant='outlined' onClick={this.handleClose}>Close</material.Button>
+          <material.Button className={classes.button} variant='outlined' color='primary' onClick={this.handleUpload}>Upload</material.Button>
         </material.DialogContent>
       </material.Dialog>
 

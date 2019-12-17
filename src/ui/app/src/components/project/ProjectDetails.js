@@ -44,7 +44,9 @@ class ProjectDetails extends React.Component {
   }
 
   render () {
-    const { project, classes } = this.props
+    const { project, classes, store } = this.props
+
+    const user = store.get('user')
 
     return <div>
       <table border={1} cellSpacing={0} cellPadding={5}>
@@ -73,9 +75,12 @@ class ProjectDetails extends React.Component {
         </tr>
         <tr>
           <td colSpan={4}>
-          <material.Button variant='outlined' onClick={this.props.handleOpen} color="primary">
-            Add Files
-          </material.Button>
+            {!user ? '' : (
+              <material.Button variant='outlined' onClick={this.props.handleOpen} color="primary">
+                Add Files
+              </material.Button>
+            )
+            }
           </td>
         </tr>
         {
@@ -101,4 +106,4 @@ class ProjectDetails extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(ProjectDetails))
+export default withStore(withStyles(style)(ProjectDetails), ['user'])
