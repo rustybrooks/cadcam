@@ -34,7 +34,6 @@ class ProjectCAM extends React.Component {
 
     this.state = {
       regenerate: 0,
-      regenerate_download: 0,
       params: {
         'cut_depth': 0.007,
         'trace_separation': 0.017,
@@ -50,10 +49,6 @@ class ProjectCAM extends React.Component {
 
   handleGenerate = event => {
     this.setState({...this.state, regenerate: this.state.regenerate+1})
-  }
-
-  handleGenerateDownload = event => {
-    this.setState({...this.state, regenerate: this.state.regenerate_download+1})
   }
 
   handleChange = name => event => {

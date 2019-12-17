@@ -61,9 +61,9 @@ class Header extends React.Component {
 
   logout = () => {
     localStorage.setItem('api-key', null)
-    const { store } = this.props
+    const { store, history } = this.props
     store.set('user', null)
-    this.props.history.push('/')
+    history.push('/')
   }
 
   componentDidMount() {
