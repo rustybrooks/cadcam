@@ -21,42 +21,51 @@ s3 = boto3.client(
 )
 
 
-class S3Cache(object):
-    basedir = '/srv/data/s3cache'
+class FileCache(object):
+    basedir = '/srv/data/file_cache'
 
-    @classmethod
-    def get(cls, project_file_id=None, project_file=None):
+    def __init__(self, use_s3=False):
+        self.use_s3 = use_s3
+
+    def _save(self, storage_key, fobj):
+        file_name = os.path.join(self.basedir, storage_key)
+        dir = os.path.dirname(file_name)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        logger.warn("Uploading %r to %r", file_name, storage_key)
+        with open(file_name, 'wb+') as f:
+            f.write(fobj.read())
+
+        # s3.put_object(Body=fobj, Bucket=bucket, Key=storage_key)
+        if self.use_s3:
+            s3.upload_file(file_name, Bucket=bucket, Key=storage_key)
+
+    def get(self, project_file_id=None, project_file=None):
         if project_file:
             pf = project_file.copy()
         else:
             pf = queries.project_file(project_file_id=project_file_id)
 
-        project_path = os.path.join(cls.basedir, str(pf.project_id))
-        if not os.path.exists(project_path):
-            try:
-                os.makedirs(project_path)
-            except OSError:
-                pass
+        file_name = os.path.join(self.basedir, pf.s3_key)
 
-        file_name = os.path.join(project_path, pf.file_name)
-        if os.path.exists(file_name):
-            file_date = os.path.getmtime(file_name)
-        else:
-            file_date = 0
+        if self.use_s3:
+            if os.path.exists(file_name):
+                file_date = os.path.getmtime(file_name)
+            else:
+                file_date = 0
 
-        offset = (pytz.utc.localize(pf.date_uploaded) - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
-        if file_date - offset < 120:
-            s3.download_file(bucket, pf.s3_key, file_name)
+            offset = (pytz.utc.localize(pf.date_uploaded) - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
+            if file_date - offset < 120:
+                s3.download_file(bucket, pf.s3_key, file_name)
 
         return file_name
 
-    @classmethod
-    def get_fobj(cls, project_file_id=None, project_file=None):
-        file_name = cls.get(project_file_id=project_file_id, project_file=project_file)
+    def get_fobj(self, project_file_id=None, project_file=None):
+        file_name = self.get(project_file_id=project_file_id, project_file=project_file)
         return open(file_name)
 
-    @classmethod
-    def add(cls, project_key=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
+    def add(self, project_key=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
         logger.warn("adding... key=%r, user_id=%r", project_key, user_id)
         if project is None:
             project = queries.project(project_key=project_key, user_id=user_id)
@@ -64,8 +73,7 @@ class S3Cache(object):
                 return 'project not found'
 
         storage_key = '{}/{}/{}'.format(user_id, project.project_key, file_name)
-        logger.warn("Uploading %r to %r", file_name, storage_key)
-        s3.put_object(Body=fobj, Bucket=bucket, Key=storage_key)
+        self._save(storage_key, fobj)
         project_file_id = queries.add_or_update_project_file(
             project_id=project.project_id,
             file_name=file_name,
@@ -79,7 +87,7 @@ class S3Cache(object):
                     file_name = os.path.split(i.filename)[-1]
                     storage_key = '{}/{}/{}'.format(user_id, project_key, file_name)
                     with z.open(i) as zf:
-                        s3.put_object(Body=zf.read(), Bucket=bucket, Key=storage_key)
+                        self._save(storage_key, zf)
                         queries.add_or_update_project_file(
                             project_id=project.project_id,
                             file_name=file_name,
@@ -90,8 +98,7 @@ class S3Cache(object):
         return None
 
 
-s3cache = S3Cache()
-
+file_cache = FileCache()
 
 @api_register(None, require_login=True)
 class ProjectsApi(Api):
@@ -152,7 +159,7 @@ class ProjectsApi(Api):
         if not project:
             raise cls.NotFound()
 
-        error = s3cache.add(
+        error = file_cache.add(
             project=project,
             project_key=project_key,
             fobj=file,
@@ -191,7 +198,7 @@ class ProjectsApi(Api):
         if not project:
             raise cls.NotFound()
 
-        file_name = s3cache.get(project_file_id=project_file_id)
+        file_name = file_cache.get(project_file_id=project_file_id)
         return FileResponse(
             content=open(file_name, 'rb').read(),
             # content='foo',

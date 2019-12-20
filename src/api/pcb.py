@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 @api_register(None, require_login=True)
 class PCBApi(Api):
-    @classmethod
-    @Api.config(file_keys=['file'])
-    def upload(cls, project_key=None, file=None, file_key=None):
-        bucket = "rustybrooks-cadcam"
-        file_key = "{}".format(project_key)
-        storage_key = '{}/{}'.format(project_key, file_key)
-
-        s3 = boto3.client('s3')
-        s3.upload_file(file, bucket, storage_key)
+    # @classmethod
+    # @Api.config(file_keys=['file'])
+    # def upload(cls, project_key=None, file=None, file_key=None):
+    #     bucket = "rustybrooks-cadcam"
+    #     file_key = "{}".format(project_key)
+    #     storage_key = '{}/{}'.format(project_key, file_key)
+    #
+    #     s3 = boto3.client('s3')
+    #     s3.upload_file(file, bucket, storage_key)
 
     '''
     @classmethod
@@ -123,7 +123,7 @@ class PCBApi(Api):
         files = queries.project_files(project_id=p.project_id)
 
         pcb = PCBProject(
-            gerber_input=[(f.file_name, projects.s3cache.get_fobj(project_file=f)) for f in files],
+            gerber_input=[(f.file_name, projects.file_cache.get_fobj(project_file=f)) for f in files],
             border=border,
             auto_zero=True if zprobe_type == 'auto' else False,
             thickness=thickness,
@@ -224,7 +224,7 @@ class PCBApi(Api):
                 continue
 
             frow = fmap[mapkey]
-            file_name = projects.s3cache.get(project_file=frow)
+            file_name = projects.file_cache.get(project_file=frow)
             layer = gerber.load_layer(file_name)
             rendered = True
             ctx.render_layer(
@@ -291,7 +291,7 @@ class PCBApi(Api):
             fmap[file_type] = frow
 
         try:
-            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
+            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.file_cache.get_fobj(project_file=fmap['both', 'outline']))
         except KeyError:
             pass
 
@@ -313,7 +313,7 @@ class PCBApi(Api):
             if mapkey[0] not in [side, 'both']:
                 continue
 
-            pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
+            pcb.load_layer(fmap[mapkey].file_name, projects.file_cache.get_fobj(project_file=fmap[mapkey]))
 
             render_layers.append(mapkey)
 
@@ -411,24 +411,27 @@ class PCBApi(Api):
 
             fmap[file_type] = frow
 
-        try:
-            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.s3cache.get_fobj(project_file=fmap['both', 'outline']))
-        except KeyError:
-            pass
-
-        for mapkey in [
+        keys = [
             ('both', 'outline'),
-            (side, 'copper'),
             ('both', 'drill'),
-        ]:
+        ]
+        if side in ['top', 'both']:
+            keys.append(('top', 'copper'))
+        if side in ['bottom', 'both']:
+            keys.append(('bottom', 'copper'))
+
+        logger.warn("keys = %r", keys)
+
+        for mapkey in keys:
             if mapkey not in fmap:
                 logger.warn("Not found: %r", mapkey)
                 continue
 
-            if mapkey[0] not in [side, 'both']:
-                continue
+            #if mapkey[0] not in [side, 'both']:
+            #    continue
 
-            pcb.load_layer(fmap[mapkey].file_name, projects.s3cache.get_fobj(project_file=fmap[mapkey]))
+            logger.warn("loading %r", mapkey)
+            pcb.load_layer(fmap[mapkey].file_name, projects.file_cache.get_fobj(project_file=fmap[mapkey]))
 
         pcb.process_layers()
 
@@ -477,7 +480,7 @@ class PCBApi(Api):
                         )
 
                 tf.seek(0)
-                error = projects.s3cache.add(
+                error = projects.file_cache.add(
                     project=p,
                     fobj=tf,
                     user_id=_user.user_id,
@@ -487,45 +490,54 @@ class PCBApi(Api):
                 if error:
                     raise cls.BadRequest(error)
 
-        with tempfile.NamedTemporaryFile(delete=True) as tf:
-            # logger.warn("geom = %r", machine.geometry)
-            bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
+        if side == 'both':
+            sides = ['top', 'bottom']
+        else:
+            sides = [side]
 
-            dwg = geometry.shapely_get_dwg(
-                svg_file=tf.name,
-                bounds=bounds,
-                marginpct=0,
-                width=max_width, height=max_height
-            )
+        output = {}
+        for side in sides:
+            output[side] = {}
+            with tempfile.NamedTemporaryFile(delete=True) as tf:
+                # logger.warn("geom = %r", machine.geometry)
+                bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
 
-            # goto
-            geometry.shapely_add_to_dwg(
-                dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
-                foreground='green'
-            )
+                dwg = geometry.shapely_get_dwg(
+                    svg_file=tf.name,
+                    bounds=bounds,
+                    marginpct=0,
+                    width=max_width, height=max_height
+                )
 
-            # cut
-            geometry.shapely_add_to_dwg(
-                dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
-                foreground='blue'
-            )
+                # goto
+                geometry.shapely_add_to_dwg(
+                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
+                    foreground='green'
+                )
 
-            dwg.save()
+                # cut
+                geometry.shapely_add_to_dwg(
+                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
+                    foreground='blue'
+                )
 
-            if encode:
-                data = {
+                dwg.save()
+
+                #if encode:
+                output[side] = {
                     'image': base64.b64encode(open(tf.name).read()),
                     'cam': {}
                 }
                 for fname in os.listdir(outdir):
-                    data['cam'][fname] = open(os.path.join(outdir, fname)).read()
+                    output[side]['cam'][fname] = open(os.path.join(outdir, fname)).read()
 
                 shutil.rmtree(outdir)
-                return data
-            else:
-                shutil.rmtree(outdir)
-                return FileResponse(
-                    content=open(tf.name),
-                    content_type='image/svg+xml',
-                )
+                # else:
+                #     shutil.rmtree(outdir)
+                #     return FileResponse(
+                #         content=open(tf.name),
+                #         content_type='image/svg+xml',
+                #     )
+
+            return output
 

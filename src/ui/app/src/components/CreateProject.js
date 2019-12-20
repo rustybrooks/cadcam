@@ -43,9 +43,12 @@ class CreateProject extends React.Component {
     let ninechar = '9'.charCodeAt()
     newname = newname.map(c => {
       return (
-        (c.charCodeAt() > achar && c.charCodeAt() < zchar) ||
-        (c.charCodeAt() > zerochar && c.charCodeAt() < ninechar)
-      ) ? c : '-'
+        (
+          c.charCodeAt() >= achar && c.charCodeAt() <= zchar)
+          ||
+          (c.charCodeAt() >= zerochar && c.charCodeAt() <= ninechar
+        ) ? c : '-'
+      )
     })
     newname = newname.join('').replace(/\-+/g, '-').replace(/^\-+|\-+$/g, '');
     this.setState({...this.state, project_key: newname, name: event.target.value})

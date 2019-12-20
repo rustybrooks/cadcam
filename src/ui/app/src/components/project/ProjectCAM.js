@@ -33,10 +33,17 @@ class ProjectCAM extends React.Component {
     super(props)
 
     this.state = {
-      regenerate: 0,
+      top: {
+        img: null,
+        cam: [],
+      },
+      bottom: {
+        img: null,
+        cam: [],
+      },
       params: {
-        'cut_depth': 0.007,
-        'trace_separation': 0.017,
+        'depth': 0.007,
+        'separation': 0.017,
         'zprobe_type': 'none',
         'border': 0,
         'thickness': .067,
@@ -45,10 +52,6 @@ class ProjectCAM extends React.Component {
         'posts': 'none',
       }
     }
-  }
-
-  handleGenerate = event => {
-    this.setState({...this.state, regenerate: this.state.regenerate+1})
   }
 
   handleChange = name => event => {
@@ -61,6 +64,24 @@ class ProjectCAM extends React.Component {
       }
     });
   };
+
+  async updateImage(download=false) {
+    const { params } = this.state
+    const { project } = this.props
+    const fw = this.props.store.get('frameworks')
+    const args = {
+      download: false,
+      project_key: project.project_key,
+      username: project.username,
+      side: 'both',
+      max_width: 700,
+      max_height: 700,
+    }
+    Object.assign(args, params)
+    console.log(args)
+    const data = await fw.PCBApi.render_cam(args)
+    this.setState({...this.state, data})
+  }
 
   render() {
     const { classes, project } = this.props
@@ -82,7 +103,7 @@ class ProjectCAM extends React.Component {
           <material.FormControl className={classes.formControl}>
             <material.TextField
               id="trace-depth-entry" label="Cut Depth"
-              value={this.state.params.cut_depth} onChange={this.handleChange('cut_depth').bind(this)}
+              value={this.state.params.depth} onChange={this.handleChange('depth').bind(this)}
               type="number"
               inputProps={{ min: "0.001", max: "0.100", step: "0.001" }}
             />
@@ -123,28 +144,19 @@ class ProjectCAM extends React.Component {
               inputProps={{ min: "1", max: "10", step: "1" }}
             />
           </material.FormControl>
-
-
         </material.FormGroup>
 
-      <material.Button color="primary" variant="outlined" onClick={this.handleGenerate.bind(this)}>Generate</material.Button>
-      {
-        // project.is_ours ? <material.Button color="primary" variant="outlined" onClick={this.handleGenerateDownload.bind(this)}>Generate and Save</material.Button> : <div></div>
-      }
+      <material.Button color="primary" variant="outlined" onClick={this.updateImage.bind(this)}>Generate</material.Button>
 
       <table border={0} cellSpacing={2}>
         <tbody>
           <tr>
             <td valign="top" width="50%">
               <CAMRender
-                className={classes.render}  project_key={project.project_key} username={project.username} side='top'
-                params={this.state.params} regenerate={this.state.regenerate}
-              />
+                className={classes.render} img={this.state.top.img} cam={this.state.top.cam} />
             </td>
             <td valign="top" width="50%">
-              <CAMRender className={classes.render} project_key={project.project_key} username={project.username} side='bottom'
-                         params={this.state.params} regenerate={this.state.regenerate}
-              />
+              <CAMRender className={classes.render} img={this.state.bottom.img} cam={this.state.bottom.cam} />
             </td>
           </tr>
         </tbody>
