@@ -3,15 +3,12 @@ import datetime
 import dateutil.parser
 import logging
 import pytz
-import io
 import sqlalchemy, sqlalchemy.exc
 from sqlalchemy import Table, MetaData, text
 import threading
 import traceback
-import types
 from warnings import filterwarnings
 
-from .structures import dictobj
 
 logger = logging.getLogger(__name__)
 filterwarnings('ignore', message='Invalid utf8mb4 character string')
@@ -375,34 +372,14 @@ class SQLConn(object):
             rs = c.execute(text(statement), data or {})
 
             for row in rs:
-                yield dictobj(row.items())
-
-    def select(self, statement, index=None, data=None):
-        results = {'list': []}
-        with self.cursor() as c:
-            rs = c.execute(text(statement), data or {})
-
-            results['columns'] = None
-            this_index = -1
-            for row in rs:
-                if results['columns'] is None:
-                    results['columns'] = row.keys()
-
-                if index is None:
-                    this_index += 1
-                else:
-                    this_index = row[index[0]] if len(index) == 1 else tuple(row[x] for x in index)
-                results['list'].append(this_index)
-                results[this_index] = dictobj(row.items())
-
-        return results
+                yield dict(row)
 
     def select_one(self, statement, data=None):
         with self.cursor() as c:
             rs = c.execute(text(statement), data or {})
             row = rs.fetchone()
             rs.close()
-            return dictobj(row.items())
+            return dict(row)
 
     def select_0or1(self, statement, data=None):
         with self.cursor() as c:
@@ -416,7 +393,7 @@ class SQLConn(object):
                 elif count == 2:
                     raise Exception(u'Query was expected to return 0 or 1 rows, returned more')
 
-            return dictobj(result.items()) if result is not None else None
+            return dict(result) if result else None
 
     def insert(self, table_name, data, ignore_duplicates=False, batch_size=200, returning=True):
         def _ignore_pre():
@@ -456,7 +433,7 @@ class SQLConn(object):
             if isinstance(data, dict):
                 rs = c.execute(text(query), data)
                 if self.sql.postgres:
-                    return dictobj(rs.fetchone().items())
+                    return dict(rs.fetchone())
                 else:
                     return rs.lastrowid  # mysql only??
             else:

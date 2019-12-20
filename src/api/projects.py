@@ -21,14 +21,16 @@ s3 = boto3.client(
 )
 
 
-class FileCache(object):
-    basedir = '/srv/data/file_cache'
-
-    def __init__(self, use_s3=False):
+class FileStore(object):
+    def __init__(self, basedir=None, use_s3=False):
         self.use_s3 = use_s3
+        self.basedir = os.path.abspath(basedir)
 
     def _save(self, storage_key, fobj):
-        file_name = os.path.join(self.basedir, storage_key)
+        file_name = os.path.abspath(os.path.join(self.basedir, storage_key))
+        if not file_name.startswith(self.basedir):
+            raise Exception("No file shenanigans allowed")
+
         dir = os.path.dirname(file_name)
         if not os.path.exists(dir):
             os.makedirs(dir)
@@ -47,7 +49,7 @@ class FileCache(object):
         else:
             pf = queries.project_file(project_file_id=project_file_id)
 
-        file_name = os.path.join(self.basedir, pf.s3_key)
+        file_name = os.path.join(self.basedir, pf['s3_key'])
 
         if self.use_s3:
             if os.path.exists(file_name):
@@ -55,9 +57,9 @@ class FileCache(object):
             else:
                 file_date = 0
 
-            offset = (pytz.utc.localize(pf.date_uploaded) - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
+            offset = (pytz.utc.localize(pf['date_uploaded']) - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
             if file_date - offset < 120:
-                s3.download_file(bucket, pf.s3_key, file_name)
+                s3.download_file(bucket, pf['s3_key'], file_name)
 
         return file_name
 
@@ -98,7 +100,7 @@ class FileCache(object):
         return None
 
 
-file_cache = FileCache()
+project_files = FileStore(basedir='/srv/data/project_files')
 
 @api_register(None, require_login=True)
 class ProjectsApi(Api):
@@ -111,8 +113,8 @@ class ProjectsApi(Api):
 
         for r in out['results']:
             r.update({
-                'created_ago': (datetime.datetime.utcnow() - r.date_created).total_seconds(),
-                'modified_ago': (datetime.datetime.utcnow() - r.date_modified).total_seconds(),
+                'created_ago': (datetime.datetime.utcnow() - r['date_created']).total_seconds(),
+                'modified_ago': (datetime.datetime.utcnow() - r['date_modified']).total_seconds(),
             })
 
         return out
@@ -130,14 +132,14 @@ class ProjectsApi(Api):
         if not p:
             raise cls.NotFound()
 
-        p['files'] = queries.project_files(project_id=p.project_id, is_deleted=False)
+        p['files'] = queries.project_files(project_id=p['project_id'], is_deleted=False)
         for f in p['files']:
-            f['uploaded_ago'] = (datetime.datetime.utcnow() - f.date_uploaded).total_seconds()
-        p['is_ours'] = p.username == _user.username
+            f['uploaded_ago'] = (datetime.datetime.utcnow() - f['date_uploaded']).total_seconds()
+        p['is_ours'] = p['username'] == _user.username
 
         p.update({
-            'created_ago': (datetime.datetime.utcnow() - p.date_created).total_seconds(),
-            'modified_ago': (datetime.datetime.utcnow() - p.date_modified).total_seconds(),
+            'created_ago': (datetime.datetime.utcnow() - p['date_created']).total_seconds(),
+            'modified_ago': (datetime.datetime.utcnow() - p['date_modified']).total_seconds(),
         })
 
         return p
@@ -159,7 +161,7 @@ class ProjectsApi(Api):
         if not project:
             raise cls.NotFound()
 
-        error = file_cache.add(
+        error = project_files.add(
             project=project,
             project_key=project_key,
             fobj=file,
@@ -178,7 +180,7 @@ class ProjectsApi(Api):
         if not p:
             raise cls.NotFound()
 
-        pf = queries.project_file(project_id=p.project_id, project_file_id=project_file_id)
+        pf = queries.project_file(project_id=p['project_id'], project_file_id=project_file_id)
         if not pf:
             raise cls.NotFound()
 
@@ -193,12 +195,12 @@ class ProjectsApi(Api):
         if not pf:
             raise cls.NotFound()
 
-        # project = queries.project(project_id=pf.project_id, user_id=_user.user_id)
-        project = queries.project(project_id=pf.project_id)
+        # project = queries.project(project_id=pf['project_id, user_id=_user.user_id)
+        project = queries.project(project_id=pf['project_id'])
         if not project:
             raise cls.NotFound()
 
-        file_name = file_cache.get(project_file_id=project_file_id)
+        file_name = project_files.get(project_file_id=project_file_id)
         return FileResponse(
             content=open(file_name, 'rb').read(),
             # content='foo',

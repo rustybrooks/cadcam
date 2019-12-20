@@ -1,29 +1,112 @@
 import base64
-import boto3
 from gerber.render.cairo_backend import GerberCairoContext
 import tempfile
 from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list, api_int, api_float
 from lib.campy import *
 import shutil
+import time
 
 from . import queries, projects
 
 logger = logging.getLogger(__name__)
 
+from lib.cache import PickleCache
 
+
+@PickleCache(prefix='render_svg', timeout=60 * 60 * 24 * 7, basedir='/srv/data/file_cache')
+def render_svg_generator(project_id=None, layers=None, encode=True, max_height=None, max_width=None, side=None,
+                          theme_name=None):
+    pcb = PCBProject()
+
+    files = queries.project_files(project_id=project_id, is_deleted=False)
+    if not files:
+        return PCBApi._empty_svg(encode=encode)
+
+    fmap = {}
+    for frow in files:
+        file_type = PCBProject.identify_file(frow['file_name'])
+        if not file_type:
+            continue
+
+        fmap[file_type] = frow
+
+    try:
+        pcb.load_layer(fmap[('both', 'outline')]['file_name'],
+                       projects.project_files.get_fobj(project_file=fmap['both', 'outline']))
+    except KeyError:
+        pass
+
+    render_layers = []
+    for mapkey in [
+        ('both', 'outline'),
+        (side, 'copper'),
+        (side, 'solder-mask'),
+        (side, 'silk-screen'),
+        ('both', 'drill'),
+    ]:
+        if mapkey not in fmap:
+            logger.warn("Not found: %r", mapkey)
+            continue
+
+        if mapkey[1] not in layers:
+            continue
+
+        if mapkey[0] not in [side, 'both']:
+            continue
+
+        pcb.load_layer(fmap[mapkey]['file_name'], projects.project_files.get_fobj(project_file=fmap[mapkey]))
+
+        render_layers.append(mapkey)
+
+    with tempfile.NamedTemporaryFile(delete=True) as tf:
+        ctx = GerberSVGContext(svg_file=tf.name, width=max_width, height=max_height, flipx=side == 'bottom')
+        ctx.render_layers([pcb.get_layer(x) for x in render_layers], theme=theme.THEMES[theme_name])
+        ctx.save()
+
+        if encode:
+            data = base64.b64encode(open(tf.name).read())
+            return data
+        else:
+            return FileResponse(
+                content=open(tf.name),
+                content_type='image/svg+xml',
+            )
+
+
+@PickleCache(prefix='pcb_load_and_process', timeout=60 * 60 * 24 * 7, basedir='/srv/data/file_cache')
+def pcb_load_and_process(files=None, side=None):
+    pcb = PCBProject()
+
+    fmap = {}
+    for frow in files:
+        file_type = PCBProject.identify_file(frow['file_name'])
+        if not file_type:
+            continue
+
+        fmap[file_type] = frow
+
+    keys = [
+        ('both', 'outline'),
+        ('both', 'drill'),
+    ]
+    if side in ['top', 'both']:
+        keys.append(('top', 'copper'))
+    if side in ['bottom', 'both']:
+        keys.append(('bottom', 'copper'))
+
+    for mapkey in keys:
+        if mapkey not in fmap:
+            logger.warn("Not found: %r", mapkey)
+            continue
+
+        logger.warn("loading %r", mapkey)
+        pcb.load_layer(fmap[mapkey]['file_name'], projects.project_files.get_fobj(project_file=fmap[mapkey]))
+
+    pcb.process_layers()
+    return pcb
 
 @api_register(None, require_login=True)
 class PCBApi(Api):
-    # @classmethod
-    # @Api.config(file_keys=['file'])
-    # def upload(cls, project_key=None, file=None, file_key=None):
-    #     bucket = "rustybrooks-cadcam"
-    #     file_key = "{}".format(project_key)
-    #     storage_key = '{}/{}'.format(project_key, file_key)
-    #
-    #     s3 = boto3.client('s3')
-    #     s3.upload_file(file, bucket, storage_key)
-
     '''
     @classmethod
     @Api.config(file_keys=['file'], require_login=False)
@@ -123,7 +206,7 @@ class PCBApi(Api):
         files = queries.project_files(project_id=p.project_id)
 
         pcb = PCBProject(
-            gerber_input=[(f.file_name, projects.file_cache.get_fobj(project_file=f)) for f in files],
+            gerber_input=[(f['file_name'], projects.project_files.get_fobj(project_file=f)) for f in files],
             border=border,
             auto_zero=True if zprobe_type == 'auto' else False,
             thickness=thickness,
@@ -198,11 +281,11 @@ class PCBApi(Api):
 
         ctx = GerberCairoContext()
 
-        files = queries.project_files(project_id=p.project_id, is_deleted=False)
+        files = queries.project_files(project_id=p['project_id'], is_deleted=False)
 
         fmap = {}
         for frow in files:
-            file_type = PCBProject.identify_file(frow.file_name)
+            file_type = PCBProject.identify_file(frow['file_name'])
             if not file_type:
                 continue
 
@@ -224,7 +307,7 @@ class PCBApi(Api):
                 continue
 
             frow = fmap[mapkey]
-            file_name = projects.file_cache.get(project_file=frow)
+            file_name = projects.project_files.get(project_file=frow)
             layer = gerber.load_layer(file_name)
             rendered = True
             ctx.render_layer(
@@ -244,12 +327,6 @@ class PCBApi(Api):
                     content_type='image/png'
                 )
 
-    @classmethod
-    def _flip(cls, g, bounds):
-        minx, miny, maxx, maxy = bounds
-        g = shapely.affinity.scale(g, xfact=-1, origin=(0, 0))
-        g = shapely.affinity.translate(g, xoff=maxx+minx)
-        return g
 
     @classmethod
     @Api.config(require_login=False)
@@ -262,6 +339,7 @@ class PCBApi(Api):
 
         encode = api_bool(encode)
         layers = list(set(api_list(layers) or [])) + ['outline']
+
         p = queries.project(
             project_key=project_key,
             username=username,
@@ -271,65 +349,15 @@ class PCBApi(Api):
         if not p:
             raise cls.NotFound()
 
-        pcb = PCBProject(
-            border=0,
-            auto_zero=True,
-            thickness=1.7*constants.MM,
-            posts=False,
+        return render_svg_generator(
+            project_id=p['project_id'],
+            side=side,
+            encode=encode,
+            layers=layers,
+            max_width=max_width,
+            max_height=max_height,
+            theme_name=theme_name,
         )
-
-        files = queries.project_files(project_id=p.project_id, is_deleted=False)
-        if not files:
-            return cls._empty_svg(encode=encode)
-
-        fmap = {}
-        for frow in files:
-            file_type = PCBProject.identify_file(frow.file_name)
-            if not file_type:
-                continue
-
-            fmap[file_type] = frow
-
-        try:
-            pcb.load_layer(fmap[('both', 'outline')].file_name, projects.file_cache.get_fobj(project_file=fmap['both', 'outline']))
-        except KeyError:
-            pass
-
-        render_layers = []
-        for mapkey in [
-            ('both', 'outline'),
-            (side, 'copper'),
-            (side, 'solder-mask'),
-            (side, 'silk-screen'),
-            ('both', 'drill'),
-        ]:
-            if mapkey not in fmap:
-                logger.warn("Not found: %r", mapkey)
-                continue
-
-            if mapkey[1] not in layers:
-                continue
-
-            if mapkey[0] not in [side, 'both']:
-                continue
-
-            pcb.load_layer(fmap[mapkey].file_name, projects.file_cache.get_fobj(project_file=fmap[mapkey]))
-
-            render_layers.append(mapkey)
-
-        with tempfile.NamedTemporaryFile(delete=True) as tf:
-            ctx = GerberSVGContext(svg_file=tf.name, width=max_width, height=max_height, flipx=side == 'bottom')
-            ctx.render_layers([pcb.get_layer(x) for x in render_layers], theme=theme.THEMES[theme_name])
-            ctx.save()
-
-            if encode:
-                data = base64.b64encode(open(tf.name).read())
-                return data
-            else:
-                return FileResponse(
-                    content=open(tf.name),
-                    content_type='image/svg+xml',
-                )
 
     @classmethod
     def _empty_svg(cls, encode=False):
@@ -392,54 +420,6 @@ class PCBApi(Api):
         if not p:
             raise cls.NotFound()
 
-        files = queries.project_files(project_id=p.project_id)
-        if not files:
-            return cls._empty_svg(encode=encode)
-
-        pcb = PCBProject(
-            border=border,
-            auto_zero=True if zprobe_type == 'auto' else False,
-            thickness=thickness,
-            posts=posts,
-        )
-
-        fmap = {}
-        for frow in files:
-            file_type = PCBProject.identify_file(frow.file_name)
-            if not file_type:
-                continue
-
-            fmap[file_type] = frow
-
-        keys = [
-            ('both', 'outline'),
-            ('both', 'drill'),
-        ]
-        if side in ['top', 'both']:
-            keys.append(('top', 'copper'))
-        if side in ['bottom', 'both']:
-            keys.append(('bottom', 'copper'))
-
-        logger.warn("keys = %r", keys)
-
-        for mapkey in keys:
-            if mapkey not in fmap:
-                logger.warn("Not found: %r", mapkey)
-                continue
-
-            #if mapkey[0] not in [side, 'both']:
-            #    continue
-
-            logger.warn("loading %r", mapkey)
-            pcb.load_layer(fmap[mapkey].file_name, projects.file_cache.get_fobj(project_file=fmap[mapkey]))
-
-        pcb.process_layers()
-
-        machine = set_machine('k2cnc')
-        machine.set_material('fr4-1oz')
-        machine.max_rpm = machine.min_rpm = 1000
-        machine.set_save_geoms(True)
-
         if zprobe_type is None or zprobe_type == 'none':
             zprobe_radius = None
         elif zprobe_type == 'auto':
@@ -447,48 +427,75 @@ class PCBApi(Api):
         else:
             zprobe_radius = float(zprobe)
 
+        job_kwargs = {
+            'drill': 'top',
+            'cutout': 'top',
+            # iso_bit='engrave-0.01in-15',
+            'iso_bit': 'engrave-0.1mm-30',
+            'drill_bit': 'tiny-1.0mm',
+            'cutout_bit': 'tiny-3mm',
+            'post_bit': '1/8in spiral upcut',
+            'file_per_operation': True,
+            'outline_depth': depth,
+            'outline_separation': separation,
+            'panelx': panelx,
+            'panely': panely,
+            'flip': 'x',
+            'zprobe_radius': zprobe_radius,
+            'side': side,
+            'border': border,
+            'thickness': thickness,
+            'posts': posts,
+        }
+
+        # job_hash = projects.arg_hash()
+        # job = queries.project_jobs(project_id=p.project_id, job_hash=job_hash)
+        # if job:
+        #     job_id = job.project_job_id
+        # else:
+        #     job_id = queries.add_project_job(project_id=p.project_id, job_hash=job_hash)
+
+        files = queries.project_files(project_id=p['project_id'])
+        if not files:
+            return cls._empty_svg(encode=encode)
+
+        machine = set_machine('k2cnc')
+        machine.set_material('fr4-1oz')
+        machine.max_rpm = machine.min_rpm = 1000
+        machine.set_save_geoms(True)
+
         outdir = tempfile.mkdtemp()
 
         logger.warn("before geom=%r", len(machine.geometry))
 
+        t1 = time.time()
+        pcb = pcb_load_and_process(files=files, side=side)
+        t2 = time.time()
         pcb.pcb_job(
-            drill='top',
-            cutout='top',
-            # iso_bit='engrave-0.01in-15',
-            iso_bit='engrave-0.1mm-30',
-            drill_bit='tiny-1.0mm',
-            cutout_bit='tiny-3mm',
-            post_bit='1/8in spiral upcut',
-            file_per_operation=True,
-            outline_depth=depth,
-            outline_separation=separation,
-            panelx=panelx,
-            panely=panely,
-            flip='x',
-            zprobe_radius=zprobe_radius,
             output_directory=outdir,
-            side=side,
+            **job_kwargs
         )
+        t3 = time.time()
 
-        if download:
-            with tempfile.NamedTemporaryFile(suffix='.zip', delete=True) as tf:
-                with zipfile.ZipFile(tf.name, 'w') as zip:
-                    for filename in os.listdir(outdir):
-                        zip.write(
-                            os.path.join(outdir, filename),
-                            arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
-                        )
-
-                tf.seek(0)
-                error = projects.file_cache.add(
-                    project=p,
-                    fobj=tf,
-                    user_id=_user.user_id,
-                    file_name='cam-{}.zip'.format(side),
-                    split_zip=False
-                )
-                if error:
-                    raise cls.BadRequest(error)
+        # if download:
+        #     with tempfile.NamedTemporaryFile(suffix='.zip', delete=True) as tf:
+        #         with zipfile.ZipFile(tf.name, 'w') as zip:
+        #             for filename in os.listdir(outdir):
+        #                 zip.write(
+        #                     os.path.join(outdir, filename),
+        #                     arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
+        #                 )
+        #
+        #         tf.seek(0)
+        #         error = projects.project_files.add(
+        #             project=p,
+        #             fobj=tf,
+        #             user_id=_user.user_id,
+        #             file_name='cam-{}.zip'.format(side),
+        #             split_zip=False
+        #         )
+        #         if error:
+        #             raise cls.BadRequest(error)
 
         if side == 'both':
             sides = ['top', 'bottom']
@@ -501,6 +508,7 @@ class PCBApi(Api):
             with tempfile.NamedTemporaryFile(delete=True) as tf:
                 # logger.warn("geom = %r", machine.geometry)
                 bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
+                t4 = time.time()
 
                 dwg = geometry.shapely_get_dwg(
                     svg_file=tf.name,
@@ -508,6 +516,7 @@ class PCBApi(Api):
                     marginpct=0,
                     width=max_width, height=max_height
                 )
+                t5 = time.time()
 
                 # goto
                 geometry.shapely_add_to_dwg(
@@ -515,23 +524,25 @@ class PCBApi(Api):
                     foreground='green'
                 )
 
+                t6 = time.time()
                 # cut
                 geometry.shapely_add_to_dwg(
                     dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
                     foreground='blue'
                 )
 
+                t7 = time.time()
                 dwg.save()
 
-                #if encode:
+                # #if encode:
                 output[side] = {
-                    'image': base64.b64encode(open(tf.name).read()),
+                    'img': base64.b64encode(open(tf.name).read()),
                     'cam': {}
                 }
-                for fname in os.listdir(outdir):
-                    output[side]['cam'][fname] = open(os.path.join(outdir, fname)).read()
+                # for fname in os.listdir(outdir):
+                #     output[side]['cam'][fname] = open(os.path.join(outdir, fname)).read()
 
-                shutil.rmtree(outdir)
+
                 # else:
                 #     shutil.rmtree(outdir)
                 #     return FileResponse(
@@ -539,5 +550,9 @@ class PCBApi(Api):
                 #         content_type='image/svg+xml',
                 #     )
 
-            return output
+        shutil.rmtree(outdir)
+        t8 = time.time()
+        logger.warn("took %r - %r - %r - %r - %r - %r - %r", t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7)
+
+        return output
 

@@ -1,3 +1,4 @@
+import appenlight_client.ext.flask as appenlight
 from flask import Flask, request
 import datetime
 import logging
@@ -10,7 +11,6 @@ from flask_cors import CORS
 
 from . import pcb, projects, queries, login
 
-
 root = os.path.join(os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,9 @@ app = Flask('cadcam-api', template_folder=os.path.join(root, 'templates'), stati
 CORS(app)
 
 app.secret_key = config.get_config_key('app_secret')
+
+appenlight_key = config.get_config_key('appenlight_key')
+app = appenlight.add_appenlight(app, {'appenlight.api_key': appenlight_key})
 
 
 @app.before_request

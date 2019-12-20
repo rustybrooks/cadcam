@@ -10,3 +10,5 @@ bcrypt
 python-dateutil
 PyJWT
 boto3
+appenlight-client
+blinker

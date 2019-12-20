@@ -780,20 +780,18 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
 
 
 class PCBProject(object):
-    def __init__(
-        self, gerber_input=None, border=None, auto_zero=True, thickness=1.7*constants.MM, posts=None, fixture_width=None,
-    ):
+    def __init__(self, gerber_input=None ):
         self.gerber_input = gerber_input
-        if isinstance(border, (int, float)):
-            self.border = [border, border, border, border]
-        else:
-            self.border = border
+        # if isinstance(border, (int, float)):
+        #     self.border = [border, border, border, border]
+        # else:
+        #     self.border = border
 
-        self.thickness = thickness
+        # self.thickness = thickness
         self.layers = None
-        self.auto_zero = auto_zero
-        self.posts = posts
-        self.fixture_width = fixture_width
+        # self.auto_zero = auto_zero
+        # self.posts = posts
+        # self.fixture_width = fixture_width
 
         self.load(gerber_input)
 
@@ -895,23 +893,23 @@ class PCBProject(object):
         self.bounds = union_geom.bounds
         minx, miny, maxx, maxy = self.bounds
 
-        if self.auto_zero:
-            newminx = 0
-            newminy = 0
-            xoff = -minx
-            yoff = -miny
-        else:
-            newminx = 0
-            newminy = 0
-            xoff = -minx
-            yoff = -miny
+        # if self.auto_zero:
+        #     newminx = 0
+        #     newminy = 0
+        #     xoff = -minx
+        #     yoff = -miny
+        # else:
+        newminx = 0
+        newminy = 0
+        xoff = -minx
+        yoff = -miny
 #            newminx = minx - self.border[0]
 #            newminy = miny - self.border[1]
 #            xoff = yoff = 0
 
         if union:
             for k, v in self.layers.items():
-                v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff+self.border[0], yoff=yoff+self.border[1])
+                v['geometry'] = shapely.affinity.translate(v['geometry'], xoff=xoff, yoff=yoff)  # +self.border[0] / +self.border[1]
         else:
             for k, v in self.layers.items():
                 v['geometry'] = [
@@ -921,8 +919,8 @@ class PCBProject(object):
         self.bounds = [
             newminx,
             newminy,
-            newminx + (maxx - minx) + self.border[0] + self.border[2],
-            newminy + (maxy - miny) + self.border[1] + self.border[3],
+            newminx + (maxx - minx),  #  + self.border[0] + self.border[2],
+            newminy + (maxy - miny),  #  + self.border[1] + self.border[3],
         ]
 
     def load_layer(self, file_name, fobj):
@@ -947,24 +945,24 @@ class PCBProject(object):
             marginpct=0, width=width, height=height,
         )
 
-    def auto_set_stock(self, side='top'):
+    def auto_set_stock(self, side='top', posts=None, fixture_width=None, thickness=None):
         minx, miny, maxx, maxy = self.bounds
         width = maxx - minx
         height = maxy - miny
 
         px = 0
-        if self.posts == 'x':
+        if posts == 'x':
             px = 0.5
 
-        if side == 'bottom' and self.fixture_width > 0:
+        if side == 'bottom' and fixture_width > 0:
             rect_stock(
-                (width * 1.2)+px, height * 1.2, self.thickness,
-                origin=(self.fixture_width + minx - width - width*.1, -self.thickness, maxy - height - height*.1)
+                (width * 1.2)+px, height * 1.2, thickness,
+                origin=(fixture_width + minx - width - width*.1, -thickness, maxy - height - height*.1)
             )
         else:
             rect_stock(
-                (width * 1.2)+px, height * 1.2, self.thickness,
-                origin=(minx - width * .1, -self.thickness, maxy - height - height * .1)
+                (width * 1.2)+px, height * 1.2, thickness,
+                origin=(minx - width * .1, -thickness, maxy - height - height * .1)
             )
 
     # drill = 'top' or 'bottom' depending on which side to drill from
@@ -976,15 +974,16 @@ class PCBProject(object):
         cutout=None, drill=None,
         iso_bit=None, drill_bit=None, cutout_bit=None, post_bit=None,
         panelx=1, panely=1, flip='y', zprobe_radius=None, side='both',
+        border=None, thickness=1.7 * constants.MM, posts=None, fixture_width=None,
     ):
         def _xoff(xi, side='top'):
             minx, miny, maxx, maxy = self.bounds
             pxoff = 0
-            if self.posts == 'x':
+            if posts == 'x':
                 pxoff = 1/4.
 
-            if self.fixture_width > 0 and side == 'bottom':
-                return self.fixture_width - (xi+1) * (maxx - minx + environment.tools[cutout_bit].diameter)
+            if fixture_width > 0 and side == 'bottom':
+                return fixture_width - (xi+1) * (maxx - minx + environment.tools[cutout_bit].diameter)
             else:
                 return pxoff + xi*(maxx-minx+environment.tools[cutout_bit].diameter)
 
@@ -999,26 +998,26 @@ class PCBProject(object):
         if side in ['top', 'both']:
             if not file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_top_all.ngc'))
-                self.auto_set_stock(side='top')
+                self.auto_set_stock(side='top', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
-            if self.posts != 'none':
+            if posts != 'none':
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_top_0_posts.ngc'))
-                    self.auto_set_stock(side='top')
+                    self.auto_set_stock(side='top', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
                 machine().set_tool(post_bit)
-                if self.posts == 'x':
+                if posts == 'x':
                     minx, miny, maxx, maxy = self.bounds
                     helical_drill(center=(minx - 1/8, (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
                     helical_drill(center=(maxx + 1/4. + 1/8., (miny+maxy)/2.), outer_rad=1/8., z=0, depth=.65, stepdown="10%")
-                elif self.posts == 'y':
+                elif posts == 'y':
                     raise Exception("not implemented")
 
                 machine().pause_program()
 
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_top_1_iso.ngc'))
-                self.auto_set_stock(side='top')
+                self.auto_set_stock(side='top', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
             machine().set_tool(iso_bit)
             l = self.layers[('top', 'copper')]
@@ -1035,7 +1034,7 @@ class PCBProject(object):
             if drill == 'top' and ('both', 'drill') in self.layers:
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_top_2_drill.ngc'))
-                    self.auto_set_stock(side='top')
+                    self.auto_set_stock(side='top', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
                 machine().set_tool(drill_bit)
 
@@ -1045,19 +1044,19 @@ class PCBProject(object):
                         pcb_drill(
                             gerber_geometry=l['geometry'],
                             xoff=_xoff(x), yoff=_yoff(y),
-                            depth=self.thickness,
+                            depth=thickness,
                             flipy=False
                         )
 
             if cutout == 'top':
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_top_3_cutout.ngc'))
-                    self.auto_set_stock(side='top')
+                    self.auto_set_stock(side='top', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
                 machine().set_tool(cutout_bit)
                 for x in range(panelx):
                     for y in range(panely):
-                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="15%")
+                        pcb_cutout(bounds=self.bounds, depth=thickness, xoff=_xoff(x), yoff=_yoff(y), stepdown="15%")
 
         if side in ['bottom', 'both']:
             # .... BOTTOM ....
@@ -1065,11 +1064,11 @@ class PCBProject(object):
 
             if not file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_bottom_all.ngc'))
-                self.auto_set_stock(side='bottom')
+                self.auto_set_stock(side='bottom', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
             if file_per_operation:
                 machine().set_file(os.path.join(output_directory, 'pcb_bottom_1_iso.ngc'))
-                self.auto_set_stock(side='bottom')
+                self.auto_set_stock(side='bottom', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
             machine().set_tool(iso_bit)
 
@@ -1088,7 +1087,7 @@ class PCBProject(object):
             if drill == 'bottom' and ('both', 'drill') in self.layers:
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_bottom_2_drill.ngc'))
-                    self.auto_set_stock(side='bottom')
+                    self.auto_set_stock(side='bottom', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
                 machine().set_tool(drill_bit)
 
@@ -1098,7 +1097,7 @@ class PCBProject(object):
                         pcb_drill(
                             gerber_geometry=l['geometry'],
                             xoff=_xoff(x, side='bottom'), yoff=_yoff(y),
-                            depth=self.thickness,
+                            depth=thickness,
                             flipx=self.bounds if flip == 'x' else False,
                             flipy=self.bounds if flip == 'y' else False,
                         )
@@ -1106,10 +1105,10 @@ class PCBProject(object):
             if cutout == 'bottom':
                 if file_per_operation:
                     machine().set_file(os.path.join(output_directory, 'pcb_bottom_3_cutout.ngc'))
-                    self.auto_set_stock(side='bottom')
+                    self.auto_set_stock(side='bottom', posts=posts, thickness=thickness, fixture_width=fixture_width, )
 
                 machine().set_tool(cutout_bit)
                 for x in range(panelx):
                     for y in range(panely):
-                        pcb_cutout(bounds=self.bounds, depth=self.thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y), stepdown="15%")
+                        pcb_cutout(bounds=self.bounds, depth=thickness, xoff=_xoff(x, side='bottom'), yoff=_yoff(y), stepdown="15%")
 

@@ -295,6 +295,7 @@ def update_project_file(project_file_id, s3_key=None, source_project_file_id=Non
     )
     return project_file_id
 
+
 def add_or_update_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
     p = project_file(project_id=project_id, file_name=file_name)
     if p:
@@ -308,3 +309,48 @@ def delete_project_file(project_file_id=None):
     SQL.update('project_files', where=SQL.where_clause(where, prefix=None), where_data=bindvars, data={
         'is_deleted': True, 'date_deleted': datetime.datetime.utcnow(),
     })
+
+
+#############################################
+# project_jobs
+
+def project_job(
+    project_id=None, project_key=None, project_job_id=None, user_id=None, job_hash=None,
+):
+    r = project_jobs(project_id=project_id, project_key=project_key, project_job_id=project_file_id, user_id=user_id, job_hash=job_hash)
+    if len(r) > 1:
+        raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
+
+    return r[0] if r else None
+
+
+def project_jobs(
+    project_id=None, project_key=None, project_job_id=None, user_id=None, job_hash=None,
+    page=None, limit=None, sort=None
+):
+    where, bindvars = SQL.auto_where(
+        project_id=project_id, project_key=project_key, user_id=user_id, project_job_id=project_job_id, job_hash=job_hash
+    )
+
+    query = """
+        select
+        from projects p 
+        join project_jobs pj using (project_id)
+        {where}
+        {sort} {limit}
+    """.format(
+        where=SQL.where_clause(where),
+        sort=SQL.orderby(sort),
+        limit=SQL.limit(page=page, limit=limit)
+    )
+
+    return list(SQL.select_foreach(query, bindvars))
+
+
+def add_project_job(project_id, job_hash):
+    r = SQL.insert('project_jobs', {
+        'project_id': project_id,
+        'job_hash': job_hash,
+        'date_created': datetime.datetime.utcnow(),
+    })
+    return r.project_job_id

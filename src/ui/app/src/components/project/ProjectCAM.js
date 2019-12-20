@@ -66,6 +66,12 @@ class ProjectCAM extends React.Component {
   };
 
   async updateImage(download=false) {
+    this.setState({
+      ...this.state,
+      'top': {'img': 'running'},
+      'bottom': {'img': 'running'},
+    })
+
     const { params } = this.state
     const { project } = this.props
     const fw = this.props.store.get('frameworks')
@@ -74,13 +80,18 @@ class ProjectCAM extends React.Component {
       project_key: project.project_key,
       username: project.username,
       side: 'both',
-      max_width: 700,
-      max_height: 700,
+      max_width: 600,
+      max_height: 600,
     }
     Object.assign(args, params)
-    console.log(args)
+    // console.log(args)
     const data = await fw.PCBApi.render_cam(args)
-    this.setState({...this.state, data})
+    console.log(data)
+    this.setState({
+      ...this.state,
+      'top': {'img': data.top.img},
+      'bottom': {'img': data.bottom.img},
+    })
   }
 
   render() {
@@ -112,8 +123,8 @@ class ProjectCAM extends React.Component {
           <material.FormControl className={classes.formControl}>
             <material.TextField
               id="trace-separation-entry" label="Trace separation"
-              value={this.state.params.trace_separation}
-              onChange={this.handleChange('trace_separation').bind(this)}
+              value={this.state.params.separation}
+              onChange={this.handleChange('separation').bind(this)}
               type="number"
               inputProps={{ min: "0.001", max: "0.100", step: "0.001" }}
             />

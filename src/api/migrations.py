@@ -101,7 +101,7 @@ new.add_statement("""
     )
 """)
 new.add_statement("create index project_files_id on project_files(project_file_id)")
-new.add_statement("create index project_files_project_id on project_files(project_id)")
+new.add_statement("create index project_files_project_id_hash on project_files(project_id, job_hash)")
 
 ###############################
 
@@ -113,3 +113,15 @@ new.add_statement("alter table project_files add column date_deleted timestamp")
 new.add_statement("alter table project_files add column is_deleted bool not null default false")
 
 
+new = Migration(7, "Add project jobs id")
+new.add_statement("""
+    create table project_jobs(
+        project_job_id serial primary key 
+        project_id bigint not null references projects(project_id),
+        job_hash char(32),
+        date_created timestamp not null,
+        date_completed timestamp
+    )
+""")
+new.add_statement("create index project_jobs_id on project_jobs(project_job_id)")
+new.add_statement("create index project_jobs_project_id on project_jobs(project_id)")

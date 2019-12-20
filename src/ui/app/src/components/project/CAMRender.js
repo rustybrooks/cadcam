@@ -36,8 +36,6 @@ class CAMRender extends React.Component {
     }
   }
 
-
-
   swapImage = () => {
     this.setState({...this.state, show_image: !this.state.show_image})
   }
@@ -49,7 +47,7 @@ class CAMRender extends React.Component {
     if (!img) {
       return <div>Nuttin</div>
     }
-    console.log("not nuttin")
+    console.log("not nuttin", img)
 
     return (
       <div className={classes.root}>
@@ -58,9 +56,9 @@ class CAMRender extends React.Component {
         </div>
         <div className={classes.image}>
         {
-          (!img.length)
+          (img === 'running')
             ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
-            : (this.state.show_image ? <img src={img}/> : <Gcode cam={cam}/>)
+            : (this.state.show_image ? <img src={'data:image/svg+xml;base64,' + img}/> : <Gcode cam={cam}/>)
         }
         </div>
       </div>
