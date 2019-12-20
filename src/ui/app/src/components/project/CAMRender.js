@@ -43,11 +43,9 @@ class CAMRender extends React.Component {
   render() {
     const { classes, img, cam } = this.props
 
-    console.log('cam render')
     if (!img) {
       return <div>Nuttin</div>
     }
-    console.log("not nuttin", img)
 
     return (
       <div className={classes.root}>

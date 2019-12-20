@@ -10,12 +10,16 @@ from . import queries, projects
 
 logger = logging.getLogger(__name__)
 
-from lib.cache import PickleCache
+from lib import cache
 
 
-@PickleCache(prefix='render_svg', timeout=60 * 60 * 24 * 7, basedir='/srv/data/file_cache')
-def render_svg_generator(project_id=None, layers=None, encode=True, max_height=None, max_width=None, side=None,
-                          theme_name=None):
+@cache.PickleCache(
+    prefix='render_svg', timeout=60 * 60 * 24 * 7, basedir='/srv/data/file_cache'
+)
+def render_svg_generator(
+    project_id=None, date_modified=None, layers=None, encode=True, max_height=None, max_width=None, side=None,
+    theme_name=None
+):
     pcb = PCBProject()
 
     files = queries.project_files(project_id=project_id, is_deleted=False)
@@ -73,8 +77,11 @@ def render_svg_generator(project_id=None, layers=None, encode=True, max_height=N
             )
 
 
-@PickleCache(prefix='pcb_load_and_process', timeout=60 * 60 * 24 * 7, basedir='/srv/data/file_cache')
-def pcb_load_and_process(files=None, side=None):
+@cache.PickleCache(
+    prefix='pcb_load_and_process', timeout=60*60*24*7, basedir='/srv/data/file_cache',
+    keyfn=cache.arg_hash_gen(skip=['files'])
+)
+def pcb_load_and_process(project_id=None, date_modified=None, files=None):
     pcb = PCBProject()
 
     fmap = {}
@@ -88,11 +95,9 @@ def pcb_load_and_process(files=None, side=None):
     keys = [
         ('both', 'outline'),
         ('both', 'drill'),
+        ('top', 'copper'),
+        ('bottom', 'copper'),
     ]
-    if side in ['top', 'both']:
-        keys.append(('top', 'copper'))
-    if side in ['bottom', 'both']:
-        keys.append(('bottom', 'copper'))
 
     for mapkey in keys:
         if mapkey not in fmap:
@@ -104,6 +109,57 @@ def pcb_load_and_process(files=None, side=None):
 
     pcb.process_layers()
     return pcb
+
+
+@cache.PickleCache(
+    prefix='pcb_job', timeout=60*60*24*7, basedir='/srv/data/file_cache',
+    keyfn=cache.arg_hash_gen(skip=['pcb', 'machine'])
+)
+def pcb_job(project_id=None, date_modified=None, pcb=None, machine=None, max_width=None, max_height=None, side=None, **kwargs):
+    outdir = tempfile.mkdtemp()
+
+    machine.set_save_geoms(True)
+    pcb.pcb_job(
+        output_directory=outdir,
+        side=side,
+        **kwargs
+    )
+
+    with tempfile.NamedTemporaryFile(delete=True) as tf:
+        # logger.warn("geom = %r", machine.geometry)
+        bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
+
+        dwg = geometry.shapely_get_dwg(
+            svg_file=tf.name,
+            bounds=bounds,
+            marginpct=0,
+            width=max_width, height=max_height
+        )
+
+        # goto
+        geometry.shapely_add_to_dwg(
+            dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
+            foreground='green'
+        )
+
+        # cut
+        geometry.shapely_add_to_dwg(
+            dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
+            foreground='blue'
+        )
+
+        dwg.save()
+
+        output = {
+            'img': base64.b64encode(open(tf.name).read()),
+            'cam': {}
+        }
+        for fname in os.listdir(outdir):
+            output['cam'][fname] = open(os.path.join(outdir, fname)).read()
+
+        shutil.rmtree(outdir)
+        return output
+
 
 @api_register(None, require_login=True)
 class PCBApi(Api):
@@ -442,18 +498,10 @@ class PCBApi(Api):
             'panely': panely,
             'flip': 'x',
             'zprobe_radius': zprobe_radius,
-            'side': side,
             'border': border,
             'thickness': thickness,
             'posts': posts,
         }
-
-        # job_hash = projects.arg_hash()
-        # job = queries.project_jobs(project_id=p.project_id, job_hash=job_hash)
-        # if job:
-        #     job_id = job.project_job_id
-        # else:
-        #     job_id = queries.add_project_job(project_id=p.project_id, job_hash=job_hash)
 
         files = queries.project_files(project_id=p['project_id'])
         if not files:
@@ -462,40 +510,13 @@ class PCBApi(Api):
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 1000
-        machine.set_save_geoms(True)
-
-        outdir = tempfile.mkdtemp()
 
         logger.warn("before geom=%r", len(machine.geometry))
 
-        t1 = time.time()
-        pcb = pcb_load_and_process(files=files, side=side)
-        t2 = time.time()
-        pcb.pcb_job(
-            output_directory=outdir,
-            **job_kwargs
+        pcb = pcb_load_and_process(
+            project_id=p['project_id'], date_modified=p['date_modified'],
+           files=files
         )
-        t3 = time.time()
-
-        # if download:
-        #     with tempfile.NamedTemporaryFile(suffix='.zip', delete=True) as tf:
-        #         with zipfile.ZipFile(tf.name, 'w') as zip:
-        #             for filename in os.listdir(outdir):
-        #                 zip.write(
-        #                     os.path.join(outdir, filename),
-        #                     arcname=os.path.join(p.project_key + '-cam-' + side, os.path.split(filename)[-1])
-        #                 )
-        #
-        #         tf.seek(0)
-        #         error = projects.project_files.add(
-        #             project=p,
-        #             fobj=tf,
-        #             user_id=_user.user_id,
-        #             file_name='cam-{}.zip'.format(side),
-        #             split_zip=False
-        #         )
-        #         if error:
-        #             raise cls.BadRequest(error)
 
         if side == 'both':
             sides = ['top', 'bottom']
@@ -504,55 +525,11 @@ class PCBApi(Api):
 
         output = {}
         for side in sides:
-            output[side] = {}
-            with tempfile.NamedTemporaryFile(delete=True) as tf:
-                # logger.warn("geom = %r", machine.geometry)
-                bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
-                t4 = time.time()
-
-                dwg = geometry.shapely_get_dwg(
-                    svg_file=tf.name,
-                    bounds=bounds,
-                    marginpct=0,
-                    width=max_width, height=max_height
-                )
-                t5 = time.time()
-
-                # goto
-                geometry.shapely_add_to_dwg(
-                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
-                    foreground='green'
-                )
-
-                t6 = time.time()
-                # cut
-                geometry.shapely_add_to_dwg(
-                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
-                    foreground='blue'
-                )
-
-                t7 = time.time()
-                dwg.save()
-
-                # #if encode:
-                output[side] = {
-                    'img': base64.b64encode(open(tf.name).read()),
-                    'cam': {}
-                }
-                # for fname in os.listdir(outdir):
-                #     output[side]['cam'][fname] = open(os.path.join(outdir, fname)).read()
-
-
-                # else:
-                #     shutil.rmtree(outdir)
-                #     return FileResponse(
-                #         content=open(tf.name),
-                #         content_type='image/svg+xml',
-                #     )
-
-        shutil.rmtree(outdir)
-        t8 = time.time()
-        logger.warn("took %r - %r - %r - %r - %r - %r - %r", t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7)
+            output[side] = pcb_job(
+                project_id=p['project_id'], date_modified=p['date_modified'],
+                pcb=pcb, machine=machine, max_width=max_width, max_height=max_height, side=side,
+                **job_kwargs
+            )
 
         return output
 

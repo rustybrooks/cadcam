@@ -58,6 +58,7 @@ class Environment(object):
 
     def set_save_geoms(self, save_geoms):
         self.save_geoms = save_geoms
+        self.geometry = []
 
     @classmethod
     def format_movement(cls, x=None, y=None, z=None, a=None, rate=None):

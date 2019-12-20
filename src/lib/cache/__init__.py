@@ -20,12 +20,16 @@ PRECACHE = 3
 RECACHE = 4
 
 
-def arg_hash(*args, **kwargs):
-    # logger.warn("cache arg_hash -> %r - %r", args, kwargs)
-    h = hashlib.md5()
-    map(lambda x: h.update(repr(unicode(x))), args)
-    map(lambda x: h.update(repr(unicode(x) + unicode(kwargs[x]))), sorted(kwargs.keys()))
-    return h.hexdigest()
+def arg_hash_gen(skip=None):
+    skip = skip or []
+
+    def fn(*args, **kwargs):
+        h = hashlib.md5()
+        map(lambda x: h.update(repr(unicode(x))), args)
+        map(lambda x: h.update(repr(unicode(x) + unicode(kwargs[x]))), sorted([x for x in kwargs.keys() if x not in skip]))
+        return h.hexdigest()
+
+    return fn
 
 
 def default_cachefn(*args, **kwargs):
@@ -48,7 +52,7 @@ class CacheBase(object):
         self.prefix = prefix
         self.timeout = timeout
         self.grace = grace
-        self.keyfn = keyfn or arg_hash
+        self.keyfn = keyfn or arg_hash_gen()
         self.cachefn = cachefn or default_cachefn
         self.binary = binary
         self.debug = debug

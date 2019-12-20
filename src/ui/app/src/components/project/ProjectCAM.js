@@ -55,7 +55,6 @@ class ProjectCAM extends React.Component {
   }
 
   handleChange = name => event => {
-    console.log("Set", name, event.target.value)
     this.setState({
       ...this.state,
       params: {
@@ -84,13 +83,11 @@ class ProjectCAM extends React.Component {
       max_height: 600,
     }
     Object.assign(args, params)
-    // console.log(args)
     const data = await fw.PCBApi.render_cam(args)
-    console.log(data)
     this.setState({
       ...this.state,
-      'top': {'img': data.top.img},
-      'bottom': {'img': data.bottom.img},
+      'top': {'img': data.top.img, 'cam': data.top.cam},
+      'bottom': {'img': data.bottom.img, 'cam': data.bottom.cam},
     })
   }
 
