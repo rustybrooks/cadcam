@@ -7,6 +7,9 @@ import { withStore } from '../../global-store'
 
 import Gcode from './Gcode'
 
+import { BASE_URL } from '../../constants/api'
+
+
 const style = theme => ({
   'loadingDiv': {
     height: '600px',
@@ -47,6 +50,9 @@ class CAMRender extends React.Component {
       return <div>Nuttin</div>
     }
 
+    const url = BASE_URL + '/api/projects/download_file/' + img.file_name + '?project_file_id=' + img.project_file_id
+
+
     return (
       <div className={classes.root}>
         <div>
@@ -56,7 +62,7 @@ class CAMRender extends React.Component {
         {
           (img === 'running')
             ? <div className={classes.loadingDiv}><ReactLoading type={'spinningBubbles'} color={this.loading_color} height={75} width={75} /></div>
-            : (this.state.show_image ? <img src={'data:image/svg+xml;base64,' + img}/> : <Gcode cam={cam}/>)
+            : (this.state.show_image ? <img src={url} /> : <Gcode cam={cam}/>)
         }
         </div>
       </div>

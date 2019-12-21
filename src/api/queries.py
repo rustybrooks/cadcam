@@ -225,6 +225,7 @@ def add_project(user_id=None, project_key=None, name=None, project_type=None):
         'date_modified': now,
     })
 
+
 def update_project(project_id=None):
     data = {'date_modified': datetime.datetime.utcnow()}
     SQL.update('projects', where='project_id=:p', where_data={'p': project_id}, data=data)
@@ -233,7 +234,7 @@ def update_project(project_id=None):
 # project_files
 
 
-def project_file(project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None):
+def project_file(project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None, is_deleted=None, is_public=None):
     r = project_files(
         project_id=project_id, project_key=project_key, project_file_id=project_file_id, project_job_id=project_job_id,
         user_id=user_id, file_name=file_name
@@ -246,6 +247,7 @@ def project_file(project_id=None, project_key=None, project_file_id=None, projec
 
 def project_files(
         project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None, is_deleted=None,
+        is_public=None,
         page=None, limit=None, sort=None
 ):
     where, bindvars = SQL.auto_where(
@@ -255,6 +257,9 @@ def project_files(
 
     if is_deleted is not None:
         where += ['is_deleted' if is_deleted else 'not pf.is_deleted']
+
+    if is_public is not None:
+        where += ['p.is_public={}'.format(1 if is_public else 0), 'pf.is_public={}'.format(1 if is_public else 0)]
 
     query = """
         select project_id, project_key, project_file_id, user_id, username, file_name, s3_key, source_project_file_id, date_uploaded

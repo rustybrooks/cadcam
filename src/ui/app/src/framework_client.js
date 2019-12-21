@@ -57,9 +57,7 @@ class Framework {
           console.error(e);
           return new Status(500, "A server error occurred")
         } finally {
-          console.log('We do cleanup here');
         }
-
       }
     })
   }

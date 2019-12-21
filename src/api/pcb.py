@@ -402,13 +402,12 @@ class PCBApi(Api):
     @classmethod
     @Api.config(require_login=False)
     def render_cam(
-        cls, project_key=None, username=None, side='top', encode=True,
+        cls, project_key=None, username=None, side='top',
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
         posts='x', drill='top', cutout='top', iso_bit='engrave-0.1mm-30', drill_bit='tiny-1.0mm',
         cutout_bit='tiny-3mm', post_bit='1/8in spiral upcut',
         max_width=800, max_height=800, _user=None,
     ):
-        encode = api_bool(encode)
         depth = api_float(depth)
         separation = api_float(separation)
         border = api_float(border)
@@ -460,14 +459,15 @@ class PCBApi(Api):
         job_hash = cache.arg_hash(**job_kwargs)
         job = queries.project_job(project_id=p['project_id'], job_hash=job_hash)
         logger.warn("looking for job, id=%r, hash=%r job=%r", p['project_id'], job_hash, job)
-        job_id = job['project_job_id'] if job else None
         if not job:
-            cls._render_cam_internal(
+            job_id = cls._render_cam_internal(
                 side=side, project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height
             )
             job = queries.project_job(project_job_id=job_id)
+        else:
+            job_id = job['project_job_id'] if job else None
 
-        job['files'] = queries.project_files(project_job_id=job_id)
+        job['files'] = queries.project_files(project_job_id=job_id, sort='file_name')
         return job
 
     @classmethod
@@ -529,3 +529,5 @@ class PCBApi(Api):
         queries.update_project_job(
             project_job_id=job_id, status='succeeded'
         )
+
+        return job_id

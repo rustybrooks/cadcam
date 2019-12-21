@@ -25,27 +25,36 @@ class Gcode extends React.Component {
     super(props)
 
     this.state = {
-      selected: Object.keys(props.cam)[0]
+      selected: props.cam[0].file_name,
+      data: '',
     }
 
     this.handleListItemClick = this.handleListItemClick.bind(this)
+    this.updateText(props.cam[0].project_file_id)
   }
 
   handleListItemClick = (event, index) => {
-    this.setState({...this.state, selected: index})
+    this.setState({...this.state, selected: this.props.cam[index].project_file_id})
+    this.updateText(this.props.cam[index].project_file_id)
   };
+
+  async updateText(project_file_id) {
+    const fw = this.props.store.get('frameworks')
+    const data = await fw.ProjectsApi.download_file({file_name: null, project_file_id: project_file_id, as_json: true})
+    this.setState({...this.state, data: data.content})
+  }
 
   render() {
     const { store, classes, cam } = this.props
     return <div className={classes.root}>
       <material.List className={classes.files}>
         {
-          Object.keys(cam).map((x) => {
+          cam.map((x, i) => {
             return <material.ListItem
-              key={x}
-              button selected={this.state.selected === x}
-              onClick={event => this.handleListItemClick(event, x)}
-            >{x}</material.ListItem>
+              key={x.file_name}
+              button selected={this.state.selected === x.file_name}
+              onClick={event => this.handleListItemClick(event, i)}
+            >{x.file_name}</material.ListItem>
           })
         }
 
@@ -53,7 +62,7 @@ class Gcode extends React.Component {
       <material.Paper className={classes.code}>
         <pre className={classes.code}>
           {/*{this.state.selected ? this.props.cam[this.state.selected].split ('\n').map ((item, i) => <span key={i}>{item}<br/></span>) : ''}*/}
-          {this.state.selected ? this.props.cam[this.state.selected] : ''}
+          {this.state.data}
         </pre>
       </material.Paper>
     </div>

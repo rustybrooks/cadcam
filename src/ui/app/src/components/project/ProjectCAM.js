@@ -89,17 +89,36 @@ class ProjectCAM extends React.Component {
     Object.assign(args, params)
     const data = await fw.PCBApi.render_cam(args)
 
-    if (data.hasOwnProperty('status')) {
+    if (data.hasOwnProperty('status') && data.hasOwnProperty('details')) {
       this.setState({
         ...this.state, error: data.details,
         'top': {'img': null},
         'bottom': {'img': null},
       })
     } else {
+      let top_img_file = null
+      let bot_img_file = null
+      let top_cam_files = []
+      let bot_cam_files = []
+      data.files.forEach(f => {
+        if (f.file_name === 'top_cam.svg') {
+          top_img_file = f
+        } else if (f.file_name === 'bottom_cam.svg') {
+          bot_img_file = f
+        } else if (f.file_name.startsWith('pcb_top')) {
+          top_cam_files.push(f)
+        } else if (f.file_name.startsWith('pcb_bot')) {
+          bot_cam_files.push(f)
+        }
+      })
+
+      console.log(top_img_file, bot_img_file, top_cam_files, bot_cam_files)
+
       this.setState({
         ...this.state,
-        'top': {'img': data.top.img, 'cam': data.top.cam},
-        'bottom': {'img': data.bottom.img, 'cam': data.bottom.cam},
+        'error': null,
+        'top': {'img': top_img_file, 'cam': top_cam_files},
+        'bottom': {'img': bot_img_file, 'cam': bot_cam_files},
       })
     }
   }

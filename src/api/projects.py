@@ -199,8 +199,9 @@ class ProjectsApi(Api):
 
     @classmethod
     @Api.config(require_login=False)
-    def download_file(cls, file_name, project_file_id=None, _user=None):
-        pf = queries.project_file(project_file_id=project_file_id, user_id=_user.user_id)
+    def download_file(cls, file_name, project_file_id=None, as_json=False, _user=None):
+        # pf = queries.project_file(project_file_id=project_file_id, user_id=_user.user_id)
+        pf = queries.project_file(project_file_id=project_file_id, is_public=True)
         if not pf:
             raise cls.NotFound()
 
@@ -210,15 +211,20 @@ class ProjectsApi(Api):
             raise cls.NotFound()
 
         file_name = project_files.get(project_file_id=project_file_id)
-        ext = os.path.splitext(file_name)[-1].tolower()
-        content_type = 'application/octet-stream'
-        if ext in ['.svg']:
-            content_type = 'image/svg+xml',
+        if as_json:
+            return {
+                'content': open(file_name, 'rb').read(),
+            }
+        else:
+            ext = os.path.splitext(file_name)[-1].lower()
+            content_type = 'application/octet-stream'
+            if ext in ['.svg']:
+                content_type = 'image/svg+xml'
 
-        return FileResponse(
-            content=open(file_name, 'rb').read(),
-            content_type=content_type,
-        )
+            return FileResponse(
+                content=open(file_name, 'rb').read(),
+                content_type=content_type,
+            )
 
     @classmethod
     @Api.config(require_login=False)
