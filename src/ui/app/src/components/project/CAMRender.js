@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactLoading from 'react-loading'
-import * as material from '@material-ui/core'
+import * as m from '@material-ui/core'
 
 import { withStyles } from '@material-ui/core/styles'
 import { withStore } from '../../global-store'
@@ -26,6 +26,12 @@ const style = theme => ({
     'align-items': 'top',
     // background: 'green',
     display: 'flex',
+  },
+  'message': {
+    'padding': '10px',
+    'height': '200px',
+    'align-items': 'center',
+    'margin': theme.spacing(1)
   }
 })
 
@@ -47,7 +53,7 @@ class CAMRender extends React.Component {
     const { classes, img, cam } = this.props
 
     if (!img) {
-      return <div>Nuttin</div>
+      return <m.Typography className={classes.message}>Set parameters and click 'generate' to see results</m.Typography>
     }
 
     const url = BASE_URL + '/api/projects/download_file/' + img.file_name + '?project_file_id=' + img.project_file_id
@@ -56,7 +62,7 @@ class CAMRender extends React.Component {
     return (
       <div className={classes.root}>
         <div>
-          <material.Button onClick={this.swapImage}>Swap to {this.state.show_image ? "Gcode" : "Image"}</material.Button>
+          <m.Button onClick={this.swapImage}>Swap to {this.state.show_image ? "Gcode" : "Image"}</m.Button>
         </div>
         <div className={classes.image}>
         {

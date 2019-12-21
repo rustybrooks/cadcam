@@ -26,7 +26,7 @@ class FileStore(object):
         self.use_s3 = use_s3
         self.basedir = os.path.abspath(basedir)
 
-    def _save(self, storage_key, fobj):
+    def _save(self, storage_key, fobj, contents):
         file_name = os.path.abspath(os.path.join(self.basedir, storage_key))
         if not file_name.startswith(self.basedir):
             raise Exception("No file shenanigans allowed")
@@ -37,7 +37,10 @@ class FileStore(object):
 
         logger.warn("Uploading %r to %r", file_name, storage_key)
         with open(file_name, 'wb+') as f:
-            f.write(fobj.read())
+            if contents:
+                f.write(contents)
+            else:
+                f.write(fobj.read())
 
         # s3.put_object(Body=fobj, Bucket=bucket, Key=storage_key)
         if self.use_s3:
@@ -67,7 +70,7 @@ class FileStore(object):
         file_name = self.get(project_file_id=project_file_id, project_file=project_file)
         return open(file_name)
 
-    def add(self, project_key=None, project_job_id=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
+    def add(self, project_key=None, project_job_id=None, fobj=None, contents=None, user_id=None, file_name=None, project=None, split_zip=False):
         logger.warn("adding... key=%r, user_id=%r", project_key, user_id)
         if project is None:
             project = queries.project(project_key=project_key, user_id=user_id)
@@ -80,7 +83,7 @@ class FileStore(object):
             storage_key = '{}/{}/{}/{}'.format(user_id, project['project_key'], project_job_id, file_name)
         else:
             storage_key = '{}/{}/{}'.format(user_id, project['project_key'], file_name)
-        self._save(storage_key, fobj)
+        self._save(storage_key, fobj, contents)
         project_file_id = queries.add_or_update_project_file(
             project_id=project['project_id'],
             project_job_id=project_job_id,
@@ -95,7 +98,7 @@ class FileStore(object):
                     file_name = os.path.split(i.filename)[-1]
                     storage_key = '{}/{}/{}'.format(user_id, project_key, file_name)
                     with z.open(i) as zf:
-                        self._save(storage_key, zf)
+                        self._save(storage_key, zf, None)
                         queries.add_or_update_project_file(
                             project_id=project['project_id'],
                             project_job_id=project_job_id,

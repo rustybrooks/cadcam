@@ -1,5 +1,6 @@
 import base64
 from gerber.render.cairo_backend import GerberCairoContext
+import json
 import tempfile
 from lib.api_framework import api_register, Api, FileResponse, api_bool, api_list, api_int, api_float
 from lib.campy import *
@@ -525,6 +526,10 @@ class PCBApi(Api):
                 )
 
             shutil.rmtree(outdir)
+
+        projects.project_files.add(
+            project=project, project_job_id=job_id, contents=json.dumps(job_kwargs), file_name='params.json'
+        )
 
         queries.update_project_job(
             project_job_id=job_id, status='succeeded'
