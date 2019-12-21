@@ -30,10 +30,13 @@ def is_logged_in(request, api_data, url_data):
         except (jwt.exceptions.InvalidSignatureError, jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError) as e:
             pass
 
-        user = queries.User(api_key=api_key)
-        if user.is_authenticated:
-            request.is_logged_in = True
-        return user
+        try:
+            user = queries.User(api_key=api_key)
+            if user.is_authenticated:
+                request.is_logged_in = True
+            return user
+        except Exception:
+            logger.warn("Failed to load user by api key")
 
     return None
 #    return flask_login.current_user

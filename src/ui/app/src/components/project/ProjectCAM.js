@@ -51,6 +51,8 @@ class ProjectCAM extends React.Component {
         'panelx': 1,
         'panely': 1,
         'posts': 'none',
+        'drill': 'top',
+        'cutout': 'top',
       }
     }
   }
@@ -163,6 +165,45 @@ class ProjectCAM extends React.Component {
               inputProps={{ min: "1", max: "10", step: "1" }}
             />
           </material.FormControl>
+
+          <material.FormControl component="fieldset">
+              <material.FormLabel component="legend">Drill Side</material.FormLabel>
+              <material.RadioGroup aria-label="position" name="position" value={this.state.params.drill} onChange={this.handleChange('drill').bind(this)} row>
+                <material.FormControlLabel
+                  value="top"
+                  control={<material.Radio color="primary" />}
+                  label="top"
+                  labelPlacement="end"
+                />
+                <material.FormControlLabel
+                  value="bottom"
+                  control={<material.Radio color="primary" />}
+                  label="bottom"
+                  labelPlacement="end"
+                />
+
+              </material.RadioGroup>
+            </material.FormControl>
+
+          <material.FormControl component="fieldset">
+              <material.FormLabel component="legend">Cutout Side</material.FormLabel>
+              <material.RadioGroup aria-label="position" name="position" value={this.state.params.cutout} onChange={this.handleChange('cutout').bind(this)} row>
+                <material.FormControlLabel
+                  value="top"
+                  control={<material.Radio color="primary" />}
+                  label="top"
+                  labelPlacement="end"
+                />
+                <material.FormControlLabel
+                  value="bottom"
+                  control={<material.Radio color="primary" />}
+                  label="bottom"
+                  labelPlacement="end"
+                />
+
+              </material.RadioGroup>
+            </material.FormControl>
+
         </material.FormGroup>
 
       <material.Button color="primary" variant="outlined" onClick={this.updateImage.bind(this)}>Generate</material.Button>

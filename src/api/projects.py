@@ -67,17 +67,21 @@ class FileStore(object):
         file_name = self.get(project_file_id=project_file_id, project_file=project_file)
         return open(file_name)
 
-    def add(self, project_key=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
+    def add(self, project_key=None, project_job_id=None, fobj=None, user_id=None, file_name=None, project=None, split_zip=False):
         logger.warn("adding... key=%r, user_id=%r", project_key, user_id)
         if project is None:
             project = queries.project(project_key=project_key, user_id=user_id)
             if not project:
                 return 'project not found'
 
-        storage_key = '{}/{}/{}'.format(user_id, project.project_key, file_name)
+        if project_job_id:
+            storage_key = '{}/{}/{}/{}'.format(user_id, project['project_key'], project_job_id, file_name)
+        else:
+            storage_key = '{}/{}/{}'.format(user_id, project['project_key'], file_name)
         self._save(storage_key, fobj)
         project_file_id = queries.add_or_update_project_file(
-            project_id=project.project_id,
+            project_id=project['project_id'],
+            project_job_id=project_job_id,
             file_name=file_name,
             s3_key=storage_key,
             source_project_file_id=None,
@@ -91,11 +95,14 @@ class FileStore(object):
                     with z.open(i) as zf:
                         self._save(storage_key, zf)
                         queries.add_or_update_project_file(
-                            project_id=project.project_id,
+                            project_id=project['project_id'],
+                            project_job_id=project_job_id,
                             file_name=file_name,
                             s3_key=storage_key,
                             source_project_file_id=project_file_id,
                         )
+
+        queries.update_project()
 
         return None
 
@@ -211,3 +218,5 @@ class ProjectsApi(Api):
     @Api.config(require_login=False)
     def user_projects(self, limit=20):
         return queries.user_projects(limit=limit)
+
+

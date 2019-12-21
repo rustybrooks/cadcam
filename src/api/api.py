@@ -75,9 +75,9 @@ class AdminApi(Api):
 
     @classmethod
     @Api.config(require_login=False, require_admin=False)
-    def bootstrap(cls):
-        if not queries.SQL.table_exists('migrations') or not queries.SQL.select_0or1("select count(*) as count from migrations").count > 0:
-            val = cls.migrate(apply=None, initial=False)
+    def bootstrap(cls, initial=False):
+        if not queries.SQL.table_exists('migrations') or not queries.SQL.select_0or1("select count(*) as count from migrations")['count'] > 0:
+            val = cls.migrate(apply=None, initial=initial)
         else:
             cls._bootstrap_admin()
 

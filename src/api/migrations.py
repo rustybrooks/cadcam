@@ -13,10 +13,12 @@ filterwarnings('ignore', message='Duplicate entry')
 
 initial = Migration(1, "initial version")
 for table in [
-    'machines', 'tools', 'project_files', 'projects', 'users',
+    'machines', 'tools', 'project_files', 'project_jobs', 'projects', 'users',
 ]:
     initial.add_statement("drop table if exists {}".format(table))
 
+for sql_type in ['project_job_status']:
+    initial.add_statement('drop type if exists {}'.format(sql_type))
 
 initial.add_statement("""
     create table users(
@@ -75,53 +77,41 @@ initial.add_statement("""
         name varchar(100),
         project_type varchar(100),
         date_created timestamp,
-        date_modified timestamp
+        date_modified timestamp,
+        is_public bool not null default true
     )
 """)
 initial.add_statement("create unique index projects_unique on projects(user_id, project_key)")
 
-#############################
-
-new = Migration(2, "adding project_files table")
-for table in [
-    'project_files'
-]:
-    new.add_statement("drop table if exists {}".format(table))
-
-new.add_statement("""
-    create table project_files(
-        project_file_id serial primary key,
-        project_id bigint not null references projects(project_id),
-        file_name varchar(200) not null,
-        s3_key varchar(200) not null,
-        source_project_file_id bigint references project_files(project_file_id),
-        date_uploaded timestamp not null,
-        is_deleted bool default false,
-        date_deleted timestamp
-    )
-""")
-new.add_statement("create index project_files_id on project_files(project_file_id)")
-new.add_statement("create index project_files_project_id_hash on project_files(project_id, job_hash)")
-
-###############################
-
-new = Migration(3, "Adding columns to project")
-new.add_statement("alter table projects add column is_public bool not null default true")
-
-new = Migration(6, "Adding columns to project")
-new.add_statement("alter table project_files add column date_deleted timestamp")
-new.add_statement("alter table project_files add column is_deleted bool not null default false")
-
-
-new = Migration(7, "Add project jobs id")
-new.add_statement("""
+initial.add_statement("create type project_job_status as enum('running', 'failed', 'succeeded')")
+initial.add_statement("""
     create table project_jobs(
-        project_job_id serial primary key 
+        project_job_id serial primary key, 
         project_id bigint not null references projects(project_id),
+        status project_job_status,
         job_hash char(32),
         date_created timestamp not null,
         date_completed timestamp
     )
 """)
-new.add_statement("create index project_jobs_id on project_jobs(project_job_id)")
-new.add_statement("create index project_jobs_project_id on project_jobs(project_id)")
+initial.add_statement("create index project_jobs_id on project_jobs(project_job_id)")
+initial.add_statement("create index project_jobs_project_id_hash on project_jobs(project_id, job_hash)")
+
+initial.add_statement("""
+    create table project_files(
+        project_file_id serial primary key,
+        project_id bigint not null references projects(project_id),
+        project_job_id bigint references project_jobs(project_job_id),
+        file_name varchar(200) not null,
+        s3_key varchar(200) not null,
+        source_project_file_id bigint references project_files(project_file_id),
+        date_uploaded timestamp not null,
+        date_deleted timestamp,
+        is_deleted bool default false
+    )
+""")
+initial.add_statement("create index project_files_id on project_files(project_file_id)")
+
+
+
+

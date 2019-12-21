@@ -570,7 +570,7 @@ class Migration(object):
             ''')
 
         res = SQL.select_one('select max(version_post) as version from migrations')
-        version = res.version if (res.version is not None and not initial) else -1
+        version = res['version'] if (res['version'] is not None and not initial) else -1
         todo = sorted([x for x in cls.registry.keys() if x > version] + apply_versions)
         cls.log(logs, u'Version = %d, todo = %r, initial=%r', version, todo, initial)
 

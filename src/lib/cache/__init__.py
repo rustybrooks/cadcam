@@ -31,6 +31,7 @@ def arg_hash_gen(skip=None):
 
     return fn
 
+arg_hash = arg_hash_gen([])
 
 def default_cachefn(*args, **kwargs):
     if kwargs.get('_precache', False):

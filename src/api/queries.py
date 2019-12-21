@@ -225,12 +225,18 @@ def add_project(user_id=None, project_key=None, name=None, project_type=None):
         'date_modified': now,
     })
 
+def update_project(project_id=None):
+    data = {'date_modified': datetime.datetime.utcnow()}
+    SQL.update('projects', where='project_id=:p', where_data={'p': project_id}, data=data)
 
 #############################################
 # project_files
 
-def project_file(project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None):
-    r = project_files(project_id=project_id, project_key=project_key, project_file_id=project_file_id, user_id=user_id, file_name=file_name)
+def project_file(project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None):
+    r = project_files(
+        project_id=project_id, project_key=project_key, project_file_id=project_file_id, project_job_id=project_job_id,
+        user_id=user_id, file_name=file_name
+    )
     if len(r) > 1:
         raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
 
@@ -238,12 +244,12 @@ def project_file(project_id=None, project_key=None, project_file_id=None, user_i
 
 
 def project_files(
-        project_id=None, project_key=None, project_file_id=None, user_id=None, file_name=None, is_deleted=None,
+        project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None, is_deleted=None,
         page=None, limit=None, sort=None
 ):
     where, bindvars = SQL.auto_where(
         project_id=project_id, project_key=project_key, user_id=user_id, file_name=file_name,
-        project_file_id=project_file_id,
+        project_file_id=project_file_id, project_job_id=project_job_id,
     )
 
     if is_deleted is not None:
@@ -264,11 +270,12 @@ def project_files(
     return list(SQL.select_foreach(query, bindvars))
 
 
-def add_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
+def add_project_file(project_id=None, project_job_id=None, file_name=None, s3_key=None, source_project_file_id=None):
     r = SQL.insert(
         'project_files',
         {
             'project_id': project_id,
+            'project_job_id': project_job_id,
             'file_name': file_name,
             's3_key': s3_key,
             'source_project_file_id': source_project_file_id,
@@ -277,7 +284,7 @@ def add_project_file(project_id=None, file_name=None, s3_key=None, source_projec
             'date_deleted': None,
         }
     )
-    return r.project_file_id
+    return r['project_file_id']
 
 
 def update_project_file(project_file_id, s3_key=None, source_project_file_id=None):
@@ -296,12 +303,17 @@ def update_project_file(project_file_id, s3_key=None, source_project_file_id=Non
     return project_file_id
 
 
-def add_or_update_project_file(project_id=None, file_name=None, s3_key=None, source_project_file_id=None):
-    p = project_file(project_id=project_id, file_name=file_name)
+def add_or_update_project_file(project_id=None, project_job_id=None, file_name=None, s3_key=None, source_project_file_id=None):
+    p = project_file(project_id=project_id, file_name=file_name, project_job_id=project_job_id)
     if p:
-        return update_project_file(project_file_id=p.project_file_id, s3_key=s3_key, source_project_file_id=source_project_file_id)
+        update_project(project_id=p['project_id'])
+        return update_project_file(
+            project_file_id=p['project_file_id'], s3_key=s3_key, source_project_file_id=source_project_file_id
+        )
     else:
-        return add_project_file(project_id=project_id, file_name=file_name, s3_key=s3_key, source_project_file_id=source_project_file_id)
+        update_project(project_id=project_id)
+        return add_project_file(project_id=project_id, project_job_id=project_job_id, file_name=file_name, s3_key=s3_key, source_project_file_id=source_project_file_id)
+
 
 
 def delete_project_file(project_file_id=None):
@@ -317,7 +329,7 @@ def delete_project_file(project_file_id=None):
 def project_job(
     project_id=None, project_key=None, project_job_id=None, user_id=None, job_hash=None,
 ):
-    r = project_jobs(project_id=project_id, project_key=project_key, project_job_id=project_file_id, user_id=user_id, job_hash=job_hash)
+    r = project_jobs(project_id=project_id, project_key=project_key, project_job_id=project_job_id, user_id=user_id, job_hash=job_hash)
     if len(r) > 1:
         raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
 
@@ -333,7 +345,7 @@ def project_jobs(
     )
 
     query = """
-        select
+        select project_id, project_job_id, pj.date_created, date_completed, status
         from projects p 
         join project_jobs pj using (project_id)
         {where}
@@ -352,5 +364,14 @@ def add_project_job(project_id, job_hash):
         'project_id': project_id,
         'job_hash': job_hash,
         'date_created': datetime.datetime.utcnow(),
+        'status': 'running'
     })
-    return r.project_job_id
+    return r['project_job_id']
+
+
+def update_project_job(project_job_id=None, status=None):
+    data = {
+        'status': status,
+        'date_completed': datetime.datetime.utcnow(),
+    }
+    SQL.update('project_jobs', where='project_job_id=:j', where_data={'j': project_job_id}, data=data)
