@@ -33,6 +33,7 @@ class ProjectCAM extends React.Component {
     super(props)
 
     this.state = {
+      error: null,
       top: {
         img: null,
         cam: [],
@@ -67,6 +68,7 @@ class ProjectCAM extends React.Component {
   async updateImage(download=false) {
     this.setState({
       ...this.state,
+      'error': null,
       'top': {'img': 'running'},
       'bottom': {'img': 'running'},
     })
@@ -84,11 +86,20 @@ class ProjectCAM extends React.Component {
     }
     Object.assign(args, params)
     const data = await fw.PCBApi.render_cam(args)
-    this.setState({
-      ...this.state,
-      'top': {'img': data.top.img, 'cam': data.top.cam},
-      'bottom': {'img': data.bottom.img, 'cam': data.bottom.cam},
-    })
+
+    if (data.hasOwnProperty('status')) {
+      this.setState({
+        ...this.state, error: data.details,
+        'top': {'img': null},
+        'bottom': {'img': null},
+      })
+    } else {
+      this.setState({
+        ...this.state,
+        'top': {'img': data.top.img, 'cam': data.top.cam},
+        'bottom': {'img': data.bottom.img, 'cam': data.bottom.cam},
+      })
+    }
   }
 
   render() {
@@ -155,6 +166,10 @@ class ProjectCAM extends React.Component {
         </material.FormGroup>
 
       <material.Button color="primary" variant="outlined" onClick={this.updateImage.bind(this)}>Generate</material.Button>
+      {
+        this.state.error ? <material.Typography color='error'>{this.state.error}</material.Typography> : ''
+      }
+
 
       <table border={0} cellSpacing={2}>
         <tbody>

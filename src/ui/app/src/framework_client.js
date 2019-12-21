@@ -34,23 +34,32 @@ class Framework {
         }
 
         // console.log("posting ", JSON.stringify(context), "to", whole_url)
-        const response = await fetch(whole_url, {
-          method: 'POST',
-          body: body,
-          headers: headers,
-        })
+        try {
+          const response = await fetch(whole_url, {
+            method: 'POST',
+            body: body,
+            headers: headers,
+          })
 
-        if (response.status === 500) {
+          if (response.status === 500) {
+            console.log('..... 500')
+            return new Status(500, "A server error occurred")
+          } else if (response.status === 400) {
+            return new Status(400, await response.json())
+          } else if (response.status === 403) {
+            return new Status(403, await response.json())
+          } else if (response.status === 404) {
+            return new Status(404, "Not Found")
+          }
+
+          return response.json()
+        } catch (e) {
+          console.error(e);
           return new Status(500, "A server error occurred")
-        } else if (response.status === 400) {
-          return new Status(400, await response.json())
-        } else if (response.status === 403) {
-          return new Status(403, await response.json())
-        } else if (response.status === 404) {
-          return new Status(404, "Not Found")
+        } finally {
+          console.log('We do cleanup here');
         }
 
-        return response.json()
       }
     })
   }
