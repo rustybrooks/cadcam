@@ -95,7 +95,7 @@ initial.add_statement("""
     )
 """)
 initial.add_statement("create index project_jobs_id on project_jobs(project_job_id)")
-initial.add_statement("create index project_jobs_project_id_hash on project_jobs(project_id, job_hash)")
+initial.add_statement("create unique index project_jobs_project_id_hash on project_jobs(project_id, job_hash)")
 
 initial.add_statement("""
     create table project_files(

@@ -460,9 +460,9 @@ class PCBApi(Api):
         job_hash = cache.arg_hash(**job_kwargs)
         job = queries.project_job(project_id=p['project_id'], job_hash=job_hash)
         logger.warn("looking for job, id=%r, hash=%r job=%r", p['project_id'], job_hash, job)
-        if not job:
+        if False or not job:
             job_id = cls._render_cam_internal(
-                side=side, project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height
+                side=side, project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height, job=job
             )
             job = queries.project_job(project_job_id=job_id)
         else:
@@ -472,8 +472,11 @@ class PCBApi(Api):
         return job
 
     @classmethod
-    def _render_cam_internal(cls, side=None, project=None, job_kwargs=None, max_width=None, max_height=None):
-        job_id = queries.add_project_job(project['project_id'], cache.arg_hash(**job_kwargs))
+    def _render_cam_internal(cls, side=None, project=None, job_kwargs=None, max_width=None, max_height=None, job=None):
+        if job:
+            job_id = job['project_job_id']
+        else:
+            job_id = queries.add_project_job(project['project_id'], cache.arg_hash(**job_kwargs))
 
         files = queries.project_files(project_id=project['project_id'])
 

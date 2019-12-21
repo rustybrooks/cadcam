@@ -199,6 +199,7 @@ class Environment(object):
 
     # z is the top of the material being drilled into
     # retract_distance and depth are relative to z
+    # hole centers are absolute coords
     def drill_cycle_plain(self, centers, z, depth, retract_distance=None, rate=None):
         if not isinstance(centers[0], (list, tuple)):
             centers = [centers]
@@ -220,7 +221,7 @@ class Environment(object):
         retract_type = 'G99'   # G98 would retract to initial Z every time
 
         self.goto(*centers[0])
-        self.write("{} G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, cycle_depth, feed))
+        self.write("{} G90 G81 R{:0.3f} Z{:0.3f} {}".format(retract_type, z_retract, cycle_depth, feed))
         for c in centers[1:]:
             self.goto(*c, prefix='')
         self.write("G80")

@@ -56,7 +56,7 @@ class CAMRender extends React.Component {
       return <m.Typography className={classes.message}>Set parameters and click 'generate' to see results</m.Typography>
     }
 
-    const url = BASE_URL + '/api/projects/download_file/' + img.file_name + '?project_file_id=' + img.project_file_id
+    const url = BASE_URL + '/api/projects/download_file/' + img.file_name + '_' + (img.date_uploaded) + '?project_file_id=' + img.project_file_id
 
 
     return (

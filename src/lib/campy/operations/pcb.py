@@ -748,7 +748,7 @@ def pcb_drill(
     return shapely.geometry.MultiPolygon(geoms)
 
 
-# FIXME - tabs not supported, add if I ever need
+# FIXME - should use outline if available
 @operation(required=['bounds', 'depth'], operation_feedrate='cut', comment="PCB Cutout bounds={bounds}")
 def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=None, depth=None, stepdown="50%", clearz=None, auto_clear=True, xoff=0, yoff=0):
     clearz = clearz or 1*constants.MM
@@ -767,13 +767,41 @@ def pcb_cutout(gerber_file=None, gerber_data=None, gerber_geometry=None, bounds=
     x2 = maxx+machine().tool.diameter/2
     y1 = miny-machine().tool.diameter/2
     y2 = maxy+machine().tool.diameter/2
+
+    tab_width = .25
+
+    xt1 = (x1+x2)/2 - tab_width/2.
+    xt2 = xt1 + tab_width
+    yt1 = (y1+y2)/2 - tab_width/2.
+    yt2 = yt1 + tab_width
+
     for Z in machine().zstep(0, -depth, stepdown):
         machine().goto(xoff+x1, yoff+y1)
         machine().cut(z=Z)
-        machine().cut(x=xoff+x1, y=yoff+y2)
-        machine().cut(x=xoff+x2, y=yoff+y2)
-        machine().cut(x=xoff+x2, y=yoff+y1)
-        machine().cut(x=xoff+x1, y=yoff+y1)
+
+        machine().cut(y=yoff+yt1)
+        machine().goto(z=clearz)
+        machine().goto(y=yoff+yt2)
+        machine().cut(z=Z)
+        machine().cut(y=yoff+y2)
+
+        machine().cut(x=xoff+xt1)
+        machine().goto(z=clearz)
+        machine().goto(x=xoff+xt2)
+        machine().cut(z=Z)
+        machine().cut(x=xoff+x2)
+
+        machine().cut(y=yoff+yt2)
+        machine().goto(z=clearz)
+        machine().goto(y=yoff+yt1)
+        machine().cut(z=Z)
+        machine().cut(y=yoff+y1)
+
+        machine().cut(x=xoff+xt2)
+        machine().goto(z=clearz)
+        machine().goto(x=xoff+xt1)
+        machine().cut(z=Z)
+        machine().cut(x=xoff+x1)
 
     if auto_clear:
         machine().goto(z=clearz)
