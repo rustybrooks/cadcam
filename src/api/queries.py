@@ -232,6 +232,7 @@ def update_project(project_id=None):
 #############################################
 # project_files
 
+
 def project_file(project_id=None, project_key=None, project_file_id=None, project_job_id=None, user_id=None, file_name=None):
     r = project_files(
         project_id=project_id, project_key=project_key, project_file_id=project_file_id, project_job_id=project_job_id,
@@ -355,6 +356,8 @@ def project_jobs(
         sort=SQL.orderby(sort),
         limit=SQL.limit(page=page, limit=limit)
     )
+
+    logger.warn("query = %r, bindvars = %r", query, bindvars)
 
     return list(SQL.select_foreach(query, bindvars))
 

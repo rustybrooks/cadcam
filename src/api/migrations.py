@@ -111,6 +111,9 @@ initial.add_statement("""
     )
 """)
 initial.add_statement("create index project_files_id on project_files(project_file_id)")
+initial.add_statement("create index project_files_project_id on project_files(project_id)")
+initial.add_statement("create index project_files_job_id on project_files(project_job_id)")
+
 
 
 

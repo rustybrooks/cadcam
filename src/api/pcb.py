@@ -457,17 +457,24 @@ class PCBApi(Api):
             'posts': posts,
         }
 
-        job = queries.project_job(project_id=p['project_id'], job_hash=cache.arg_hash(job_kwargs))
-        if job:
-            return {}
+        job_hash = cache.arg_hash(**job_kwargs)
+        job = queries.project_job(project_id=p['project_id'], job_hash=job_hash)
+        logger.warn("looking for job, id=%r, hash=%r job=%r", p['project_id'], job_hash, job)
+        job_id = job['project_job_id'] if job else None
+        if not job:
+            cls._render_cam_internal(
+                side=side, project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height
+            )
+            job = queries.project_job(project_job_id=job_id)
 
-        job_id = queries.add_project_job(p['project_id'], cache.arg_hash(**job_kwargs))
+        job['files'] = queries.project_files(project_job_id=job_id)
+        return job
 
-        projects.start_job(project_id=p['project_id'])
+    @classmethod
+    def _render_cam_internal(cls, side=None, project=None, job_kwargs=None, max_width=None, max_height=None):
+        job_id = queries.add_project_job(project['project_id'], cache.arg_hash(**job_kwargs))
 
-        files = queries.project_files(project_id=p['project_id'])
-        if not files:
-            return cls._empty_svg(encode=encode)
+        files = queries.project_files(project_id=project['project_id'])
 
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
@@ -476,7 +483,7 @@ class PCBApi(Api):
         logger.warn("before geom=%r", len(machine.geometry))
 
         pcb = pcb_load_and_process(
-            project_id=p['project_id'], date_modified=p['date_modified'],
+            project_id=project['project_id'], date_modified=project['date_modified'],
             files=files
         )
 
@@ -488,45 +495,33 @@ class PCBApi(Api):
         for side in sides:
             outdir = tempfile.mkdtemp()
             machine.set_save_geoms(True)
-            pcb.pcb_job(
-                output_directory=outdir,
-                side=side,
-                **job_kwargs
-            )
+            pcb.pcb_job(output_directory=outdir, side=side, **job_kwargs)
 
             with tempfile.NamedTemporaryFile(delete=True) as tf:
                 bounds = geometry.shapely_svg_bounds([x[0] for x in machine.geometry])
 
-                dwg = geometry.shapely_get_dwg(
-                    svg_file=tf.name,
-                    bounds=bounds,
-                    marginpct=0,
-                    width=max_width, height=max_height
-                )
+                dwg = geometry.shapely_get_dwg(svg_file=tf.name, bounds=bounds, marginpct=0, width=max_width,
+                                               height=max_height)
 
                 # goto
                 geometry.shapely_add_to_dwg(
-                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'],
-                    foreground='green'
+                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'goto'], foreground='green'
                 )
 
                 # cut
                 geometry.shapely_add_to_dwg(
-                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'],
-                    foreground='blue'
+                    dwg, geoms=[x[0] for x in machine.geometry if x[1] == 'cut'], foreground='blue'
                 )
 
                 dwg.save()
 
                 projects.project_files.add(
-                    user_id=_user.user_id,
-                    project=p, project_job_id=job_id, fobj=open(tf.name, 'rb+'), file_name='{}_cam.svg'.format(side)
+                    project=project, project_job_id=job_id, fobj=open(tf.name, 'rb+'), file_name='{}_cam.svg'.format(side)
                 )
 
             for fname in os.listdir(outdir):
                 projects.project_files.add(
-                    user_id=_user.user_id,
-                    project=p, project_job_id=job_id, fobj=open(os.path.join(outdir, fname), 'rb+'), file_name=fname
+                    project=project, project_job_id=job_id, fobj=open(os.path.join(outdir, fname), 'rb+'), file_name=fname
                 )
 
             shutil.rmtree(outdir)
@@ -534,5 +529,3 @@ class PCBApi(Api):
         queries.update_project_job(
             project_job_id=job_id, status='succeeded'
         )
-
-        return queries.project_job(project_job_id=job_id)

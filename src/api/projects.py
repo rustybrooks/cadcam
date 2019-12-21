@@ -73,6 +73,8 @@ class FileStore(object):
             project = queries.project(project_key=project_key, user_id=user_id)
             if not project:
                 return 'project not found'
+        else:
+            user_id = user_id if user_id else project['user_id']
 
         if project_job_id:
             storage_key = '{}/{}/{}/{}'.format(user_id, project['project_key'], project_job_id, file_name)
@@ -208,10 +210,14 @@ class ProjectsApi(Api):
             raise cls.NotFound()
 
         file_name = project_files.get(project_file_id=project_file_id)
+        ext = os.path.splitext(file_name)[-1].tolower()
+        content_type = 'application/octet-stream'
+        if ext in ['.svg']:
+            content_type = 'image/svg+xml',
+
         return FileResponse(
             content=open(file_name, 'rb').read(),
-            # content='foo',
-            content_type='application/octet-stream',
+            content_type=content_type,
         )
 
     @classmethod
