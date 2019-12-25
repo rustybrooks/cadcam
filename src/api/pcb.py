@@ -405,8 +405,8 @@ class PCBApi(Api):
     def render_cam(
         cls, project_key=None, username=None, side='top',
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
-        posts='x', drill='top', cutout='top', iso_bit='engrave-0.1mm-30', drill_bit='tiny-1.0mm',
-        cutout_bit='tiny-3mm', post_bit='1/8in spiral upcut',
+        posts='x', drill='top', cutout='top', iso_bit=None, drill_bit='tiny-1.0mm',
+        cutout_bit=None, post_bit='1/8in spiral upcut',
         max_width=800, max_height=800, _user=None,
     ):
         depth = api_float(depth)

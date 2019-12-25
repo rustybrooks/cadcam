@@ -17,7 +17,7 @@ for table in [
 ]:
     initial.add_statement("drop table if exists {}".format(table))
 
-for sql_type in ['project_job_status']:
+for sql_type in ['project_job_status', 'tool_type']:
     initial.add_statement('drop type if exists {}'.format(sql_type))
 
 initial.add_statement("""
@@ -52,18 +52,29 @@ initial.add_statement("create index machines_machine_id on machines(machine_id)"
 initial.add_statement("create unique index machines_unique on machines(user_id, machine_key)")
 
 initial.add_statement("""
+    create type tool_type as enum(
+        'straight', 'ball', 'dovetail', 'vee'
+    )
+""")
+
+initial.add_statement("""
     create table tools(
         tool_id serial primary key,
-        user_id bigint not null references users(user_id),
+        user_id bigint references users(user_id),
+        date_created timestamp,
+        date_modified timestamp,
         tool_key varchar(100) not null,
         description varchar(300),
         type varchar(100),
         material varchar(100),
         flutes integer,
+        cutting_length float,
         xoffset real,
         yoffset real,
         zoffset real,
-        diameter real
+        diameter real,
+        minor_diameter real,
+        edge_radius real
     )
 """)
 initial.add_statement("create index tools_tool_id on tools(tool_id)")
@@ -113,7 +124,6 @@ initial.add_statement("""
 initial.add_statement("create index project_files_id on project_files(project_file_id)")
 initial.add_statement("create index project_files_project_id on project_files(project_id)")
 initial.add_statement("create index project_files_job_id on project_files(project_job_id)")
-
 
 
 

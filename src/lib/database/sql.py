@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 filterwarnings('ignore', message='Invalid utf8mb4 character string')
 filterwarnings('ignore', message='Duplicate entry')
 
+from .structures import dictobj
+
 try:
     import flask
 except Exception as e:
@@ -372,14 +374,14 @@ class SQLConn(object):
             rs = c.execute(text(statement), data or {})
 
             for row in rs:
-                yield dict(row)
+                yield dictobj(row)
 
     def select_one(self, statement, data=None):
         with self.cursor() as c:
             rs = c.execute(text(statement), data or {})
             row = rs.fetchone()
             rs.close()
-            return dict(row)
+            return dictobj(row)
 
     def select_0or1(self, statement, data=None):
         with self.cursor() as c:
@@ -393,7 +395,7 @@ class SQLConn(object):
                 elif count == 2:
                     raise Exception(u'Query was expected to return 0 or 1 rows, returned more')
 
-            return dict(result) if result else None
+            return dictobj(result) if result else None
 
     def insert(self, table_name, data, ignore_duplicates=False, batch_size=200, returning=True):
         def _ignore_pre():
@@ -433,7 +435,7 @@ class SQLConn(object):
             if isinstance(data, dict):
                 rs = c.execute(text(query), data)
                 if self.sql.postgres:
-                    return dict(rs.fetchone())
+                    return dictobj(rs.fetchone())
                 else:
                     return rs.lastrowid  # mysql only??
             else:
@@ -458,7 +460,8 @@ class SQLConn(object):
         query = u'update {table} set {sets} {where}'.format(
             table=table_name,
             sets=set_vals,
-            where=u'where {}'.format(where) if len(where) else '',
+            where=self.sql.where_clause(where),
+            # u'where {}'.format(where) if len(where) else '',
         )
 
         with self.cursor() as c:

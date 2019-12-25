@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _SQL = None
 JWT_SECRET = config.get_config_key('jwt_secret')
+sentinel = object()
 
 
 def SQLFactory(sql_url=None, flask_storage=False):
@@ -116,13 +117,14 @@ class User(object):
         return self.user_id
 
 
-def add_user(username=None, email=None, password=None, is_admin=False):
+def add_user(username=None, email=None, password=None, is_admin=False, api_key=None):
+    api_key = api_key or hashlib.sha256(str(random.getrandbits(128))).hexdigest()
     salt = bcrypt.gensalt(12)
     return SQL.insert('users', {
         'username': username,
         'email': email,
         'password': User.generate_password_hash(password, salt).decode('utf-8'),
-        'api_key': hashlib.sha256(str(random.getrandbits(128))).hexdigest(),
+        'api_key': api_key,
         'is_admin': is_admin,
     })
 
@@ -383,3 +385,115 @@ def update_project_job(project_job_id=None, status=None):
         'date_completed': datetime.datetime.utcnow(),
     }
     SQL.update('project_jobs', where='project_job_id=:j', where_data={'j': project_job_id}, data=data)
+
+
+#########################################
+# tools
+
+
+def tool(tool_id=None, tool_key=None, user_id=sentinel):
+    r = tools(tool_id=tool_id, tool_key=tool_key, user_id=user_id)
+    if len(r) > 1:
+        raise Exception("Expected 0 or 1 result, found {}".format(len(r)))
+
+    return r[0] if r else None
+
+
+def _tool_where(tool_id, tool_key, user_id):
+    where, bindvars = SQL.auto_where(tool_id=tool_id, tool_key=tool_key)
+
+    if user_id is not sentinel:
+        if user_id is None:
+            where += ['user_id is null']
+        else:
+            where += ['user_id=:user_id']
+            bindvars['user_id'] = user_id
+
+    return where, bindvars
+
+
+def tools(tool_id=None, tool_key=None, user_id=sentinel, page=None, limit=None, sort=None):
+    where, bindvars = _tool_where(tool_id, tool_key, user_id)
+
+    if user_id is not sentinel:
+        if user_id is None:
+            where += ['user_id is null']
+        else:
+            where += ['user_id=:user_id']
+            bindvars['user_id'] = user_id
+
+    query = """
+        select * 
+        from tools
+        {where}
+        {sort} {limit}
+    """.format(
+        where=SQL.where_clause(where),
+        sort=SQL.orderby(sort),
+        limit=SQL.limit(page=page, limit=limit)
+    )
+    return list(SQL.select_foreach(query, bindvars))
+
+
+def add_tool(data):
+    now = datetime.datetime.utcnow()
+    data['date_created'] = now
+    data['date_modified'] = now
+    r = SQL.insert('tools', data)
+    return r['tool_id']
+
+
+def update_tool(tool_id=None, user_id=sentinel, tool_key=None, data=None):
+    where, bindvars = _tool_where(tool_id, tool_key, user_id)
+
+    SQL.update('tools', where=where, where_data=bindvars, data=data)
+
+
+def delete_tool(tool_id=None, user_id=sentinel, tool_key=None):
+    where, bindvars = _tool_where(tool_id, tool_key, user_id)
+    SQL.delete('tools', where, bindvars)
+
+
+def add_global_tools():
+    from lib.campy import constants
+    from lib.campy.tools import StraightRouterBit, BallRouterBit, VRouterBit, DovetailRouterBit
+
+    old_tools = {x['tool_key']: x for x in tools(user_id=None)}
+    old_tool_names = set(old_tools.keys())
+    new_tool_names = set()
+
+    for name, t in (
+        ('engrave-0.1mm-30deg', VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)),
+        ('engrave-0.1mm-10deg', VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)),
+        ('engrave-0.01in-15deg', VRouterBit(included_angle=15.0, diameter=1/8., tip_diameter=0.01, tool_material='hss', flutes=3)),
+
+        ('straight-0.6mm', StraightRouterBit(diameter=.6 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-0.7mm', StraightRouterBit(diameter=.7 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-0.8mm', StraightRouterBit(diameter=.8 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-0.9mm', StraightRouterBit(diameter=.9 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-1.0mm', StraightRouterBit(diameter=1.0 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-1.2mm', StraightRouterBit(diameter=1.2 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-1.4mm', StraightRouterBit(diameter=1.4 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-1.6mm', StraightRouterBit(diameter=1.6 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-1.8mm', StraightRouterBit(diameter=1.8 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-2.0mm', StraightRouterBit(diameter=2.0 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-2.2mm', StraightRouterBit(diameter=2.2 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-2.4mm', StraightRouterBit(diameter=2.4 * constants.MM, tool_material='hss', flutes=2)),
+        ('straight-3.0mm', StraightRouterBit(diameter=3 * constants.MM, tool_material='hss', flutes=2)),
+    ):
+        logger.warn("Adding tool %r", name)
+        new_tool_names.add(name)
+
+        db_data = t.to_db()
+        dbtool = tool(tool_key=name, user_id=None)
+        db_data['user_id'] = None
+        db_data['tool_key'] = name
+        if dbtool:
+            update_tool(tool_id=dbtool['tool_id'], data=db_data)
+        else:
+            add_tool(db_data)
+
+    for tool_key in old_tool_names - new_tool_names:
+        logger.warn('Deleting tool %r', tool_key)
+        delete_tool(tool_id=old_tools[tool_key]['tool_id'])
+

@@ -6,13 +6,15 @@ from .cammath import frange
 class Tool(object):
     index_counter = 0
 
-    def __init__(self, tool_material, effective_diameter, flutes=None):
+    def __init__(self, tool_material, effective_diameter, flutes=None, edge_radius=0):
         self.index_counter += 1
         self.index = self.index_counter
 
         self.effective_diameter = effective_diameter
 
+
         self.flutes = flutes
+        self.edge_radius = edge_radius
         self.feeds = {
             'cut': None,
             'raster_engrave': None,
@@ -190,16 +192,34 @@ class Tool(object):
     def diameter_at_depth(self, depth=0):
         return self.effective_diameter
 
+    def from_db(self):
+        raise Exception("not defined")
+
+    def to_db(self):
+        raise Exception("not defined")
+
 
 class StraightRouterBit(Tool):
-    def __init__(self, diameter, tool_material, flutes=None):
-        super(StraightRouterBit, self).__init__(effective_diameter=diameter, tool_material=tool_material, flutes=flutes)
+    def __init__(self, diameter, tool_material, flutes=None, edge_radius=0, cutting_length=5):
+        super(StraightRouterBit, self).__init__(
+            effective_diameter=diameter, tool_material=tool_material, flutes=flutes, edge_radius=edge_radius,
+        )
 
         self.diameter = diameter
-        self.cutting_length = 5 # FIXME
+        self.cutting_length = cutting_length
 
     def comment(self, cam):
         cam.comment("FlatMill %f %f" % (self.cutting_length, self.diameter/2.0))
+
+    def to_db(self):
+        return {
+            'type': 'straight',
+            'material': self.tool_material,
+            'flutes': self.flutes,
+            'diameter': self.diameter,
+            'edge_radius': self.edge_radius,
+            'cutting_length': self.cutting_length,
+        }
 
 
 class BallRouterBit(StraightRouterBit):
@@ -208,27 +228,55 @@ class BallRouterBit(StraightRouterBit):
 
 
 class DovetailRouterBit(Tool):
-    def __init__(self, minor_diameter=None, major_diameter=None, height=None, tool_material=None, flutes=None):
-        super(DovetailRouterBit, self).__init__(effective_diameter=major_diameter, tool_material=tool_material, flutes=flutes)
+    def __init__(self, minor_diameter=None, major_diameter=None, height=None, tool_material=None, flutes=None, edge_radius=0):
+        super(DovetailRouterBit, self).__init__(
+            effective_diameter=major_diameter, tool_material=tool_material, flutes=flutes, edge_radius=edge_radius,
+        )
 
         self.major_diameter = major_diameter
         self.minor_diameter = minor_diameter
         self.height = height
 
+    def to_db(self):
+        return {
+            'type': 'straight',
+            'material': self.tool_material,
+            'flutes': self.flutes,
+            'diameter': self.major_diameter,
+            'minor_diameter': self.major_diameter,
+            'edge_radius': self.edge_radius,
+            'cutting_length': self.height,
+        }
+
 
 class VRouterBit(Tool):
-    def __init__(self, included_angle, diameter=None, tip_diameter=None, tool_material=None, flutes=None):
-        super(VRouterBit, self).__init__(effective_diameter=diameter/2., tool_material=tool_material, flutes=flutes)
+    def __init__(self, included_angle, diameter=None, tip_diameter=None, tool_material=None, flutes=None, edge_radius=0, cutting_length=5):
+        super(VRouterBit, self).__init__(
+            effective_diameter=diameter/2., tool_material=tool_material, flutes=flutes, edge_radius=edge_radius,
+        )
 
         self.included_angle = included_angle
         self.diameter = diameter
         self.tip_diameter = tip_diameter
+        self.edge_radius = edge_radius
+        self.cutting_length = cutting_length
 
     def comment(self, cam):
         cam.comment("VMill %f %f %f %f" % (1, self.tip_diameter/2.0, self.diameter/2.0, self.included_angle))  # FIXME fixed cutting length
 
     def diameter_at_depth(self, depth=0):
         return self.tip_diameter + math.tan(math.radians(self.included_angle/2.))*depth*2
+
+    def to_db(self):
+        return {
+            'type': 'straight',
+            'material': self.tool_material,
+            'flutes': self.flutes,
+            'diameter': self.diameter,
+            'minor_diameter': self.tip_diameter,
+            'edge_radius': self.edge_radius,
+            'cutting_length': self.cutting_length,
+        }
 
 
 class Laser(Tool):

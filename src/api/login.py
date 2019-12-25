@@ -1,6 +1,5 @@
 import jwt
 import logging
-from flask import request
 
 from . import queries
 

@@ -376,49 +376,49 @@ class Environment(object):
 
 # machine =
 
-# FIXME load from file shared with fusion etc
-tools = {}
-tools['1/8in spiral upcut'] = StraightRouterBit(diameter=1/8., tool_material='hss', flutes=2)
-tools['1/16in spiral upcut'] = StraightRouterBit(diameter=1/16., tool_material='hss', flutes=2)
-tools['1/4in spiral upcut'] = StraightRouterBit(diameter=1/4., tool_material='hss', flutes=2)
-tools['3/8in spiral upcut'] = StraightRouterBit(diameter=3/8., tool_material='hss', flutes=2)
-tools['1/2in spiral upcut'] = StraightRouterBit(diameter=1/2., tool_material='hss', flutes=2)
-
-tools['1/2in 4-flute endmill'] = StraightRouterBit(diameter=1/2., tool_material='hss', flutes=4)
-tools['1/4in 4-flute endmill'] = StraightRouterBit(diameter=1/4., tool_material='hss', flutes=4)
-tools['1/8in 4-flute endmill'] = StraightRouterBit(diameter=1/8., tool_material='hss', flutes=4)
-
-tools['1/8in spiral ball'] = BallRouterBit(diameter=1/8., tool_material='hss', flutes=2)
-tools['1/4in spiral ball'] = BallRouterBit(diameter=1/4., tool_material='hss', flutes=2)
-tools['3/8in spiral upcut'] = StraightRouterBit(diameter=3/8., tool_material='hss', flutes=2)
-tools['1/2in spiral ball'] = BallRouterBit(diameter=1/2., tool_material='hss', flutes=2)
-
-tools['1 1/2in straight bit'] = StraightRouterBit(diameter=1.5, tool_material='hss', flutes=2)
-tools['1/2in dovetail'] = DovetailRouterBit(minor_diameter=5/8., major_diameter=1/2., height=7/8., tool_material='hss', flutes=2)
-tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='hss', flutes=1)
-
-tools['probe'] = Tool('hss', 1, 1)
-tools['probe'].feeds['probe'] = 1
-
-tools['engrave-0.1mm-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
-tools['engrave-0.1mm-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
-tools['engrave-0.01in-15'] = VRouterBit(included_angle=15.0, diameter=1/8., tip_diameter=0.01, tool_material='hss', flutes=3)
-
-tools['tiny-0.6mm'] = StraightRouterBit(diameter=.6*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-0.7mm'] = StraightRouterBit(diameter=.7*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-0.9mm'] = StraightRouterBit(diameter=.9*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-1.0mm'] = StraightRouterBit(diameter=1.0*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-1.2mm'] = StraightRouterBit(diameter=1.2*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-1.4mm'] = StraightRouterBit(diameter=1.4*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-1.6mm'] = StraightRouterBit(diameter=1.6*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-1.8mm'] = StraightRouterBit(diameter=1.8*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-2.0mm'] = StraightRouterBit(diameter=2.0*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-2.2mm'] = StraightRouterBit(diameter=2.2*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-2.4mm'] = StraightRouterBit(diameter=2.4*constants.MM, tool_material='hss', flutes=2)
-tools['tiny-3mm'] = StraightRouterBit(diameter=3*constants.MM, tool_material='hss', flutes=2)
-
-tools['k40-laser'] = Laser(focused_beam_width=0.010)  # Just a guess - measure...
+# # FIXME load from file shared with fusion etc
+# tools = {}
+# tools['1/8in spiral upcut'] = StraightRouterBit(diameter=1/8., tool_material='hss', flutes=2)
+# tools['1/16in spiral upcut'] = StraightRouterBit(diameter=1/16., tool_material='hss', flutes=2)
+# tools['1/4in spiral upcut'] = StraightRouterBit(diameter=1/4., tool_material='hss', flutes=2)
+# tools['3/8in spiral upcut'] = StraightRouterBit(diameter=3/8., tool_material='hss', flutes=2)
+# tools['1/2in spiral upcut'] = StraightRouterBit(diameter=1/2., tool_material='hss', flutes=2)
+#
+# tools['1/2in 4-flute endmill'] = StraightRouterBit(diameter=1/2., tool_material='hss', flutes=4)
+# tools['1/4in 4-flute endmill'] = StraightRouterBit(diameter=1/4., tool_material='hss', flutes=4)
+# tools['1/8in 4-flute endmill'] = StraightRouterBit(diameter=1/8., tool_material='hss', flutes=4)
+#
+# tools['1/8in spiral ball'] = BallRouterBit(diameter=1/8., tool_material='hss', flutes=2)
+# tools['1/4in spiral ball'] = BallRouterBit(diameter=1/4., tool_material='hss', flutes=2)
+# tools['3/8in spiral upcut'] = StraightRouterBit(diameter=3/8., tool_material='hss', flutes=2)
+# tools['1/2in spiral ball'] = BallRouterBit(diameter=1/2., tool_material='hss', flutes=2)
+#
+# tools['1 1/2in straight bit'] = StraightRouterBit(diameter=1.5, tool_material='hss', flutes=2)
+# tools['1/2in dovetail'] = DovetailRouterBit(minor_diameter=5/8., major_diameter=1/2., height=7/8., tool_material='hss', flutes=2)
+# tools['30degV'] = VRouterBit(included_angle=30.0, diameter=1/4., tool_material='hss', flutes=1)
+#
+# tools['probe'] = Tool('hss', 1, 1)
+# tools['probe'].feeds['probe'] = 1
+#
+# tools['engrave-0.1mm-30'] = VRouterBit(included_angle=30.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+# tools['engrave-0.1mm-10'] = VRouterBit(included_angle=10.0, diameter=1/8., tip_diameter=0.1*constants.MM, tool_material='hss', flutes=1)
+# tools['engrave-0.01in-15'] = VRouterBit(included_angle=15.0, diameter=1/8., tip_diameter=0.01, tool_material='hss', flutes=3)
+#
+# tools['tiny-0.6mm'] = StraightRouterBit(diameter=.6*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-0.7mm'] = StraightRouterBit(diameter=.7*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-0.8mm'] = StraightRouterBit(diameter=.8*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-0.9mm'] = StraightRouterBit(diameter=.9*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-1.0mm'] = StraightRouterBit(diameter=1.0*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-1.2mm'] = StraightRouterBit(diameter=1.2*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-1.4mm'] = StraightRouterBit(diameter=1.4*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-1.6mm'] = StraightRouterBit(diameter=1.6*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-1.8mm'] = StraightRouterBit(diameter=1.8*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-2.0mm'] = StraightRouterBit(diameter=2.0*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-2.2mm'] = StraightRouterBit(diameter=2.2*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-2.4mm'] = StraightRouterBit(diameter=2.4*constants.MM, tool_material='hss', flutes=2)
+# tools['tiny-3mm'] = StraightRouterBit(diameter=3*constants.MM, tool_material='hss', flutes=2)
+#
+# tools['k40-laser'] = Laser(focused_beam_width=0.010)  # Just a guess - measure...
 
 # fpt is for diameter of 1/8 1/4 1/2 1
 # http://www.micro-machine-shop.com/SFM_Formulae_Chart_2.pdf

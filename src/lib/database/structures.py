@@ -1,10 +1,12 @@
 import copy
 import types
 
+import logging
 
 # very crude.  Dig up my old dictobj from somewhere
 class dictobj(object):
     def __init__(self, d=None):
+        logging.warn("d class = %r", d.__class__)
         if isinstance(d, dictobj):
             self.__dict__['__dict'] = d.__dict__['__dict']
         elif isinstance(d, list):
@@ -12,7 +14,8 @@ class dictobj(object):
         elif isinstance(d, dict):
             self.__dict__['__dict'] = d
         else:
-            self.__dict__['__dict'] = {}
+            self.__dict__['__dict'] = dict(d)
+            # self.__dict__['__dict'] = {}
 
     def to_json(self):
         return self.__dict__['__dict']

@@ -58,6 +58,7 @@ class AdminApi(Api):
                 password=config.get_config_key('admin_password'),
                 email='me@rustybrooks.com',
                 is_admin=True,
+                api_key=config.get_config_key('admin_api_key'),
             )
 
     @classmethod
@@ -70,13 +71,14 @@ class AdminApi(Api):
         )
 
         cls._bootstrap_admin()
+        queries.add_global_tools()
 
         return val
 
     @classmethod
     @Api.config(require_login=False, require_admin=False)
     def bootstrap(cls, initial=False):
-        if not queries.SQL.table_exists('migrations') or not queries.SQL.select_0or1("select count(*) as count from migrations")['count'] > 0:
+        if initial or not queries.SQL.table_exists('migrations') or not queries.SQL.select_0or1("select count(*) as count from migrations")['count'] > 0:
             val = cls.migrate(apply=None, initial=initial)
         else:
             cls._bootstrap_admin()
