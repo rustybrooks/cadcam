@@ -87,10 +87,6 @@ class Projects extends React.Component {
     if (this.props.location.pathname !== prevProps.location.pathname) {
       this.onRouteChanged()
     }
-
-    //if (this.props.league && !prevProps.league) {
-    //  this.onRouteChanged()
-   // }
   }
 
   componentDidMount() {
@@ -119,17 +115,6 @@ class Projects extends React.Component {
     this.setState({...this.state, 'username': username, 'projects': data})
   }
 
-  handleRequestSort = (event, property) => {
-    const orderBy = property;
-    let order = 'desc';
-
-    if (this.state.orderBy === property && this.state.order === 'desc') {
-      order = 'asc';
-    }
-
-    this.setState({ order, orderBy });
-  };
-
   handleChangePage = (event, page) => {
     this.setState({ page });
   };
@@ -156,8 +141,7 @@ class Projects extends React.Component {
     console.log("projects", projects)
 
     let even = true
-    let owner = this
-    const { order, orderBy, selected, rowsPerPage, page } = this.state;
+    const { order, orderBy, rowsPerPage, page } = this.state;
 
     const user = store.get('user')
 

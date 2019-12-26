@@ -70,11 +70,21 @@ class Header extends React.Component {
     const { store } = this.props
     store.set('login-widget', this)
     this.updateUser()
+    this.updateTools()
   }
 
   componentDidUpdate(prevProps, prevState) {
-    //console.log("update", this.props)
   }
+
+  async updateTools() {
+    const { store } = this.props
+    let fw = store.get('frameworks')
+    if (fw === null || fw === undefined) return
+
+    const data = await fw.ToolsApi.index({page: 1, limit: 100})
+    store.set('tools', data)
+  }
+
 
   render() {
     const { store, classes } = this.props

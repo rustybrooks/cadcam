@@ -42,14 +42,11 @@ class Timer(object):
 
 
 class OurJSONEncoder(json.JSONEncoder):
-    # @newrelic.agent.function_trace()
     def default(self, obj):
         if hasattr(obj, "to_json"):
             return obj.to_json()
         elif isinstance(obj, datetime.datetime):
             return obj.isoformat()
-        # elif isinstance(obj, bson.ObjectId):
-        #     return str(obj)
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
         elif callable(obj):

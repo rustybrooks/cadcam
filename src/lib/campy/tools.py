@@ -31,6 +31,10 @@ class Tool(object):
 
         self.tool_material = tool_material
 
+    def to_json(self):
+        return self.to_db()
+
+
     """
     DEPTH OF CUT: 1 x D Use recommended chip load
     2 x D Reduce chip load by 25%
@@ -192,7 +196,8 @@ class Tool(object):
     def diameter_at_depth(self, depth=0):
         return self.effective_diameter
 
-    def from_db(self):
+    @classmethod
+    def from_db(cls, data):
         raise Exception("not defined")
 
     def to_db(self):
@@ -221,10 +226,30 @@ class StraightRouterBit(Tool):
             'cutting_length': self.cutting_length,
         }
 
+    @classmethod
+    def from_db(cls, data):
+        return StraightRouterBit(
+            diameter=data['diameter'],
+            tool_material=data['material'],
+            flutes=data['flutes'],
+            edge_radius=data['edge_radius'],
+            cutting_length=data['cutting_length'],
+        )
+
 
 class BallRouterBit(StraightRouterBit):
     def comment(self, cam):
         cam.comment("BallMill %f %f" % (self.cutting_length, self.diameter/2.0))
+
+    def to_db(self):
+        return {
+            'type': 'straight',
+            'material': self.tool_material,
+            'flutes': self.flutes,
+            'diameter': self.diameter,
+            'edge_radius': self.edge_radius,
+            'cutting_length': self.cutting_length,
+        }
 
 
 class DovetailRouterBit(Tool):
@@ -239,7 +264,7 @@ class DovetailRouterBit(Tool):
 
     def to_db(self):
         return {
-            'type': 'straight',
+            'type': 'dovetail',
             'material': self.tool_material,
             'flutes': self.flutes,
             'diameter': self.major_diameter,
@@ -247,6 +272,17 @@ class DovetailRouterBit(Tool):
             'edge_radius': self.edge_radius,
             'cutting_length': self.height,
         }
+
+    @classmethod
+    def from_db(cls, data):
+        return DovetailRouterBit(
+            major_diameter=data['diameter'],
+            minor_diameter=data['minor_diameter'],
+            tool_material=data['material'],
+            flutes=data['flutes'],
+            edge_radius=data['edge_radius'],
+            height=data['cutting_length'],
+        )
 
 
 class VRouterBit(Tool):
@@ -269,14 +305,28 @@ class VRouterBit(Tool):
 
     def to_db(self):
         return {
-            'type': 'straight',
+            'type': 'vee',
             'material': self.tool_material,
             'flutes': self.flutes,
             'diameter': self.diameter,
             'minor_diameter': self.tip_diameter,
             'edge_radius': self.edge_radius,
             'cutting_length': self.cutting_length,
+            'included_angle': self.included_angle,
         }
+
+    @classmethod
+    def from_db(cls, data):
+        return VRouterBit(
+            included_angle=data['included_angle'],
+            diameter=data['diameter'],
+            tip_diameter=data['minor_diameter'],
+            tool_material=data['material'],
+            flutes=data['flutes'],
+            edge_radius=data['edge_radius'],
+            cutting_length=data['cutting_length'],
+        )
+
 
 
 class Laser(Tool):

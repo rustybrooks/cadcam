@@ -6,6 +6,7 @@ from lib.api_framework import api_register, Api, FileResponse, api_bool, api_lis
 from lib.campy import *
 import shutil
 import time
+from lib.api_framework import OurJSONEncoder
 
 from . import queries, projects
 
@@ -401,12 +402,29 @@ class PCBApi(Api):
                 )
 
     @classmethod
+    def _load_tool(cls, tool_id=None, tool_key=None, user_id=None, **kwargs):
+        from lib.campy.tools import StraightRouterBit, BallRouterBit, VRouterBit, DovetailRouterBit
+
+        dbtool = queries.tool(tool_id=tool_id, tool_key=tool_key, user_id=user_id)
+        if not dbtool:
+            raise cls.NotFound()
+
+        if dbtool['type'] == 'straight':
+            return StraightRouterBit.from_db(dbtool)
+        elif dbtool['type'] == 'ball':
+            return BallRouterBit.from_db(dbtool)
+        elif dbtool['type'] == 'vee':
+            return VRouterBit.from_db(dbtool)
+        elif dbtool['type'] == 'dovetail':
+            return DovetailRouterBit.from_db(dbtool)
+
+    @classmethod
     @Api.config(require_login=False)
     def render_cam(
         cls, project_key=None, username=None, side='top',
         depth=0.005, separation=0.020, border=0, thickness=1.7*constants.MM, panelx=1, panely=1, zprobe_type='auto',
-        posts='x', drill='top', cutout='top', iso_bit=None, drill_bit='tiny-1.0mm',
-        cutout_bit=None, post_bit='1/8in spiral upcut',
+        posts='x', drill='top', cutout='top', iso_bit=None, drill_bit=None,
+        cutout_bit=None, post_bit=None,
         max_width=800, max_height=800, _user=None,
     ):
         depth = api_float(depth)
@@ -478,13 +496,14 @@ class PCBApi(Api):
         else:
             job_id = queries.add_project_job(project['project_id'], cache.arg_hash(**job_kwargs))
 
+        for key in ['iso_bit', 'drill_bit', 'cutout_bit', 'post_bit']:
+            job_kwargs[key] = cls._load_tool(**job_kwargs[key])
+
         files = queries.project_files(project_id=project['project_id'])
 
         machine = set_machine('k2cnc')
         machine.set_material('fr4-1oz')
         machine.max_rpm = machine.min_rpm = 1000
-
-        logger.warn("before geom=%r", len(machine.geometry))
 
         pcb = pcb_load_and_process(
             project_id=project['project_id'], date_modified=project['date_modified'],
@@ -531,7 +550,7 @@ class PCBApi(Api):
             shutil.rmtree(outdir)
 
         projects.project_files.add(
-            project=project, project_job_id=job_id, contents=json.dumps(job_kwargs), file_name='params.json'
+            project=project, project_job_id=job_id, contents=json.dumps(job_kwargs, cls=OurJSONEncoder), file_name='params.json'
         )
 
         queries.update_project_job(

@@ -114,6 +114,7 @@ class FileStore(object):
 
 project_files = FileStore(basedir='/srv/data/project_files')
 
+
 @api_register(None, require_login=True)
 class ProjectsApi(Api):
     @classmethod

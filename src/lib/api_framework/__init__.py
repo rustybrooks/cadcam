@@ -1,10 +1,16 @@
 from lib.api_framework.utils import *
 from lib.api_framework import utils
 
+import logging
+
+logging.warn("waht")
+
 # FIXME This is crude - find a better way to control or detect environment
 if os.getenv('DJANGO_SETTINGS_MODULE') is not None:
+    logging.warn("import from django")
     from .framework_django import *
 else:
+    logging.warn("import from flask")
     from .framework_flask import *
 
 

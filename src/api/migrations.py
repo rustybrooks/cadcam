@@ -74,7 +74,8 @@ initial.add_statement("""
         zoffset real,
         diameter real,
         minor_diameter real,
-        edge_radius real
+        edge_radius real,
+        included_angle real
     )
 """)
 initial.add_statement("create index tools_tool_id on tools(tool_id)")

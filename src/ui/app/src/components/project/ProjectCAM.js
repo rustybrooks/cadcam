@@ -53,6 +53,10 @@ class ProjectCAM extends React.Component {
         'posts': 'none',
         'drill': 'top',
         'cutout': 'top',
+        'iso_bit': 'engrave-0.1mm-30deg',
+        'drill_bit': 'straight-1.0mm',
+        'cutout_bit': 'straight-3.0mm',
+        'post_bit': 'straight-3.0mm',
       }
     }
   }
@@ -76,8 +80,8 @@ class ProjectCAM extends React.Component {
     })
 
     const { params } = this.state
-    const { project } = this.props
-    const fw = this.props.store.get('frameworks')
+    const { project, store } = this.props
+    const fw = store.get('frameworks')
     const args = {
       download: false,
       project_key: project.project_key,
@@ -87,6 +91,14 @@ class ProjectCAM extends React.Component {
       max_height: 600,
     }
     Object.assign(args, params)
+    const tools = store.get('tools')
+    const vars = ['iso_bit', 'drill_bit', 'cutout_bit', 'post_bit']
+    vars.forEach(v => {
+      const found = tools.find(f => {
+        return f.tool_key === args[v]
+      })
+      args[v] = {tool_key: found.tool_key, user_id: found.user_id}
+    })
     const data = await fw.PCBApi.render_cam(args)
 
     if (data.hasOwnProperty('status') && data.hasOwnProperty('details')) {
@@ -124,7 +136,10 @@ class ProjectCAM extends React.Component {
   }
 
   render() {
-    const { classes, project } = this.props
+    const { classes, project, store } = this.props
+
+    const tools = store.get('tools')
+    const drill_tools = tools.filter(x => x.type === 'straight')
 
     return <div className={classes.forms}>
         <material.FormGroup row>
@@ -137,6 +152,46 @@ class ProjectCAM extends React.Component {
             >
               <material.MenuItem value='none'>None</material.MenuItem>
               <material.MenuItem value='auto'>Auto</material.MenuItem>
+            </material.Select>
+          </material.FormControl>
+
+          <material.FormControl className={classes.formControl}>
+            <material.InputLabel id="iso-bit-label">Isolation tool</material.InputLabel>
+            <material.Select
+              labelId="iso-bit-label" id="iso-bit-select"
+              value={this.state.params.iso_bit} onChange={this.handleChange('iso_bit').bind(this)}
+            >
+              {tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
+            </material.Select>
+          </material.FormControl>
+
+          <material.FormControl className={classes.formControl}>
+            <material.InputLabel id="drill-bit-label">Drill tool</material.InputLabel>
+            <material.Select
+              labelId="drill-bit-label" id="drill-bit-select"
+              value={this.state.params.drill_bit} onChange={this.handleChange('drill_bit').bind(this)}
+            >
+              {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
+            </material.Select>
+          </material.FormControl>
+
+          <material.FormControl className={classes.formControl}>
+            <material.InputLabel id="cutout-bit-label">Cutout tool</material.InputLabel>
+            <material.Select
+              labelId="cutout-bit-label" id="cutout-bit-select"
+              value={this.state.params.cutout_bit} onChange={this.handleChange('cutout_bit').bind(this)}
+            >
+              {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
+            </material.Select>
+          </material.FormControl>
+
+          <material.FormControl className={classes.formControl}>
+            <material.InputLabel id="post-bit-label">Post tool</material.InputLabel>
+            <material.Select
+              labelId="post-bit-label" id="post-bit-select"
+              value={this.state.params.post_bit} onChange={this.handleChange('post_bit').bind(this)}
+            >
+              {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
             </material.Select>
           </material.FormControl>
 
@@ -248,4 +303,4 @@ class ProjectCAM extends React.Component {
   }
 }
 
-export default withStore(withStyles(style)(ProjectCAM))
+export default withStore(withStyles(style)(ProjectCAM), ['tools'])

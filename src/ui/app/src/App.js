@@ -53,6 +53,7 @@ const initialValue = {
   'frameworks': null,
   'login-widget': null,
   'user': null,
+  'tools': [],
 }
 
 const config = {}

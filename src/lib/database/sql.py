@@ -374,14 +374,14 @@ class SQLConn(object):
             rs = c.execute(text(statement), data or {})
 
             for row in rs:
-                yield dictobj(row)
+                yield dict(row)
 
     def select_one(self, statement, data=None):
         with self.cursor() as c:
             rs = c.execute(text(statement), data or {})
             row = rs.fetchone()
             rs.close()
-            return dictobj(row)
+            return dict(row)
 
     def select_0or1(self, statement, data=None):
         with self.cursor() as c:
@@ -395,7 +395,7 @@ class SQLConn(object):
                 elif count == 2:
                     raise Exception(u'Query was expected to return 0 or 1 rows, returned more')
 
-            return dictobj(result) if result else None
+            return dict(result) if result else None
 
     def insert(self, table_name, data, ignore_duplicates=False, batch_size=200, returning=True):
         def _ignore_pre():
@@ -435,7 +435,7 @@ class SQLConn(object):
             if isinstance(data, dict):
                 rs = c.execute(text(query), data)
                 if self.sql.postgres:
-                    return dictobj(rs.fetchone())
+                    return dict(rs.fetchone())
                 else:
                     return rs.lastrowid  # mysql only??
             else:

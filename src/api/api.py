@@ -9,7 +9,7 @@ from lib import config
 from . import migrations
 from flask_cors import CORS
 
-from . import pcb, projects, queries, login
+from . import pcb, projects, tools, queries, login
 
 root = os.path.join(os.path.dirname(__file__))
 
@@ -130,5 +130,6 @@ class UserApi(Api):
 app_class_proxy(app, '', 'api/admin', AdminApi())
 app_class_proxy(app, '', 'api/user', UserApi())
 app_class_proxy(app, '', 'api/projects', projects.ProjectsApi())
+app_class_proxy(app, '', 'api/tools', tools.ToolsApi())
 app_class_proxy(app, '', 'api/pcb', pcb.PCBApi())
 app_class_proxy(app, '', 'api/framework', utils.FrameworkApi())

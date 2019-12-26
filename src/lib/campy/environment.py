@@ -95,7 +95,8 @@ class Environment(object):
 
     def set_tool(self, tool, feed_class='low', rpm_range=None, ):
         if isinstance(tool, (str, unicode)):
-            this_tool = tools[tool]
+            raise Exception("Can no longer pass in tools by name")
+            # this_tool = tools[tool]
         else:
             this_tool = tool
 

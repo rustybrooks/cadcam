@@ -32,7 +32,7 @@ import geometry
 import constants
 
 from cammath import *
-from environment import tools, materials, machines, holes, Environment
+from environment import materials, machines, holes, Environment
 from operations import *
 from operations.pcb import *
 from operations.probe import *

@@ -499,15 +499,24 @@ def pcb_isolation_geometry(
     stepovers = int(math.ceil(offset/stepover))
     stepover = offset/stepovers
 
-    for g in in_geoms:
+    if False:
+        for g in in_geoms:
+            for step in range(1, stepovers+1):
+                # print "stepover =", step*stepover
+                bgeom = g.buffer(step * stepover)
+                # bgeom = g.buffer(step * stepover).difference(union_geom)
+                if isinstance(bgeom, shapely.geometry.Polygon):
+                    bgeom = shapely.geometry.MultiPolygon([bgeom])
+
+                # union_geom = union_geom.union(bgeom)
+
+                geoms.append(bgeom)
+    else:
+        union_geom = shapely.ops.cascaded_union(in_geoms)
         for step in range(1, stepovers+1):
-            # print "stepover =", step*stepover
-            bgeom = g.buffer(step*stepover)
-                 # .difference(union_geom)
+            bgeom = union_geom.buffer(step*stepover)
             if isinstance(bgeom, shapely.geometry.Polygon):
                 bgeom = shapely.geometry.MultiPolygon([bgeom])
-
-            # union_geom = union_geom.union(bgeom)
 
             geoms.append(bgeom)
 
@@ -730,13 +739,15 @@ def pcb_drill(
     hole_geom = shapely.affinity.translate(hole_geom, xoff=xoff, yoff=yoff)
 
     tool_dia = machine().tool.diameter
+    logger.warn("tool dia = %r", tool_dia)
     drill_holes = [x for x in hole_geom if x.coords[0][2] <= tool_dia]
     helical_holes = [x for x in hole_geom if x.coords[0][2] > tool_dia]
 
     machine().goto(z=1*constants.MM)
-    drill_cycle(
-        centers=[x.coords[0][:2] for x in drill_holes], z=0, depth=depth, retract_distance=1*constants.MM, rate=2, auto_clear=False
-    )
+    if drill_holes:
+        drill_cycle(
+            centers=[x.coords[0][:2] for x in drill_holes], z=0, depth=depth, retract_distance=1*constants.MM, rate=2, auto_clear=False
+        )
 
     for h in helical_holes:
         geoms.append(h.buffer(h.coords[0][2], resolution=16))
@@ -1011,13 +1022,13 @@ class PCBProject(object):
                 pxoff = 1/4.
 
             if fixture_width > 0 and side == 'bottom':
-                return fixture_width - (xi+1) * (maxx - minx + environment.tools[cutout_bit].diameter)
+                return fixture_width - (xi+1) * (maxx - minx + cutout_bit.diameter)
             else:
-                return pxoff + xi*(maxx-minx+environment.tools[cutout_bit].diameter)
+                return pxoff + xi*(maxx-minx+cutout_bit.diameter)
 
         def _yoff(yi):
             minx, miny, maxx, maxy = self.bounds
-            return yi*(maxy-miny+environment.tools[cutout_bit].diameter)
+            return yi*(maxy-miny+cutout_bit.diameter)
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
