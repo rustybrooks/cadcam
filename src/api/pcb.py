@@ -473,6 +473,7 @@ class PCBApi(Api):
             'border': border,
             'thickness': thickness,
             'posts': posts,
+            'side': side,
         }
 
         job_hash = cache.arg_hash(**job_kwargs)
@@ -480,7 +481,7 @@ class PCBApi(Api):
         logger.warn("looking for job, id=%r, hash=%r job=%r", p['project_id'], job_hash, job)
         if False or not job:
             job_id = cls._render_cam_internal(
-                side=side, project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height, job=job
+                project=p, job_kwargs=job_kwargs, max_width=max_width, max_height=max_height, job=job
             )
             job = queries.project_job(project_job_id=job_id)
         else:
@@ -490,7 +491,7 @@ class PCBApi(Api):
         return job
 
     @classmethod
-    def _render_cam_internal(cls, side=None, project=None, job_kwargs=None, max_width=None, max_height=None, job=None):
+    def _render_cam_internal(cls, project=None, job_kwargs=None, max_width=None, max_height=None, job=None):
         if job:
             job_id = job['project_job_id']
         else:
@@ -510,10 +511,13 @@ class PCBApi(Api):
             files=files
         )
 
+        side = job_kwargs.pop('side')
         if side == 'both':
             sides = ['top', 'bottom']
         else:
             sides = [side]
+
+
 
         for side in sides:
             outdir = tempfile.mkdtemp()

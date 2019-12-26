@@ -43,6 +43,7 @@ class ProjectCAM extends React.Component {
         cam: [],
       },
       params: {
+        'side': 'both',
         'depth': 0.007,
         'separation': 0.017,
         'zprobe_type': 'none',
@@ -50,7 +51,6 @@ class ProjectCAM extends React.Component {
         'thickness': .067,
         'panelx': 1,
         'panely': 1,
-        'posts': 'none',
         'drill': 'top',
         'cutout': 'top',
         'iso_bit': 'engrave-0.1mm-30deg',
@@ -81,16 +81,21 @@ class ProjectCAM extends React.Component {
 
     const { params } = this.state
     const { project, store } = this.props
+    const { side } = params
     const fw = store.get('frameworks')
     const args = {
       download: false,
       project_key: project.project_key,
       username: project.username,
-      side: 'both',
       max_width: 600,
       max_height: 600,
+      posts: params.side === 'both' ? 'x' : 'none',
     }
     Object.assign(args, params)
+
+    args['cutout'] = side === 'both' ? args['cutout'] : side
+    args['drill'] = side === 'both' ? args['drill'] : side
+
     const tools = store.get('tools')
     const vars = ['iso_bit', 'drill_bit', 'cutout_bit', 'post_bit']
     vars.forEach(v => {
@@ -136,7 +141,9 @@ class ProjectCAM extends React.Component {
   }
 
   render() {
-    const { classes, project, store } = this.props
+    const { classes, store } = this.props
+    const { params } = this.state
+    const { side } = params
 
     const tools = store.get('tools')
     const drill_tools = tools.filter(x => x.type === 'straight')
@@ -145,10 +152,22 @@ class ProjectCAM extends React.Component {
         <material.FormGroup row>
 
           <material.FormControl className={classes.formControl}>
+            <material.InputLabel id="side-label">Side(s) to mill</material.InputLabel>
+            <material.Select
+              labelId="side-label" id="side-select"
+              value={params.side} onChange={this.handleChange('side').bind(this)}
+            >
+              <material.MenuItem value='both'>Both</material.MenuItem>
+              <material.MenuItem value='top'>Top</material.MenuItem>
+              <material.MenuItem value='bottom'>Bottom</material.MenuItem>
+            </material.Select>
+          </material.FormControl>
+
+          <material.FormControl className={classes.formControl}>
             <material.InputLabel id="zprobe-type-label">Z Probe Type</material.InputLabel>
             <material.Select
               labelId="trace_depth-label" id="zprobe-type-select"
-              value={this.state.params.zprobe_type} onChange={this.handleChange('zprobe_type').bind(this)}
+              value={params.zprobe_type} onChange={this.handleChange('zprobe_type').bind(this)}
             >
               <material.MenuItem value='none'>None</material.MenuItem>
               <material.MenuItem value='auto'>Auto</material.MenuItem>
@@ -159,7 +178,7 @@ class ProjectCAM extends React.Component {
             <material.InputLabel id="iso-bit-label">Isolation tool</material.InputLabel>
             <material.Select
               labelId="iso-bit-label" id="iso-bit-select"
-              value={this.state.params.iso_bit} onChange={this.handleChange('iso_bit').bind(this)}
+              value={params.iso_bit} onChange={this.handleChange('iso_bit').bind(this)}
             >
               {tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
             </material.Select>
@@ -169,7 +188,7 @@ class ProjectCAM extends React.Component {
             <material.InputLabel id="drill-bit-label">Drill tool</material.InputLabel>
             <material.Select
               labelId="drill-bit-label" id="drill-bit-select"
-              value={this.state.params.drill_bit} onChange={this.handleChange('drill_bit').bind(this)}
+              value={params.drill_bit} onChange={this.handleChange('drill_bit').bind(this)}
             >
               {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
             </material.Select>
@@ -179,26 +198,30 @@ class ProjectCAM extends React.Component {
             <material.InputLabel id="cutout-bit-label">Cutout tool</material.InputLabel>
             <material.Select
               labelId="cutout-bit-label" id="cutout-bit-select"
-              value={this.state.params.cutout_bit} onChange={this.handleChange('cutout_bit').bind(this)}
+              value={params.cutout_bit} onChange={this.handleChange('cutout_bit').bind(this)}
             >
               {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
             </material.Select>
           </material.FormControl>
 
-          <material.FormControl className={classes.formControl}>
+          {
+            side !== 'both' ? '' :
+            <material.FormControl className={classes.formControl}>
             <material.InputLabel id="post-bit-label">Post tool</material.InputLabel>
             <material.Select
-              labelId="post-bit-label" id="post-bit-select"
-              value={this.state.params.post_bit} onChange={this.handleChange('post_bit').bind(this)}
+            labelId="post-bit-label" id="post-bit-select"
+            value={params.post_bit} onChange={this.handleChange('post_bit').bind(this)}
             >
-              {drill_tools.map(x => <material.MenuItem key={x.tool_id} value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
+            {drill_tools.map(x => <material.MenuItem key={x.tool_id}
+                                                     value={x.tool_key}>{x.tool_key}</material.MenuItem>)}
             </material.Select>
-          </material.FormControl>
+            </material.FormControl>
+          }
 
           <material.FormControl className={classes.formControl}>
             <material.TextField
               id="trace-depth-entry" label="Cut Depth"
-              value={this.state.params.depth} onChange={this.handleChange('depth').bind(this)}
+              value={params.depth} onChange={this.handleChange('depth').bind(this)}
               type="number"
               inputProps={{ min: "0.001", max: "0.100", step: "0.001" }}
             />
@@ -207,7 +230,7 @@ class ProjectCAM extends React.Component {
           <material.FormControl className={classes.formControl}>
             <material.TextField
               id="trace-separation-entry" label="Trace separation"
-              value={this.state.params.separation}
+              value={params.separation}
               onChange={this.handleChange('separation').bind(this)}
               type="number"
               inputProps={{ min: "0.001", max: "0.100", step: "0.001" }}
@@ -216,7 +239,7 @@ class ProjectCAM extends React.Component {
 
           <material.FormControl className={classes.formControl}>
             <material.TextField
-              id="border-entry" label="Border" value={this.state.params.border}
+              id="border-entry" label="Border" value={params.border}
               type="number"
               inputProps={{ min: "0.0", max: "1.0", step: "0.1" }}
             />
@@ -224,7 +247,7 @@ class ProjectCAM extends React.Component {
 
           <material.FormControl className={classes.formControl}>
             <material.TextField
-              id="panel-x-entry" label="Panel X" value={this.state.params.panelx}
+              id="panel-x-entry" label="Panel X" value={params.panelx}
               type="number"
               onChange={this.handleChange('panelx').bind(this)}
               inputProps={{ min: "1", max: "10", step: "1" }}
@@ -233,51 +256,59 @@ class ProjectCAM extends React.Component {
 
           <material.FormControl className={classes.formControl}>
             <material.TextField
-              id="panel-y-entry" label="Panel Y" value={this.state.params.panely}
+              id="panel-y-entry" label="Panel Y" value={params.panely}
               type="number"
               onChange={this.handleChange('panely').bind(this)}
               inputProps={{ min: "1", max: "10", step: "1" }}
             />
           </material.FormControl>
 
-          <material.FormControl component="fieldset">
-              <material.FormLabel component="legend">Drill Side</material.FormLabel>
-              <material.RadioGroup aria-label="position" name="position" value={this.state.params.drill} onChange={this.handleChange('drill').bind(this)} row>
-                <material.FormControlLabel
-                  value="top"
-                  control={<material.Radio color="primary" />}
-                  label="top"
-                  labelPlacement="end"
-                />
-                <material.FormControlLabel
-                  value="bottom"
-                  control={<material.Radio color="primary" />}
-                  label="bottom"
-                  labelPlacement="end"
-                />
+          {
+            side !== 'both' ? '' :
+              <material.FormControl component="fieldset">
+                <material.FormLabel component="legend">Drill Side</material.FormLabel>
+                <material.RadioGroup aria-label="position" name="position" value={params.drill}
+                                     onChange={this.handleChange('drill').bind(this)} row>
+                  <material.FormControlLabel
+                    value="top"
+                    control={<material.Radio color="primary"/>}
+                    label="top"
+                    labelPlacement="end"
+                  />
+                  <material.FormControlLabel
+                    value="bottom"
+                    control={<material.Radio color="primary"/>}
+                    label="bottom"
+                    labelPlacement="end"
+                  />
 
-              </material.RadioGroup>
-            </material.FormControl>
+                </material.RadioGroup>
+              </material.FormControl>
+          }
 
-          <material.FormControl component="fieldset">
-              <material.FormLabel component="legend">Cutout Side</material.FormLabel>
-              <material.RadioGroup aria-label="position" name="position" value={this.state.params.cutout} onChange={this.handleChange('cutout').bind(this)} row>
-                <material.FormControlLabel
-                  value="top"
-                  control={<material.Radio color="primary" />}
-                  label="top"
-                  labelPlacement="end"
-                />
-                <material.FormControlLabel
-                  value="bottom"
-                  control={<material.Radio color="primary" />}
-                  label="bottom"
-                  labelPlacement="end"
-                />
+          {
+            side !== 'both' ? '' :
 
-              </material.RadioGroup>
-            </material.FormControl>
+              <material.FormControl component="fieldset">
+                <material.FormLabel component="legend">Cutout Side</material.FormLabel>
+                <material.RadioGroup aria-label="position" name="position" value={params.cutout}
+                                     onChange={this.handleChange('cutout').bind(this)} row>
+                  <material.FormControlLabel
+                    value="top"
+                    control={<material.Radio color="primary"/>}
+                    label="top"
+                    labelPlacement="end"
+                  />
+                  <material.FormControlLabel
+                    value="bottom"
+                    control={<material.Radio color="primary"/>}
+                    label="bottom"
+                    labelPlacement="end"
+                  />
 
+                </material.RadioGroup>
+              </material.FormControl>
+          }
         </material.FormGroup>
 
       <material.Button color="primary" variant="outlined" onClick={this.updateImage.bind(this)}>Generate</material.Button>
